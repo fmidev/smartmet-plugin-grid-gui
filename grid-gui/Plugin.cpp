@@ -941,6 +941,10 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 
     ostr << "<SCRIPT>\n";
 
+    ostr << "var backColor;\n";
+    ostr << "var invisible = '#fefefe';\n";
+    ostr << "var buttonColor = '#808080';\n";
+
     ostr << "function getPage(obj,frm,url)\n";
     ostr << "{\n";
     ostr << "  frm.location.href=url;\n";
@@ -951,11 +955,27 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     ostr << "  img.src = url;\n";
     ostr << "}\n";
 
+    ostr << "function mouseOver(obj)\n";
+    ostr << "{\n";
+    ostr << "  if (obj.bgColor != invisible)\n";
+    ostr << "  {\n";
+    ostr << "    backColor = obj.bgColor;\n";
+    ostr << "    obj.bgColor='#FF8040';\n";
+    ostr << "  }\n";
+    ostr << "}\n";
+
+    ostr << "function mouseOut(obj)\n";
+    ostr << "{\n";
+    ostr << "  if (obj.bgColor != invisible)\n";
+    ostr << "  {\n";
+    ostr << "    obj.bgColor=backColor;\n";
+    ostr << "  }\n";
+    ostr << "}\n";
     ostr << "</SCRIPT>\n";
 
 
     ostr << "<TABLE width=\"100%\" height=\"100%\">\n";
-    ostr << "<TR><TD  bgcolor=\"#C0C0C0\" width=\"180\">\n";
+    ostr << "<TR><TD  bgcolor=\"#C0C0C0\" width=\"180\" rowspan=\"2\">\n";
 
     ostr << "<TABLE width=\"100%\" height=\"100%\">\n";
 
@@ -1255,7 +1275,14 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     std::string prevTime = "19000101T0000";
 
     ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>Time:</TD></TR>\n";
-    ostr << "<TR height=\"30\"><TD>\n";
+    ostr << "<TR height=\"30\"><TD><TABLE><TR><TD>\n";
+
+    //ostr << "<TR height=\"30\"><TD>\n";
+
+    T::ContentInfo *prevCont = NULL;
+    T::ContentInfo *currentCont = NULL;
+    T::ContentInfo *nextCont = NULL;
+
 
     if (len > 0)
     {
@@ -1286,11 +1313,15 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
             {
               std::string url = "&start=" + g->mStartTime + "&fileId=" + std::to_string(g->mFileId) + "&messageIndex=" + std::to_string(g->mMessageIndex) + "&typeOfEnsembleForecast=" + typeOfEnsembleForecastStr + "&perturbationNumber=" + perturbationNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr;
 
+              if (currentCont != NULL  &&  nextCont == NULL)
+                nextCont = g;
+
               if (startTime.length() == 0)
                 startTime = g->mStartTime;
 
               if (startTime == g->mStartTime)
               {
+                currentCont = g;
                 ostr << "<OPTION selected value=\"" <<  url << "\">" <<  g->mStartTime << "</OPTION>\n";
                 fileIdStr = std::to_string(g->mFileId);
                 messageIndexStr = std::to_string(g->mMessageIndex);
@@ -1299,6 +1330,10 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
               {
                 ostr << "<OPTION value=\"" <<  url << "\">" <<  g->mStartTime << "</OPTION>\n";
               }
+
+              if (currentCont == NULL)
+                prevCont = g;
+
               prevTime = g->mStartTime;
             }
           }
@@ -1306,8 +1341,22 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
       }
       ostr << "</SELECT>\n";
     }
-    ostr << "</TD></TR>\n";
+    ostr << "</TD>\n";
+    //ostr << "</TD></TR>\n";
 
+    //ostr << "<TR><TD><TABLE height=\"30\"><TR>\n";
+
+    if (prevCont != NULL)
+      ostr << "<TD width=\"20\" > <button type=\"button\" onClick=\"getPage(this,parent,'/grid-gui?page=main&presentation=" + presentation + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + prevCont->mStartTime + "&fileId=" + std::to_string(prevCont->mFileId) + "&messageIndex=" + std::to_string(prevCont->mMessageIndex) + "&typeOfEnsembleForecast=" + typeOfEnsembleForecastStr + "&perturbationNumber=" + perturbationNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "');\">&lt;</button></TD>\n";
+    else
+      ostr << "<TD width=\"20\"><button type=\"button\">&lt;</button></TD></TD>\n";
+
+    if (nextCont != NULL)
+      ostr << "<TD width=\"20\"><button type=\"button\" onClick=\"getPage(this,parent,'/grid-gui?page=main&presentation=" + presentation + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + nextCont->mStartTime + "&fileId=" + std::to_string(nextCont->mFileId) + "&messageIndex=" + std::to_string(nextCont->mMessageIndex) + "&typeOfEnsembleForecast=" + typeOfEnsembleForecastStr + "&perturbationNumber=" + perturbationNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "');\">&gt;</button></TD>\n";
+    else
+      ostr << "<TD width=\"20\"><button type=\"button\">&gt;</button></TD></TD>\n";
+
+    ostr << "</TR></TABLE></TD></TR>\n";
 
     // ### Modes:
 
@@ -1423,19 +1472,20 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 
     }
 
-    ostr << "<TR><TD></TD></TR>\n";
+    ostr << "<TR height=\"50%\"><TD></TD></TR>\n";
     ostr << "</TABLE>\n";
     ostr << "</TD>\n";
 
-    ostr << "<TD align=\"center\" valign=\"center\"><TABLE width=\"100%\" height=\"100%\"><TR>\n";
+    //ostr << "<TD align=\"center\" valign=\"center\">\n";
+    //ostr << "<TABLE width=\"100%\" height=\"100%\"><TR>\n";
     if (presentation == "image")
     {
-      ostr << "<TD><IMG id=\"myimage\" style=\"background:#000000; max-width:100%; height:100%;\" src=\"/grid-gui?page=image&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "&rotate=no&hue=" << hueStr << "&saturation=" << saturationStr << "&blur=" << blurStr <<  "\"></TD>";
+      ostr << "<TD><IMG id=\"myimage\" style=\"background:#000000; max-width:1800; height:100%; max-height:100%;\" src=\"/grid-gui?page=image&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "&rotate=no&hue=" << hueStr << "&saturation=" << saturationStr << "&blur=" << blurStr <<  "\"></TD>";
     }
     else
     if (presentation == "image(rotated)")
     {
-      ostr << "<TD><IMG id=\"myimage\" style=\"background:#000000; max-width:100%; height:100%;\" src=\"/grid-gui?page=image&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "&rotate=yes&hue=" << hueStr << "&saturation=" << saturationStr << "&blur=" << blurStr <<  "\"></TD>";
+      ostr << "<TD><IMG id=\"myimage\" style=\"background:#000000; max-width:1800; height:100%; max-height:100%;\" src=\"/grid-gui?page=image&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "&rotate=yes&hue=" << hueStr << "&saturation=" << saturationStr << "&blur=" << blurStr <<  "\"></TD>";
     }
     else
     if (presentation == "map")
@@ -1461,12 +1511,13 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 
     Identification::ParameterDefinition_fmi_cptr pDef = Identification::gribDef.mMessageIdentifier_fmi.getParameterDefById(parameterIdStr);
     if (pDef != NULL)
-      ostr << "<TR height=\"25\" valign=\"center\" style=\"font-size:12;\"><TD>" << pDef->mParameterDescription << "</TD></TR>\n";
+      ostr << "<TR><TD style=\"height:25; vertical-align:middle; text-align:left; font-size:12;\">" << pDef->mParameterDescription << "</TD></TR>\n";
+
+    //ostr << "</TABLE>\n";
+    //ostr << "</TD></TR>\n";
+
 
     ostr << "</TABLE>\n";
-    ostr << "</TD></TR>\n";
-
-
     ostr << "</BODY></HTML>\n";
 
     theResponse.setContent(std::string(ostr.str()));
