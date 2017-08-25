@@ -1030,7 +1030,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
       {
         T::GenerationInfo *g = generationInfoList.getGenerationInfoByIndex(a);
 
-        if (gid == 0)
+        if (gid == 0  && a == (len-1))
         {
           gid = g->mGenerationId;
           generationIdStr = std::to_string(gid);
