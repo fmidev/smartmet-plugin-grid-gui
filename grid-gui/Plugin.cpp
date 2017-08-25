@@ -1026,15 +1026,24 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     if (len > 0)
     {
       ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&producerId=" + producerIdStr + "&generationId=' + this.options[this.selectedIndex].value)\">\n";
+
+
+      if (gid == 0)
+      {
+        T::GenerationInfo *biggest = generationInfoList.getGenerationInfoByIndex(0);
+        for (uint a=1; a<len; a++)
+        {
+          T::GenerationInfo *g = generationInfoList.getGenerationInfoByIndex(a);
+          if (g->mName > biggest->mName)
+            biggest = g;
+        }
+        gid = biggest->mGenerationId;
+        generationIdStr = std::to_string(gid);
+      }
+
       for (uint a=0; a<len; a++)
       {
         T::GenerationInfo *g = generationInfoList.getGenerationInfoByIndex(a);
-
-        if (gid == 0  && a == (len-1))
-        {
-          gid = g->mGenerationId;
-          generationIdStr = std::to_string(gid);
-        }
 
         if (gid == g->mGenerationId)
           ostr << "<OPTION selected value=\"" <<  g->mGenerationId << "\">" <<  g->mName << "</OPTION>\n";
