@@ -633,7 +633,7 @@ bool Plugin::page_image(SmartMet::Spine::Reactor &theReactor,
     std::string fileIdStr = "";
     std::string messageIndexStr = "0";
     std::string hueStr = "110";
-    std::string saturationStr = "123";
+    std::string saturationStr = "0";
     bool rotate = false;
     std::string presentation = "image(rotated)";
     std::string blurStr = "1";
@@ -685,7 +685,7 @@ bool Plugin::page_image(SmartMet::Spine::Reactor &theReactor,
     sprintf(fname,"/tmp/image_%llu.jpg",getTime());
     saveImage(fname,gridData,(unsigned char)atoi(hueStr.c_str()),(unsigned char)atoi(saturationStr.c_str()),(unsigned char)atoi(blurStr.c_str()),rotate);
 
-    size_t sz = getFileSize(fname);
+    long long sz = getFileSize(fname);
     if (sz > 0)
     {
       char buf[10000];
@@ -752,7 +752,7 @@ bool Plugin::page_map(SmartMet::Spine::Reactor &theReactor,
     std::string fileIdStr = "";
     std::string messageIndexStr = "0";
     std::string hueStr = "110";
-    std::string saturationStr = "123";
+    std::string saturationStr = "0";
     std::string blurStr = "1";
 
     boost::optional<std::string> v;
@@ -797,7 +797,7 @@ bool Plugin::page_map(SmartMet::Spine::Reactor &theReactor,
     sprintf(fname,"/tmp/image_%llu.jpg",getTime());
     saveMap(fname,columns,rows,values,(unsigned char)atoi(hueStr.c_str()),(unsigned char)atoi(saturationStr.c_str()),(unsigned char)atoi(blurStr.c_str()));
 
-    size_t sz = getFileSize(fname);
+    long long sz = getFileSize(fname);
     if (sz > 0)
     {
       char buf[10000];
@@ -871,7 +871,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     std::string hueStr = "110";
     std::string typeOfEnsembleForecastStr = "";
     std::string perturbationNumberStr = "";
-    std::string saturationStr = "123";
+    std::string saturationStr = "0";
     std::string blurStr = "1";
     std::string startTime = "";
     //std::string endTime = "";
