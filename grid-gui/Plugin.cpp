@@ -309,6 +309,91 @@ void Plugin::saveImage(const char *imageFile,T::GridData&  gridData,unsigned cha
 
 
 
+void Plugin::saveTimeSeries(const char *imageFile,std::vector<T::ParamValue>& valueList,int idx,std::set<int> dayIdx)
+{
+  try
+  {
+    T::ParamValue maxValue = -1000000000;
+    T::ParamValue minValue = 1000000000;
+
+    int len = (int)valueList.size();
+
+
+    int width = len * 3;
+    int height = 100;
+
+    uint size = width*height;
+
+    if (size == 0)
+      return;
+
+    for (auto it = valueList.begin(); it != valueList.end(); ++it)
+    {
+      if (*it != ParamValueMissing)
+      {
+        if (*it < minValue)
+          minValue = *it;
+
+        if (*it > maxValue)
+          maxValue = *it;
+      }
+    }
+
+    double diff = maxValue - minValue;
+    double dd = (height-2) / diff;
+    double step = diff / 200;
+
+
+    unsigned long *image = new unsigned long[size];
+    memset(image,0xFF,size*sizeof(unsigned long));
+
+    for (int x=0; x<len; x++)
+    {
+      int xp = x*3;
+      int yp = (int)(dd*(valueList[x]-minValue)) + 1;
+      //uint col = 0x404040;
+
+      uint v = 200 - (uint)((valueList[x]-minValue) / step);
+      v = v + 55;
+      uint col = hsv_to_rgb(0,0,(unsigned char)v);
+
+      if (x == idx)
+        col = 0xFF0000;
+
+      for (uint w=0; w<3; w++)
+      {
+        for (int y=0; y<yp; y++)
+        {
+          int pos = ((height-y-1)*width + xp+w);
+          if (pos >=0  && pos < (int)size)
+            image[pos] = col;
+        }
+      }
+
+      if (dayIdx.find(x) != dayIdx.end())
+      {
+        for (int y=0; y<height; y++)
+        {
+          int pos = (y*width + xp);
+          if (pos >=0  && pos < (int)size)
+            image[pos] = 0xA0A0A0;
+        }
+      }
+
+    }
+    jpeg_save(imageFile,image,height,width,100);
+    delete image;
+  }
+  catch (...)
+  {
+    throw SmartMet::Spine::Exception(BCP,"Operation failed!",NULL);
+  }
+}
+
+
+
+
+
 bool Plugin::page_info(SmartMet::Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse)
@@ -430,8 +515,7 @@ bool Plugin::page_info(SmartMet::Spine::Reactor &theReactor,
     ostr << "<TR><TD bgColor=\"#000080\" width=\"100\">Parameter</TD><TD><TABLE border=\"1\" width=\"100%\" style=\"font-size:12;\">\n";
 
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Message index</TD><TD>" << contentInfo.mMessageIndex << "</TD></TR>\n";
-    ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Start time</TD><TD>" << contentInfo.mStartTime << "</TD></TR>\n";
-    ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">End time</TD><TD>" << contentInfo.mEndTime << "</TD></TR>\n";
+    ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Start time</TD><TD>" << contentInfo.mForecastTime << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Level</TD><TD>" << contentInfo.mParameterLevel << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">FMI identifier</TD><TD>" << contentInfo.mFmiParameterId << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">FMI name</TD><TD>" << contentInfo.mFmiParameterName << "</TD></TR>\n";
@@ -445,8 +529,8 @@ bool Plugin::page_info(SmartMet::Spine::Reactor &theReactor,
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Newbase name</TD><TD>" << contentInfo.mNewbaseParameterName << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">CDM identifier</TD><TD>" << contentInfo.mCdmParameterId << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">CDM name</TD><TD>" << contentInfo.mCdmParameterName << "</TD></TR>\n";
-    ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Type Of Ensemble Forecast</TD><TD>" << (uint)contentInfo.mTypeOfEnsembleForecast << "</TD></TR>\n";
-    ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Perturbation Number</TD><TD>" << (uint)contentInfo.mPerturbationNumber << "</TD></TR>\n";
+    ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Type Of Ensemble Forecast</TD><TD>" << (int)contentInfo.mForecastType << "</TD></TR>\n";
+    ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\"> Number</TD><TD>" << (int)contentInfo.mForecastNumber << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Geometry identifier</TD><TD>" << (uint)contentInfo.mGeometryId << "</TD></TR>\n";
 
     ostr << "</TABLE></TD></TR>\n";
@@ -608,6 +692,250 @@ bool Plugin::page_table(SmartMet::Spine::Reactor &theReactor,
     ostr << "</BODY></HTML>\n";
 
     theResponse.setContent(std::string(ostr.str()));
+
+    return true;
+  }
+  catch (...)
+  {
+    throw SmartMet::Spine::Exception(BCP, "Operation failed!", NULL);
+  }
+}
+
+
+
+
+
+bool Plugin::page_value(SmartMet::Spine::Reactor &theReactor,
+                            const HTTP::Request &theRequest,
+                            HTTP::Response &theResponse)
+{
+  try
+  {
+    std::shared_ptr<SmartMet::ContentServer::ServiceInterface> contentServer = itsGridEngine->getContentServerPtr();
+    std::shared_ptr<SmartMet::DataServer::ServiceInterface>  dataServer = itsGridEngine->getDataServerPtr();
+    //std::shared_ptr<SmartMet::QueryServer::ServiceInterface> queryServer = itsGridEngine->getQueryServerPt();
+
+    uint fileId = 0;
+    uint messageIndex = 0;
+    std::string presentation = "image";
+    double xPos = 0;
+    double yPos = 0;
+
+    boost::optional<std::string> v = theRequest.getParameter("presentation");
+    if (v)
+      presentation = *v;
+
+    v = theRequest.getParameter("fileId");
+    if (v)
+      fileId = atoll(v->c_str());
+
+    v = theRequest.getParameter("messageIndex");
+    if (v)
+      messageIndex = atoll(v->c_str());
+
+    v = theRequest.getParameter("x");
+    if (v)
+      xPos = atof(v->c_str());
+
+    v = theRequest.getParameter("y");
+    if (v)
+      yPos = atof(v->c_str());
+
+    if (fileId == 0)
+      return true;
+
+
+    T::ContentInfo contentInfo;
+    if (contentServer->getContentInfo(0,fileId,messageIndex,contentInfo) != 0)
+      return true;
+
+    if (contentInfo.mGeometryId == 0)
+      return true;
+
+    GRIB2::GridDefinition_ptr def =  Identification::gribDef.getGridDefinition2ByGeometryId(contentInfo.mGeometryId);
+    if (def == NULL)
+      return true;
+
+    T::Dimensions_opt dim = def->getGridDimensions();
+    if (!dim)
+      return true;
+
+    uint height = dim->ny();
+    uint width = dim->nx();
+
+    double xx = (double)(xPos * (double)width);
+    double yy = (double)(yPos * (double)height);
+
+    if (presentation == "image(rotated)")
+      yy = height-yy;
+
+    T::ParamValue value;
+    dataServer->getGridValue(0,fileId,messageIndex,T::CoordinateType::GRID_COORDINATES,xx,yy,T::InterpolationMethod::Linear,value);
+
+    if (value != ParamValueMissing)
+      theResponse.setContent(std::to_string(value));
+    else
+      theResponse.setContent(std::string("Not available"));
+
+    return true;
+  }
+  catch (...)
+  {
+    throw SmartMet::Spine::Exception(BCP, "Operation failed!", NULL);
+  }
+}
+
+
+
+
+
+bool Plugin::page_timeseries(SmartMet::Spine::Reactor &theReactor,
+                            const HTTP::Request &theRequest,
+                            HTTP::Response &theResponse)
+{
+  try
+  {
+    std::shared_ptr<SmartMet::ContentServer::ServiceInterface> contentServer = itsGridEngine->getContentServerPtr();
+    std::shared_ptr<SmartMet::DataServer::ServiceInterface>  dataServer = itsGridEngine->getDataServerPtr();
+    //std::shared_ptr<SmartMet::QueryServer::ServiceInterface> queryServer = itsGridEngine->getQueryServerPt();
+
+    uint fileId = 0;
+    uint messageIndex = 0;
+    std::string presentation = "image";
+    double xPos = 0;
+    double yPos = 0;
+
+    boost::optional<std::string> v = theRequest.getParameter("presentation");
+    if (v)
+      presentation = *v;
+
+    v = theRequest.getParameter("fileId");
+    if (v)
+      fileId = atoll(v->c_str());
+
+    v = theRequest.getParameter("messageIndex");
+    if (v)
+      messageIndex = atoll(v->c_str());
+
+    v = theRequest.getParameter("x");
+    if (v)
+      xPos = atof(v->c_str());
+
+    v = theRequest.getParameter("y");
+    if (v)
+      yPos = atof(v->c_str());
+
+    if (fileId == 0)
+      return true;
+
+
+    T::ContentInfo contentInfo;
+    if (contentServer->getContentInfo(0,fileId,messageIndex,contentInfo) != 0)
+      return true;
+
+    if (contentInfo.mGeometryId == 0)
+      return true;
+
+    GRIB2::GridDefinition_ptr def =  Identification::gribDef.getGridDefinition2ByGeometryId(contentInfo.mGeometryId);
+    if (def == NULL)
+      return true;
+
+    T::Dimensions_opt dim = def->getGridDimensions();
+    if (!dim)
+      return true;
+
+    uint height = dim->ny();
+    uint width = dim->nx();
+
+    double xx = (double)(xPos * (double)width);
+    double yy = (double)(yPos * (double)height);
+
+    if (presentation == "image(rotated)")
+      yy = height-yy;
+
+    T::ContentInfoList contentInfoList;
+    contentServer->getContentListByParameterAndGenerationId(0,contentInfo.mGenerationId,T::ParamKeyType::FMI_ID,contentInfo.mFmiParameterId,T::ParamLevelIdType::FMI,contentInfo.mFmiParameterLevelId,contentInfo.mParameterLevel,contentInfo.mParameterLevel,"19000101T000000","23000101T000000",0,contentInfoList);
+
+    contentInfoList.sort(T::ContentInfo::ComparisonMethod::fmiId_level_starttime_file_message);
+
+    std::vector <T::ParamValue> valueList;
+
+    int idx = -1;
+    //std::ostringstream ostr;
+    std::set<int> dayIdx;
+
+    uint c = 0;
+    uint len = contentInfoList.getLength();
+    for (uint t=0; t<len; t++)
+    {
+      T::ContentInfo *info = contentInfoList.getContentInfoByIndex(t);
+
+      if (info->mGeometryId == contentInfo.mGeometryId  &&  info->mForecastType == contentInfo.mForecastType  &&  info->mForecastNumber == contentInfo.mForecastNumber)
+      {
+        T::ParamValue value;
+        if (dataServer->getGridValue(0,info->mFileId,info->mMessageIndex,T::CoordinateType::GRID_COORDINATES,xx,yy,T::InterpolationMethod::Linear,value) == 0)
+        {
+          if (value != ParamValueMissing)
+          {
+            if (info->mFileId == fileId  &&  info->mMessageIndex == messageIndex)
+              idx = (int)c;
+
+            if (strstr(info->mForecastTime.c_str(),"T000000") != NULL)
+              dayIdx.insert(t);
+
+            valueList.push_back(value);
+            c++;
+          }
+        }
+      }
+    }
+
+    char fname[200];
+    sprintf(fname,"/tmp/image_%llu.jpg",getTime());
+
+    saveTimeSeries(fname,valueList,idx,dayIdx);
+
+    long long sz = getFileSize(fname);
+    if (sz > 0)
+    {
+      char buf[10000];
+      std::vector<char> *content = new std::vector<char>();
+      content->reserve(sz);
+
+      boost::shared_ptr<std::vector<char> > sContent;
+      sContent.reset(content);
+
+      FILE *file = fopen(fname,"r");
+      if (file != NULL)
+      {
+        while (!feof(file))
+        {
+          int n = fread(buf,1,10000,file);
+          if (n > 0)
+          {
+            for (int t=0; t<n; t++)
+            {
+              content->push_back(buf[t]);
+            }
+          }
+        }
+        fclose(file);
+        remove(fname);
+
+        theResponse.setHeader("Content-Type","image/jpg");
+        theResponse.setContent(sContent);
+      }
+      return true;
+    }
+    else
+    {
+      std::ostringstream ostr;
+      ostr << "<HTML><BODY>\n";
+      ostr << "Image does not exist!\n";
+      ostr << "</BODY></HTML>\n";
+      theResponse.setContent(std::string(ostr.str()));
+      return true;
+    }
 
     return true;
   }
@@ -871,12 +1199,12 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     std::string messageIndexStr = "0";
     std::string parameterLevelIdStr;
     std::string hueStr = "110";
-    std::string typeOfEnsembleForecastStr = "";
-    std::string perturbationNumberStr = "";
+    std::string forecastTypeStr = "";
+    std::string forecastNumberStr = "";
     std::string saturationStr = "0";
     std::string blurStr = "1";
     std::string startTime = "";
-    //std::string endTime = "";
+    std::string unitStr = "";
     std::string presentation = "image(rotated)";
 
     boost::optional<std::string> v;
@@ -900,13 +1228,13 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     if (v)
       parameterLevelIdStr = *v;
 
-    v = theRequest.getParameter("typeOfEnsembleForecast");
+    v = theRequest.getParameter("forecastType");
     if (v)
-      typeOfEnsembleForecastStr = *v;
+      forecastTypeStr = *v;
 
-    v = theRequest.getParameter("perturbationNumber");
+    v = theRequest.getParameter("forecastNumber");
     if (v)
-      perturbationNumberStr = *v;
+      forecastNumberStr = *v;
 
     v = theRequest.getParameter("level");
     if (v)
@@ -976,6 +1304,33 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     ostr << "  {\n";
     ostr << "    obj.bgColor=backColor;\n";
     ostr << "  }\n";
+    ostr << "}\n";
+
+    ostr << "function httpGet(theUrl)\n";
+    ostr << "{\n";
+    ostr << "  var xmlHttp = new XMLHttpRequest();\n";
+    ostr << "  xmlHttp.open(\"GET\", theUrl, false );\n";
+    ostr << "  xmlHttp.send( null );\n";
+    ostr << "  return xmlHttp.responseText;\n";
+    ostr << "}\n";
+
+    ostr << "function getImageCoords(event,img,fileId,messageIndex,presentation) {\n";
+    ostr << "  var posX = event.offsetX?(event.offsetX):event.pageX-img.offsetLeft;\n";
+    ostr << "  var posY = event.offsetY?(event.offsetY):event.pageY-img.offsetTop;\n";
+    ostr << "  var prosX = posX / img.width;\n";
+    ostr << "  var prosY = posY / img.height;\n";
+    ostr << "  var url = \"/grid-gui?page=value&presentation=\" + presentation + \"&fileId=\" + fileId + \"&messagIndex=\" + messageIndex + \"&x=\" + prosX + \"&y=\" + prosY;\n";
+
+    //ostr << "  document.getElementById('gridValue').value = url;\n";
+    ostr << "  var txt = httpGet(url);\n";
+    ostr << "  document.getElementById('gridValue').value = txt;\n";
+
+    ostr << "  var url2 = \"/grid-gui?page=timeseries&presentation=\" + presentation + \"&fileId=\" + fileId + \"&messagIndex=\" + messageIndex + \"&x=\" + prosX + \"&y=\" + prosY;\n";
+    //ostr << "  var txt2 = httpGet(url2);\n";
+    //ostr << "  document.getElementById('timeseries').value = txt2;\n";
+    ostr << "  document.getElementById('timeseries').src = url2;\n";
+
+    //ostr << "  alert(\"You clicked at: (\"+posX+\",\"+posY+\")\");\n";
     ostr << "}\n";
     ostr << "</SCRIPT>\n";
 
@@ -1097,9 +1452,14 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 
 
           if (parameterIdStr == g->mFmiParameterId)
+          {
             ostr << "<OPTION selected value=\"" <<  g->mFmiParameterId << "\">" <<  g->mFmiParameterName << "</OPTION>\n";
+            unitStr = g->mFmiParameterUnits;
+          }
           else
+          {
             ostr << "<OPTION value=\"" <<  g->mFmiParameterId << "\">" <<  g->mFmiParameterName << "</OPTION>\n";
+          }
 
           prevFmiName = g->mFmiParameterName;
         }
@@ -1198,41 +1558,41 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     ostr << "</TD></TR>\n";
 
 
-    // ### typeOfEnsembleForecastStr:
+    // ### forecastTypeStr:
 
-    unsigned char typeOfEnsembleForecast = (unsigned char)atoi(typeOfEnsembleForecastStr.c_str());
+    short forecastType = (short)atoi(forecastTypeStr.c_str());
     int prevType = -1;
 
-    ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>TypeOfEnsembleForecast:</TD></TR>\n";
+    ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>Forecast type:</TD></TR>\n";
     ostr << "<TR height=\"30\"><TD>\n";
 
     if (len > 0)
     {
       contentInfoList.sort(T::ContentInfo::ComparisonMethod::fmiId_fmiLevelId_level_starttime_file_message);
 
-      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&typeOfEnsembleForecast=' + this.options[this.selectedIndex].value)\">\n";
+      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&forecastType=' + this.options[this.selectedIndex].value)\">\n";
       for (uint a=0; a<len; a++)
       {
         T::ContentInfo *g = contentInfoList.getContentInfoByIndex(a);
 
-        if (prevType < (int)g->mTypeOfEnsembleForecast)
+        if (prevType < (int)g->mForecastType)
         {
           if (levelId == g->mFmiParameterLevelId)
           {
             if (level == g->mParameterLevel)
             {
-              if (typeOfEnsembleForecastStr.length() == 0)
+              if (forecastTypeStr.length() == 0)
               {
-                typeOfEnsembleForecastStr = std::to_string((int)g->mTypeOfEnsembleForecast);
-                typeOfEnsembleForecast = g->mTypeOfEnsembleForecast;
+                forecastTypeStr = std::to_string((int)g->mForecastType);
+                forecastType = g->mForecastType;
               }
 
-              if (typeOfEnsembleForecast == g->mTypeOfEnsembleForecast)
-                ostr << "<OPTION selected value=\"" <<  (int)g->mTypeOfEnsembleForecast << "\">" <<  (int)g->mTypeOfEnsembleForecast << "</OPTION>\n";
+              if (forecastType == g->mForecastType)
+                ostr << "<OPTION selected value=\"" <<  (int)g->mForecastType << "\">" <<  (int)g->mForecastType << "</OPTION>\n";
               else
-                ostr << "<OPTION value=\"" <<  (int)g->mTypeOfEnsembleForecast << "\">" <<  (int)g->mTypeOfEnsembleForecast << "</OPTION>\n";
+                ostr << "<OPTION value=\"" <<  (int)g->mForecastType << "\">" <<  (int)g->mForecastType << "</OPTION>\n";
 
-              prevType = (int)g->mTypeOfEnsembleForecast;
+              prevType = (int)g->mForecastType;
             }
           }
         }
@@ -1242,41 +1602,41 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     ostr << "</TD></TR>\n";
 
 
-    // ### perturbationNumber:
+    // ### forecastNumber:
 
-    unsigned char perturbationNumber = (unsigned char)atoi(perturbationNumberStr.c_str());
-    int prevNumber = -1;
+    short forecastNumber = (short)atoi(forecastNumberStr.c_str());
+    int prevNumber = -100;
 
-    ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>PerturbationNumber:</TD></TR>\n";
+    ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>Forecast number:</TD></TR>\n";
     ostr << "<TR height=\"30\"><TD>\n";
 
     if (len > 0)
     {
-      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&typeOfEnsembleForecast=" + typeOfEnsembleForecastStr + "&perturbationNumber=' + this.options[this.selectedIndex].value)\">\n";
+      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=' + this.options[this.selectedIndex].value)\">\n";
       for (uint a=0; a<len; a++)
       {
         T::ContentInfo *g = contentInfoList.getContentInfoByIndex(a);
 
-        if (prevNumber < (int)g->mPerturbationNumber)
+        if (prevNumber < (int)g->mForecastNumber)
         {
           if (levelId == g->mFmiParameterLevelId)
           {
             if (level == g->mParameterLevel)
             {
-              if (typeOfEnsembleForecast == g->mTypeOfEnsembleForecast)
+              if (forecastType == g->mForecastType)
               {
-                if (perturbationNumberStr.length() == 0)
+                if (forecastNumberStr.length() == 0)
                 {
-                  perturbationNumberStr = std::to_string((int)g->mPerturbationNumber);
-                  perturbationNumber = g->mPerturbationNumber;
+                  forecastNumberStr = std::to_string((int)g->mForecastNumber);
+                  forecastNumber = g->mForecastNumber;
                 }
 
-                if (perturbationNumber == g->mPerturbationNumber)
-                  ostr << "<OPTION selected value=\"" <<  (int)g->mPerturbationNumber << "\">" <<  (int)g->mPerturbationNumber << "</OPTION>\n";
+                if (forecastNumber == g->mForecastNumber)
+                  ostr << "<OPTION selected value=\"" <<  (int)g->mForecastNumber << "\">" <<  (int)g->mForecastNumber << "</OPTION>\n";
                 else
-                  ostr << "<OPTION value=\"" <<  (int)g->mPerturbationNumber << "\">" <<  (int)g->mPerturbationNumber << "</OPTION>\n";
+                  ostr << "<OPTION value=\"" <<  (int)g->mForecastNumber << "\">" <<  (int)g->mForecastNumber << "</OPTION>\n";
 
-                prevNumber = (int)g->mPerturbationNumber;
+                prevNumber = (int)g->mForecastNumber;
               }
             }
           }
@@ -1300,8 +1660,8 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
           parameterIdStr == g->mFmiParameterId &&
           levelId == g->mFmiParameterLevelId  &&
           level == g->mParameterLevel  &&
-          typeOfEnsembleForecast == g->mTypeOfEnsembleForecast &&
-          perturbationNumber == g->mPerturbationNumber)
+          forecastType == g->mForecastType &&
+          forecastNumber == g->mForecastNumber)
       {
         if (geometryIdList.find(g->mGeometryId) == geometryIdList.end())
           geometryIdList.insert(g->mGeometryId);
@@ -1316,7 +1676,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     if (geometryIdList.size() > 0)
     {
       //ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=' + this.options[this.selectedIndex].value)\">\n";
-      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&typeOfEnsembleForecast=" + typeOfEnsembleForecastStr + "&perturbationNumber=" + perturbationNumberStr + "&geometryId=' + this.options[this.selectedIndex].value)\">\n";
+      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&geometryId=' + this.options[this.selectedIndex].value)\">\n";
 
       std::set<uint>::iterator it;
       for (it=geometryIdList.begin(); it!=geometryIdList.end(); ++it)
@@ -1390,36 +1750,36 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 
         if (g->mGeometryId == geometryId)
         {
-          if (prevTime < g->mStartTime)
+          if (prevTime < g->mForecastTime)
           {
-            if (typeOfEnsembleForecast == g->mTypeOfEnsembleForecast)
+            if (forecastType == g->mForecastType)
             {
-              if (perturbationNumber == g->mPerturbationNumber)
+              if (forecastNumber == g->mForecastNumber)
               {
-                std::string url = "&start=" + g->mStartTime + "&fileId=" + std::to_string(g->mFileId) + "&messageIndex=" + std::to_string(g->mMessageIndex) + "&typeOfEnsembleForecast=" + typeOfEnsembleForecastStr + "&perturbationNumber=" + perturbationNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr;
+                std::string url = "&start=" + g->mForecastTime + "&fileId=" + std::to_string(g->mFileId) + "&messageIndex=" + std::to_string(g->mMessageIndex) + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr;
 
                 if (currentCont != NULL  &&  nextCont == NULL)
                   nextCont = g;
 
                 if (startTime.length() == 0)
-                  startTime = g->mStartTime;
+                  startTime = g->mForecastTime;
 
-                if (startTime == g->mStartTime)
+                if (startTime == g->mForecastTime)
                 {
                   currentCont = g;
-                  ostr << "<OPTION selected value=\"" <<  url << "\">" <<  g->mStartTime << "</OPTION>\n";
+                  ostr << "<OPTION selected value=\"" <<  url << "\">" <<  g->mForecastTime << "</OPTION>\n";
                   fileIdStr = std::to_string(g->mFileId);
                   messageIndexStr = std::to_string(g->mMessageIndex);
                 }
                 else
                 {
-                  ostr << "<OPTION value=\"" <<  url << "\">" <<  g->mStartTime << "</OPTION>\n";
+                  ostr << "<OPTION value=\"" <<  url << "\">" <<  g->mForecastTime << "</OPTION>\n";
                 }
 
                 if (currentCont == NULL)
                   prevCont = g;
 
-                prevTime = g->mStartTime;
+                prevTime = g->mForecastTime;
               }
             }
           }
@@ -1433,12 +1793,12 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     //ostr << "<TR><TD><TABLE height=\"30\"><TR>\n";
 
     if (prevCont != NULL)
-      ostr << "<TD width=\"20\" > <button type=\"button\" onClick=\"getPage(this,parent,'/grid-gui?page=main&presentation=" + presentation + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + prevCont->mStartTime + "&fileId=" + std::to_string(prevCont->mFileId) + "&messageIndex=" + std::to_string(prevCont->mMessageIndex) + "&typeOfEnsembleForecast=" + typeOfEnsembleForecastStr + "&perturbationNumber=" + perturbationNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "');\">&lt;</button></TD>\n";
+      ostr << "<TD width=\"20\" > <button type=\"button\" onClick=\"getPage(this,parent,'/grid-gui?page=main&presentation=" + presentation + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + prevCont->mForecastTime + "&fileId=" + std::to_string(prevCont->mFileId) + "&messageIndex=" + std::to_string(prevCont->mMessageIndex) + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "');\">&lt;</button></TD>\n";
     else
       ostr << "<TD width=\"20\"><button type=\"button\">&lt;</button></TD></TD>\n";
 
     if (nextCont != NULL)
-      ostr << "<TD width=\"20\"><button type=\"button\" onClick=\"getPage(this,parent,'/grid-gui?page=main&presentation=" + presentation + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + nextCont->mStartTime + "&fileId=" + std::to_string(nextCont->mFileId) + "&messageIndex=" + std::to_string(nextCont->mMessageIndex) + "&typeOfEnsembleForecast=" + typeOfEnsembleForecastStr + "&perturbationNumber=" + perturbationNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "');\">&gt;</button></TD>\n";
+      ostr << "<TD width=\"20\"><button type=\"button\" onClick=\"getPage(this,parent,'/grid-gui?page=main&presentation=" + presentation + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + nextCont->mForecastTime + "&fileId=" + std::to_string(nextCont->mFileId) + "&messageIndex=" + std::to_string(nextCont->mMessageIndex) + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "');\">&gt;</button></TD>\n";
     else
       ostr << "<TD width=\"20\"><button type=\"button\">&gt;</button></TD></TD>\n";
 
@@ -1451,7 +1811,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 
     ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>Presentation:</TD></TR>\n";
     ostr << "<TR height=\"30\"><TD>\n";
-    ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&typeOfEnsembleForecast=" + typeOfEnsembleForecastStr + "&perturbationNumber=" + perturbationNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&presentation=' + this.options[this.selectedIndex].value)\">\n";
+    ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&presentation=' + this.options[this.selectedIndex].value)\">\n";
 
     for (uint a=0; a<6; a++)
     {
@@ -1472,7 +1832,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     {
       ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>Hue:</TD></TR>\n";
       ostr << "<TR height=\"30\"><TD>\n";
-      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&typeOfEnsembleForecast=" + typeOfEnsembleForecastStr + "&perturbationNumber=" + perturbationNumberStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&hue=' + this.options[this.selectedIndex].value)\"";
+      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&hue=' + this.options[this.selectedIndex].value)\"";
 
       if (presentation == "image")
         ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=image&rotate=no&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&hue=' + this.options[this.selectedIndex].value)\"";
@@ -1501,16 +1861,16 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 
       ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>Saturation:</TD></TR>\n";
       ostr << "<TR height=\"30\"><TD>\n";
-      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&geometryId=" + geometryIdStr + "&generationId=" + generationIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&typeOfEnsembleForecast=" + typeOfEnsembleForecastStr + "&perturbationNumber=" + perturbationNumberStr + "&hue=" + hueStr + "&blur=" + blurStr + "&saturation=' + this.options[this.selectedIndex].value)\"";
+      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&geometryId=" + geometryIdStr + "&generationId=" + generationIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&blur=" + blurStr + "&saturation=' + this.options[this.selectedIndex].value)\"";
 
       if (presentation == "image")
-        ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=image&rotate=no&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&typeOfEnsembleForecast=" + typeOfEnsembleForecastStr + "&hue=" + hueStr + "&blur=" + blurStr + "&saturation=' + this.options[this.selectedIndex].value)\"";
+        ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=image&rotate=no&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&blur=" + blurStr + "&saturation=' + this.options[this.selectedIndex].value)\"";
 
       if (presentation == "image(rotated)")
-        ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=image&rotate=yes&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&typeOfEnsembleForecast=" + typeOfEnsembleForecastStr + "&hue=" + hueStr + "&blur=" + blurStr + "&saturation=' + this.options[this.selectedIndex].value)\"";
+        ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=image&rotate=yes&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&blur=" + blurStr + "&saturation=' + this.options[this.selectedIndex].value)\"";
 
       if (presentation == "map")
-        ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=map&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&typeOfEnsembleForecast=" + typeOfEnsembleForecastStr + "&hue=" + hueStr + "&blur=" + blurStr + "&saturation=' + this.options[this.selectedIndex].value)\"";
+        ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=map&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&blur=" + blurStr + "&saturation=' + this.options[this.selectedIndex].value)\"";
 
       ostr << " >\n";
 
@@ -1531,16 +1891,16 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 
       ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>Blur:</TD></TR>\n";
       ostr << "<TR height=\"30\"><TD>\n";
-      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&typeOfEnsembleForecast=" + typeOfEnsembleForecastStr + "&perturbationNumber=" + perturbationNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=' + this.options[this.selectedIndex].value)\"";
+      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=' + this.options[this.selectedIndex].value)\"";
 
       if (presentation == "image")
-        ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=image&rotate=no&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&typeOfEnsembleForecast=" + typeOfEnsembleForecastStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=' + this.options[this.selectedIndex].value)\"";
+        ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=image&rotate=no&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=' + this.options[this.selectedIndex].value)\"";
 
       if (presentation == "image(rotated)")
-        ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=image&rotate=yes&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&typeOfEnsembleForecast=" + typeOfEnsembleForecastStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=' + this.options[this.selectedIndex].value)\"";
+        ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=image&rotate=yes&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=' + this.options[this.selectedIndex].value)\"";
 
       if (presentation == "map")
-        ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=map&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&typeOfEnsembleForecast=" + typeOfEnsembleForecastStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=' + this.options[this.selectedIndex].value)\"";
+        ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=map&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=' + this.options[this.selectedIndex].value)\"";
 
       ostr << " >\n";
 
@@ -1558,6 +1918,15 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 
     }
 
+    ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>Units:</TD></TR>\n";
+    ostr << "<TR height=\"30\"><TD><INPUT type=\"text\" value=\"" << unitStr << "\"></TD></TR>\n";
+
+    ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>Value:</TD></TR>\n";
+    ostr << "<TR height=\"30\"><TD><INPUT type=\"text\" id=\"gridValue\"></TD></TR>\n";
+
+    ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>Timeseries:</TD></TR>\n";
+    ostr << "<TR height=\"100\"><TD><IMG id=\"timeseries\" style=\"height:100; max-width:250;\" alt=\"\" src=\"/grid-gui?page=timeseries&fileId=0&messageIndex=0\"></TD></TR>\n";
+
     ostr << "<TR height=\"50%\"><TD></TD></TR>\n";
     ostr << "</TABLE>\n";
     ostr << "</TD>\n";
@@ -1566,17 +1935,17 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     //ostr << "<TABLE width=\"100%\" height=\"100%\"><TR>\n";
     if (presentation == "image")
     {
-      ostr << "<TD><IMG id=\"myimage\" style=\"background:#000000; max-width:1800; height:100%; max-height:100%;\" src=\"/grid-gui?page=image&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "&rotate=no&hue=" << hueStr << "&saturation=" << saturationStr << "&blur=" << blurStr <<  "\"></TD>";
+      ostr << "<TD><IMG id=\"myimage\" style=\"background:#000000; max-width:1800; height:100%; max-height:100%;\" src=\"/grid-gui?page=image&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "&rotate=no&hue=" << hueStr << "&saturation=" << saturationStr << "&blur=" << blurStr <<  "\" onclick=\"getImageCoords(event,this," << fileIdStr << "," << messageIndexStr << ",'" << presentation << "');\"></TD>";
     }
     else
     if (presentation == "image(rotated)")
     {
-      ostr << "<TD><IMG id=\"myimage\" style=\"background:#000000; max-width:1800; height:100%; max-height:100%;\" src=\"/grid-gui?page=image&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "&rotate=yes&hue=" << hueStr << "&saturation=" << saturationStr << "&blur=" << blurStr <<  "\"></TD>";
+      ostr << "<TD><IMG id=\"myimage\" style=\"background:#000000; max-width:1800; height:100%; max-height:100%;\" src=\"/grid-gui?page=image&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "&rotate=yes&hue=" << hueStr << "&saturation=" << saturationStr << "&blur=" << blurStr <<  "\" onclick=\"getImageCoords(event,this," << fileIdStr << "," << messageIndexStr << ",'" << presentation << "');\"></TD>";
     }
     else
     if (presentation == "map")
     {
-      ostr << "<TD><IMG id=\"myimage\" style=\"background:#000000; max-width:100%; height:100%;\" src=\"/grid-gui?page=map&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "&hue=" << hueStr << "&saturation=" << saturationStr << "&blur=" << blurStr << "\"></TD>";
+      ostr << "<TD><IMG id=\"myimage\" style=\"background:#000000; max-width:100%; height:100%;\" src=\"/grid-gui?page=map&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "&hue=" << hueStr << "&saturation=" << saturationStr << "&blur=" << blurStr <<  "\"></TD>";
     }
     else
     if (presentation == "table(sample)"  || presentation == "table(full)")
@@ -1644,6 +2013,12 @@ bool Plugin::request(SmartMet::Spine::Reactor &theReactor,
 
     if (page == "table")
       return page_table(theReactor,theRequest,theResponse);
+
+    if (page == "value")
+      return page_value(theReactor,theRequest,theResponse);
+
+    if (page == "timeseries")
+      return page_timeseries(theReactor,theRequest,theResponse);
 
     return true;
   }

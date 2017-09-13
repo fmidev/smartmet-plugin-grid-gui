@@ -52,6 +52,14 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
                       const SmartMet::Spine::HTTP::Request& theRequest,
                       SmartMet::Spine::HTTP::Response& theResponse);
 
+    bool page_value(SmartMet::Spine::Reactor& theReactor,
+                      const SmartMet::Spine::HTTP::Request& theRequest,
+                      SmartMet::Spine::HTTP::Response& theResponse);
+
+    bool page_timeseries(SmartMet::Spine::Reactor& theReactor,
+                      const SmartMet::Spine::HTTP::Request& theRequest,
+                      SmartMet::Spine::HTTP::Response& theResponse);
+
     bool page_table(SmartMet::Spine::Reactor& theReactor,
                       const SmartMet::Spine::HTTP::Request& theRequest,
                       SmartMet::Spine::HTTP::Response& theResponse);
@@ -82,6 +90,8 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
                       unsigned char hue,
                       unsigned char saturation,
                       unsigned char blur);
+
+    void saveTimeSeries(const char *imageFile,std::vector<T::ParamValue>& valueList,int idx,std::set<int> dayIdx);
 
 
     Engine::Grid::Engine*     itsGridEngine;
