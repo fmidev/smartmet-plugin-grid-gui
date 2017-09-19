@@ -1417,14 +1417,20 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 
 
 
-    T::ContentInfoList contentInfoList;
-    contentServer->getContentListByGenerationId(0,gid,0,0,1000000,contentInfoList);
+    //T::ContentInfoList contentParamList;
+    //contentServer->getContentParamListByGenerationId(0,gid,contentParamList);
+
+    //T::ContentInfoList contentInfoList;
+    //contentServer->getContentListByGenerationId(0,gid,0,0,1000000,contentInfoList);
 
 
     // ### Parameters:
 
-    len = contentInfoList.getLength();
-    std::string prevFmiName;
+    std::set<std::string> paramKeyList;
+    contentServer->getContentParamKeyListByGenerationId(0,gid,T::ParamKeyType::FMI_NAME,paramKeyList);
+
+    //len = contentParamList.getLength();
+    //std::string prevFmiName;
 
     ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>Parameter:</TD></TR>\n";
     ostr << "<TR height=\"30\"><TD>\n";
@@ -1433,35 +1439,31 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     //printf("GenerationId %u\n",gid);
     //printf("ContentLen %u\n",len);
 
-    if (len > 0)
+    if (paramKeyList.size() > 0)
     {
-      contentInfoList.sort(T::ContentInfo::ComparisonMethod::fmiName_level_starttime_file_message);
-
       ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&parameterId=' + this.options[this.selectedIndex].value)\">\n";
-      for (uint a=0; a<len; a++)
+      for (auto it=paramKeyList.begin(); it!=paramKeyList.end(); ++it)
       {
-        T::ContentInfo *g = contentInfoList.getContentInfoByIndex(a);
-
-
-        if (g->mFmiParameterName.length() > 0  &&  g->mFmiParameterName != prevFmiName)
+        Identification::ParameterDefinition_fmi_cptr def = Identification::gribDef.mMessageIdentifier_fmi.getParameterDefByName(*it);
+        std::string pId = *it;
+        std::string pName = *it;
+        if (def != NULL)
         {
-          //printf("-- geom %u %u %s\n",g->mGeometryId,geometryId,g->mFmiParameterName.c_str());
+          pId = def->mFmiParameterId;
+          pName = def->mParameterName;
+          unitStr = def->mParameterUnits;
+        }
 
-          if (parameterIdStr.length() == 0)
-            parameterIdStr = g->mFmiParameterId;
+        if (parameterIdStr.length() == 0)
+          parameterIdStr = pId;
 
-
-          if (parameterIdStr == g->mFmiParameterId)
-          {
-            ostr << "<OPTION selected value=\"" <<  g->mFmiParameterId << "\">" <<  g->mFmiParameterName << "</OPTION>\n";
-            unitStr = g->mFmiParameterUnits;
-          }
-          else
-          {
-            ostr << "<OPTION value=\"" <<  g->mFmiParameterId << "\">" <<  g->mFmiParameterName << "</OPTION>\n";
-          }
-
-          prevFmiName = g->mFmiParameterName;
+        if (parameterIdStr == pId)
+        {
+          ostr << "<OPTION selected value=\"" <<  pId << "\">" <<  pName << "</OPTION>\n";
+        }
+        else
+        {
+          ostr << "<OPTION value=\"" <<  pId << "\">" <<  pName << "</OPTION>\n";
         }
       }
       ostr << "</SELECT>\n";
@@ -1471,7 +1473,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 
     // ### Level identifiers:
 
-    contentInfoList.clear();
+    T::ContentInfoList contentInfoList;
     contentServer->getContentListByParameterAndGenerationId(0,gid,T::ParamKeyType::FMI_ID,parameterIdStr,T::ParamLevelIdType::IGNORE,0,0,0,"10000101T000000","30000101T000000",0,contentInfoList);
     len = contentInfoList.getLength();
     T::ParamLevelId levelId = (T::ParamLevelId)atoi(parameterLevelIdStr.c_str());
