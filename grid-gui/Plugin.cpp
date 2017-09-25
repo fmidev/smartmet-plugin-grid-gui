@@ -613,7 +613,7 @@ bool Plugin::page_table(SmartMet::Spine::Reactor &theReactor,
     }
 
     T::GridCoordinates coordinates;
-    result = dataServer->getGridCoordinates(0,atoi(fileIdStr.c_str()),atoi(messageIndexStr.c_str()),coordinates);
+    result = dataServer->getGridCoordinates(0,atoi(fileIdStr.c_str()),atoi(messageIndexStr.c_str()),T::CoordinateType::ORIGINAL_COORDINATES,coordinates);
     if (result != 0)
     {
       ostr << "<HTML><BODY>\n";
@@ -680,8 +680,15 @@ bool Plugin::page_table(SmartMet::Spine::Reactor &theReactor,
         ostr << "<TD>";
         if (c < (uint)gridData.mValues.size())
         {
-          sprintf(tmp,"%.3f",gridData.mValues[c]);
-          ostr << tmp;
+          if (gridData.mValues[c] != ParamValueMissing)
+          {
+            sprintf(tmp,"%.3f",gridData.mValues[c]);
+            ostr << tmp;
+          }
+          else
+          {
+            ostr << "Null";
+          }
         }
         c++;
         ostr << "</TD>";
