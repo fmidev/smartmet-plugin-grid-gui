@@ -400,8 +400,8 @@ bool Plugin::page_info(SmartMet::Spine::Reactor &theReactor,
 {
   try
   {
-    std::shared_ptr<SmartMet::ContentServer::ServiceInterface> contentServer = itsGridEngine->getContentServerPtr();
-    std::shared_ptr<SmartMet::DataServer::ServiceInterface>  dataServer = itsGridEngine->getDataServerPtr();
+    auto contentServer = itsGridEngine->getContentServer_sptr();
+    auto dataServer = itsGridEngine->getDataServer_sptr();
 
     std::string fileIdStr = "";
     std::string messageIndexStr = "0";
@@ -574,9 +574,7 @@ bool Plugin::page_table(SmartMet::Spine::Reactor &theReactor,
 {
   try
   {
-    //std::shared_ptr<SmartMet::ContentServer::ServiceInterface> contentServer = itsGridEngine->getContentServerPtr();
-    std::shared_ptr<SmartMet::DataServer::ServiceInterface>  dataServer = itsGridEngine->getDataServerPtr();
-    //std::shared_ptr<SmartMet::QueryServer::ServiceInterface> queryServer = itsGridEngine->getQueryServerPt();
+    auto dataServer = itsGridEngine->getDataServer_sptr();
 
     std::string fileIdStr = "";
     std::string messageIndexStr = "0";
@@ -718,9 +716,8 @@ bool Plugin::page_value(SmartMet::Spine::Reactor &theReactor,
 {
   try
   {
-    std::shared_ptr<SmartMet::ContentServer::ServiceInterface> contentServer = itsGridEngine->getContentServerPtr();
-    std::shared_ptr<SmartMet::DataServer::ServiceInterface>  dataServer = itsGridEngine->getDataServerPtr();
-    //std::shared_ptr<SmartMet::QueryServer::ServiceInterface> queryServer = itsGridEngine->getQueryServerPt();
+    auto contentServer = itsGridEngine->getContentServer_sptr();
+    auto dataServer = itsGridEngine->getDataServer_sptr();
 
     uint fileId = 0;
     uint messageIndex = 0;
@@ -802,9 +799,8 @@ bool Plugin::page_timeseries(SmartMet::Spine::Reactor &theReactor,
 {
   try
   {
-    std::shared_ptr<SmartMet::ContentServer::ServiceInterface> contentServer = itsGridEngine->getContentServerPtr();
-    std::shared_ptr<SmartMet::DataServer::ServiceInterface>  dataServer = itsGridEngine->getDataServerPtr();
-    //std::shared_ptr<SmartMet::QueryServer::ServiceInterface> queryServer = itsGridEngine->getQueryServerPt();
+    auto contentServer = itsGridEngine->getContentServer_sptr();
+    auto dataServer = itsGridEngine->getDataServer_sptr();
 
     uint fileId = 0;
     uint messageIndex = 0;
@@ -861,7 +857,7 @@ bool Plugin::page_timeseries(SmartMet::Spine::Reactor &theReactor,
       yy = height-yy;
 
     T::ContentInfoList contentInfoList;
-    contentServer->getContentListByParameterAndGenerationId(0,contentInfo.mGenerationId,T::ParamKeyType::FMI_ID,contentInfo.mFmiParameterId,T::ParamLevelIdType::FMI,contentInfo.mFmiParameterLevelId,contentInfo.mParameterLevel,contentInfo.mParameterLevel,"19000101T000000","23000101T000000",0,contentInfoList);
+    contentServer->getContentListByParameterAndGenerationId(0,contentInfo.mGenerationId,T::ParamKeyType::FMI_ID,contentInfo.mFmiParameterId,T::ParamLevelIdType::FMI,contentInfo.mFmiParameterLevelId,contentInfo.mParameterLevel,contentInfo.mParameterLevel,-1,0,-1,"19000101T000000","23000101T000000",0,contentInfoList);
 
     contentInfoList.sort(T::ContentInfo::ComparisonMethod::fmiId_level_starttime_file_message);
 
@@ -962,9 +958,7 @@ bool Plugin::page_image(SmartMet::Spine::Reactor &theReactor,
 {
   try
   {
-    //std::shared_ptr<SmartMet::ContentServer::ServiceInterface> contentServer = itsGridEngine->getContentServerPtr();
-    std::shared_ptr<SmartMet::DataServer::ServiceInterface>  dataServer = itsGridEngine->getDataServerPtr();
-    //std::shared_ptr<SmartMet::QueryServer::ServiceInterface> queryServer = itsGridEngine->getQueryServerPt();
+    auto dataServer = itsGridEngine->getDataServer_sptr();
 
     std::string fileIdStr = "";
     std::string messageIndexStr = "0";
@@ -1081,9 +1075,7 @@ bool Plugin::page_map(SmartMet::Spine::Reactor &theReactor,
 {
   try
   {
-    //std::shared_ptr<SmartMet::ContentServer::ServiceInterface> contentServer = itsGridEngine->getContentServerPtr();
-    std::shared_ptr<SmartMet::DataServer::ServiceInterface>  dataServer = itsGridEngine->getDataServerPtr();
-    //std::shared_ptr<SmartMet::QueryServer::ServiceInterface> queryServer = itsGridEngine->getQueryServerPt();
+    auto dataServer = itsGridEngine->getDataServer_sptr();
 
     std::string fileIdStr = "";
     std::string messageIndexStr = "0";
@@ -1193,9 +1185,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 {
   try
   {
-    std::shared_ptr<SmartMet::ContentServer::ServiceInterface> contentServer = itsGridEngine->getContentServerPtr();
-    //std::shared_ptr<SmartMet::DataServer::ServiceInterface>  dataServer = itsGridEngine->getDataServerPtr();
-    //std::shared_ptr<SmartMet::QueryServer::ServiceInterface> queryServer = itsGridEngine->getQueryServerPt();
+    auto contentServer = itsGridEngine->getContentServer_sptr();
 
     std::string producerIdStr = "";
     std::string generationIdStr = "";
@@ -1481,7 +1471,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     // ### Level identifiers:
 
     T::ContentInfoList contentInfoList;
-    contentServer->getContentListByParameterAndGenerationId(0,gid,T::ParamKeyType::FMI_ID,parameterIdStr,T::ParamLevelIdType::IGNORE,0,0,0,"10000101T000000","30000101T000000",0,contentInfoList);
+    contentServer->getContentListByParameterAndGenerationId(0,gid,T::ParamKeyType::FMI_ID,parameterIdStr,T::ParamLevelIdType::IGNORE,0,0,0,-1,0,-1,"10000101T000000","30000101T000000",0,contentInfoList);
     len = contentInfoList.getLength();
     T::ParamLevelId levelId = (T::ParamLevelId)atoi(parameterLevelIdStr.c_str());
     int prevLevelId = -1;
@@ -1526,7 +1516,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     // ### Levels:
 
     contentInfoList.clear();
-    contentServer->getContentListByParameterAndGenerationId(0,gid,T::ParamKeyType::FMI_ID,parameterIdStr,T::ParamLevelIdType::FMI,levelId,0,0xFFFFFFFF,"10000101T000000","30000101T000000",0,contentInfoList);
+    contentServer->getContentListByParameterAndGenerationId(0,gid,T::ParamKeyType::FMI_ID,parameterIdStr,T::ParamLevelIdType::FMI,levelId,0,0x7FFFFFFF,-1,0,-1,"10000101T000000","30000101T000000",0,contentInfoList);
     len = contentInfoList.getLength();
     T::ParamLevel level = (T::ParamLevel)atoi(parameterLevelStr.c_str());
     int prevLevel = -1;
@@ -1657,9 +1647,9 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 
     // ### Geometries:
 
-    uint geometryId  = (uint)atoi(geometryIdStr.c_str());
+    T::GeometryId geometryId  = (T::GeometryId)atoi(geometryIdStr.c_str());
 
-    std::set<uint> geometryIdList;
+    std::set<T::GeometryId> geometryIdList;
 
     for (uint a=0; a<len; a++)
     {
@@ -1687,8 +1677,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
       //ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=' + this.options[this.selectedIndex].value)\">\n";
       ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&geometryId=' + this.options[this.selectedIndex].value)\">\n";
 
-      std::set<uint>::iterator it;
-      for (it=geometryIdList.begin(); it!=geometryIdList.end(); ++it)
+      for (auto it=geometryIdList.begin(); it!=geometryIdList.end(); ++it)
       {
         std::string st = std::to_string(*it);
 
@@ -1722,7 +1711,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     // ### Times:
 
     contentInfoList.clear();
-    contentServer->getContentListByParameterAndGenerationId(0,gid,T::ParamKeyType::FMI_ID,parameterIdStr,T::ParamLevelIdType::FMI,levelId,level,level,"10000101T000000","30000101T000000",0,contentInfoList);
+    contentServer->getContentListByParameterAndGenerationId(0,gid,T::ParamKeyType::FMI_ID,parameterIdStr,T::ParamLevelIdType::FMI,levelId,level,level,-1,0,-1,"10000101T000000","30000101T000000",0,contentInfoList);
     len = contentInfoList.getLength();
     std::string prevTime = "19000101T0000";
 
