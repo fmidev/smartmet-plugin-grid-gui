@@ -5,9 +5,10 @@
 // ======================================================================
 
 #include "Plugin.h"
-#include "grid-files/common/GeneralFunctions.h"
-#include "grid-files/common/ImageFunctions.h"
-#include "grid-files/identification/GribDef.h"
+
+#include <grid-files/common/GeneralFunctions.h>
+#include <grid-files/common/ImageFunctions.h>
+#include <grid-files/identification/GribDef.h>
 #include <spine/SmartMet.h>
 #include <macgyver/TimeFormatter.h>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
