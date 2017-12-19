@@ -416,6 +416,7 @@ bool Plugin::page_info(SmartMet::Spine::Reactor &theReactor,
     auto contentServer = itsGridEngine->getContentServer_sptr();
     auto dataServer = itsGridEngine->getDataServer_sptr();
 
+    uint flags = 0;
     std::string fileIdStr = "";
     std::string messageIndexStr = "0";
 
@@ -481,7 +482,7 @@ bool Plugin::page_info(SmartMet::Spine::Reactor &theReactor,
     }
 
     T::AttributeList attributeList;
-    result = dataServer->getGridAttributeList(0,contentInfo.mFileId,contentInfo.mMessageIndex,attributeList);
+    result = dataServer->getGridAttributeList(0,contentInfo.mFileId,contentInfo.mMessageIndex,flags,attributeList);
     if (result != 0)
     {
       ostr << "<HTML><BODY>\n";
@@ -612,8 +613,9 @@ bool Plugin::page_table(SmartMet::Spine::Reactor &theReactor,
 
     std::ostringstream ostr;
 
+    uint flags = 0;
     T::GridData gridData;
-    int result = dataServer->getGridData(0,atoi(fileIdStr.c_str()),atoi(messageIndexStr.c_str()),gridData);
+    int result = dataServer->getGridData(0,atoi(fileIdStr.c_str()),atoi(messageIndexStr.c_str()),flags,gridData);
     if (result != 0)
     {
       ostr << "<HTML><BODY>\n";
@@ -624,7 +626,7 @@ bool Plugin::page_table(SmartMet::Spine::Reactor &theReactor,
     }
 
     T::GridCoordinates coordinates;
-    result = dataServer->getGridCoordinates(0,atoi(fileIdStr.c_str()),atoi(messageIndexStr.c_str()),T::CoordinateType::ORIGINAL_COORDINATES,coordinates);
+    result = dataServer->getGridCoordinates(0,atoi(fileIdStr.c_str()),atoi(messageIndexStr.c_str()),flags,T::CoordinateType::ORIGINAL_COORDINATES,coordinates);
     if (result != 0)
     {
       ostr << "<HTML><BODY>\n";
@@ -769,16 +771,14 @@ bool Plugin::page_value(SmartMet::Spine::Reactor &theReactor,
     if (contentInfo.mGeometryId == 0)
       return true;
 
-    GRIB2::GridDefinition_ptr def =  Identification::gribDef.getGridDefinition2ByGeometryId(contentInfo.mGeometryId);
-    if (def == NULL)
+    uint cols = 0;
+    uint rows = 0;
+
+    if (!Identification::gribDef.getGridDimensionsByGeometryId(contentInfo.mGeometryId,cols,rows))
       return true;
 
-    T::Dimensions_opt dim = def->getGridDimensions();
-    if (!dim)
-      return true;
-
-    uint height = dim->ny();
-    uint width = dim->nx();
+    uint height = rows;
+    uint width = cols;
 
     double xx = (double)(xPos * (double)width);
     double yy = (double)(yPos * (double)height);
@@ -786,8 +786,9 @@ bool Plugin::page_value(SmartMet::Spine::Reactor &theReactor,
     if (presentation == "image(rotated)")
       yy = height-yy;
 
+    uint flags = 0;
     T::ParamValue value;
-    dataServer->getGridValueByPoint(0,fileId,messageIndex,T::CoordinateType::GRID_COORDINATES,xx,yy,T::InterpolationMethod::Linear,value);
+    dataServer->getGridValueByPoint(0,fileId,messageIndex,flags,T::CoordinateType::GRID_COORDINATES,xx,yy,T::InterpolationMethod::Linear,value);
 
     if (value != ParamValueMissing)
       theResponse.setContent(std::to_string(value));
@@ -852,16 +853,14 @@ bool Plugin::page_timeseries(SmartMet::Spine::Reactor &theReactor,
     if (contentInfo.mGeometryId == 0)
       return true;
 
-    GRIB2::GridDefinition_ptr def =  Identification::gribDef.getGridDefinition2ByGeometryId(contentInfo.mGeometryId);
-    if (def == NULL)
+    uint cols = 0;
+    uint rows = 0;
+
+    if (!Identification::gribDef.getGridDimensionsByGeometryId(contentInfo.mGeometryId,cols,rows))
       return true;
 
-    T::Dimensions_opt dim = def->getGridDimensions();
-    if (!dim)
-      return true;
-
-    uint height = dim->ny();
-    uint width = dim->nx();
+    uint height = rows;
+    uint width = cols;
 
     double xx = (double)(xPos * (double)width);
     double yy = (double)(yPos * (double)height);
@@ -880,6 +879,7 @@ bool Plugin::page_timeseries(SmartMet::Spine::Reactor &theReactor,
     //std::ostringstream ostr;
     std::set<int> dayIdx;
 
+    uint flags = 0;
     uint c = 0;
     uint len = contentInfoList.getLength();
     for (uint t=0; t<len; t++)
@@ -889,7 +889,7 @@ bool Plugin::page_timeseries(SmartMet::Spine::Reactor &theReactor,
       if (info->mGeometryId == contentInfo.mGeometryId  &&  info->mForecastType == contentInfo.mForecastType  &&  info->mForecastNumber == contentInfo.mForecastNumber)
       {
         T::ParamValue value;
-        if (dataServer->getGridValueByPoint(0,info->mFileId,info->mMessageIndex,T::CoordinateType::GRID_COORDINATES,xx,yy,T::InterpolationMethod::Linear,value) == 0)
+        if (dataServer->getGridValueByPoint(0,info->mFileId,info->mMessageIndex,flags,T::CoordinateType::GRID_COORDINATES,xx,yy,T::InterpolationMethod::Linear,value) == 0)
         {
           if (value != ParamValueMissing)
           {
@@ -1009,9 +1009,10 @@ bool Plugin::page_image(SmartMet::Spine::Reactor &theReactor,
     if (v)
       blurStr = *v;
 
+    uint flags = 0;
     T::GridData gridData;
 
-    int result = dataServer->getGridData(0,atoi(fileIdStr.c_str()),atoi(messageIndexStr.c_str()),gridData);
+    int result = dataServer->getGridData(0,atoi(fileIdStr.c_str()),flags,atoi(messageIndexStr.c_str()),gridData);
 
     if (result != 0)
     {
@@ -1120,9 +1121,10 @@ bool Plugin::page_map(SmartMet::Spine::Reactor &theReactor,
 
     uint columns = 1800;
     uint rows = 900;
+    uint flags = 0;
     T::ParamValue_vec values;
 
-    int result = dataServer->getGridValueVectorByRectangle(0,atoi(fileIdStr.c_str()),atoi(messageIndexStr.c_str()),T::CoordinateType::LATLON_COORDINATES,columns,rows,-180,90,360/(double)columns,-180/(double)rows,T::InterpolationMethod::Nearest,values);
+    int result = dataServer->getGridValueVectorByRectangle(0,atoi(fileIdStr.c_str()),atoi(messageIndexStr.c_str()),flags,T::CoordinateType::LATLON_COORDINATES,columns,rows,-180,90,360/(double)columns,-180/(double)rows,T::InterpolationMethod::Nearest,values);
     if (result != 0)
     {
       std::ostringstream ostr;
@@ -1454,14 +1456,15 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
       ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&parameterId=' + this.options[this.selectedIndex].value)\">\n";
       for (auto it=paramKeyList.begin(); it!=paramKeyList.end(); ++it)
       {
-        Identification::ParameterDefinition_fmi_cptr def = Identification::gribDef.mMessageIdentifier_fmi.getParameterDefByName(*it);
         std::string pId = *it;
         std::string pName = *it;
-        if (def != NULL)
+        Identification::ParameterDefinition_fmi def;
+
+        if (Identification::gribDef.mMessageIdentifier_fmi.getParameterDefByName(*it,def))
         {
-          pId = def->mFmiParameterId;
-          pName = def->mParameterName;
-          unitStr = def->mParameterUnits;
+          pId = def.mFmiParameterId;
+          pName = def.mParameterName;
+          unitStr = def.mParameterUnits;
         }
 
         if (parameterIdStr.length() == 0)
@@ -1694,16 +1697,16 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
       {
         std::string st = std::to_string(*it);
 
-        GRIB2::GridDefinition_ptr def =  Identification::gribDef.getGridDefinition2ByGeometryId(*it);
-        if (def != NULL)
-        {
-          T::Dimensions_opt d = def->getGridDimensions();
+        std::string gName;
+        uint cols = 0;
+        uint rows = 0;
 
-          if (d)
-            st = def->getGridGeometryName() + " (" + std::to_string(d->nx()) + " x " + std::to_string(d->ny()) + ")";
-          else
-            st = def->getGridGeometryName();
-        }
+        Identification::gribDef.getGeometryNameById(*it,gName);
+
+        if (Identification::gribDef.getGridDimensionsByGeometryId(*it,cols,rows))
+          st = gName + " (" + std::to_string(cols) + " x " + std::to_string(rows) + ")";
+        else
+          st = gName;
 
         if (geometryId == 0)
         {
@@ -1975,9 +1978,9 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 
     ostr << "</TR>\n";
 
-    Identification::ParameterDefinition_fmi_cptr pDef = Identification::gribDef.mMessageIdentifier_fmi.getParameterDefById(parameterIdStr);
-    if (pDef != NULL)
-      ostr << "<TR><TD style=\"height:25; vertical-align:middle; text-align:left; font-size:12;\">" << pDef->mParameterDescription << "</TD></TR>\n";
+    Identification::ParameterDefinition_fmi pDef;
+    if (Identification::gribDef.mMessageIdentifier_fmi.getParameterDefById(parameterIdStr,pDef))
+      ostr << "<TR><TD style=\"height:25; vertical-align:middle; text-align:left; font-size:12;\">" << pDef.mParameterDescription << "</TD></TR>\n";
 
     //ostr << "</TABLE>\n";
     //ostr << "</TD></TR>\n";
