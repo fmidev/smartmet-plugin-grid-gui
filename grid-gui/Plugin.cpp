@@ -8,7 +8,7 @@
 
 #include <grid-files/common/GeneralFunctions.h>
 #include <grid-files/common/ImageFunctions.h>
-#include <grid-files/identification/GribDef.h>
+#include <grid-files/identification/GridDef.h>
 #include <spine/SmartMet.h>
 #include <macgyver/TimeFormatter.h>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
@@ -79,12 +79,12 @@ Plugin::Plugin(SmartMet::Spine::Reactor *theReactor, const char *theConfig)
       throw exception;
     }
 
-    if (!itsConfig.exists("grid.configDirectory"))
-      throw SmartMet::Spine::Exception(BCP, "The 'grid.configDirectory' attribute not specified in the config file");
+    if (!itsConfig.exists("grid-files.configFile"))
+      throw SmartMet::Spine::Exception(BCP, "The 'grid-files.configFile' attribute not specified in the config file");
 
-    itsConfig.lookupValue("grid.configDirectory", itsGridConfigDirectory);
+    itsConfig.lookupValue("grid-files.configFile", itsGridConfigFile);
 
-    Identification::gribDef.init(itsGridConfigDirectory.c_str());
+    Identification::gridDef.init(itsGridConfigFile.c_str());
   }
   catch (...)
   {
@@ -426,7 +426,7 @@ bool Plugin::page_info(SmartMet::Spine::Reactor &theReactor,
 
     v = theRequest.getParameter("messageIndex");
     if (v)
-      std::string messageIndexStr = *v;
+      messageIndexStr = *v;
 
     if (fileIdStr.length() == 0)
       return true;
@@ -605,7 +605,7 @@ bool Plugin::page_table(SmartMet::Spine::Reactor &theReactor,
 
     v = theRequest.getParameter("messageIndex");
     if (v)
-      std::string messageIndexStr = *v;
+      messageIndexStr = *v;
 
 
     if (fileIdStr.length() == 0)
@@ -725,6 +725,120 @@ bool Plugin::page_table(SmartMet::Spine::Reactor &theReactor,
 
 
 
+bool Plugin::page_coordinates(SmartMet::Spine::Reactor &theReactor,
+                            const HTTP::Request &theRequest,
+                            HTTP::Response &theResponse)
+{
+  try
+  {
+    auto dataServer = itsGridEngine->getDataServer_sptr();
+
+    std::string fileIdStr = "";
+    std::string messageIndexStr = "0";
+    std::string presentation = "coordinates(sample)";
+    char tmp[1000];
+
+    boost::optional<std::string> v = theRequest.getParameter("presentation");
+    if (v)
+      presentation = *v;
+
+    v = theRequest.getParameter("fileId");
+    if (v)
+      fileIdStr = *v;
+
+    v = theRequest.getParameter("messageIndex");
+    if (v)
+      messageIndexStr = *v;
+
+
+    if (fileIdStr.length() == 0)
+      return true;
+
+    std::ostringstream ostr;
+
+    uint flags = 0;
+
+    T::GridCoordinates coordinates;
+    int result = dataServer->getGridCoordinates(0,atoi(fileIdStr.c_str()),atoi(messageIndexStr.c_str()),flags,T::CoordinateType::LATLON_COORDINATES,coordinates);
+    if (result != 0)
+    {
+      ostr << "<HTML><BODY>\n";
+      ostr << "DataServer request 'getGridCoordinates()' failed : " << result << "\n";
+      ostr << "</BODY></HTML>\n";
+      theResponse.setContent(std::string(ostr.str()));
+      return true;
+    }
+
+
+    uint c = 0;
+    uint height = coordinates.mRows;
+    uint width = coordinates.mColumns;
+
+    if (presentation == "coordinates(sample)")
+    {
+      if (width > 100)
+        width = 100;
+
+      if (height > 100)
+        height = 100;
+    }
+
+    ostr << "<HTML><BODY>\n";
+    ostr << "<TABLE border=\"1\" style=\"text-align:right; font-size:10pt;\">\n";
+
+
+    // ### Column index header:
+
+    ostr << "<TR bgColor=\"#E0E0E0\"><TD></TD><TD></TD>";
+    for (uint x=0; x<width; x++)
+    {
+      ostr << "<TD>" << x << "</TD>";
+    }
+    ostr << "</TR>\n";
+
+
+    // ### Rows:
+
+    for (uint y=0; y<height; y++)
+    {
+      c = y*coordinates.mColumns;
+
+      // ### Row index and Y coordinate:
+
+      ostr << "<TR><TD bgColor=\"#E0E0E0\">" << y << "</TD>";
+
+      // ### Columns:
+
+      for (uint x=0; x<width; x++)
+      {
+        ostr << "<TD>";
+        if (c < (uint)coordinates.mCoordinateList.size())
+        {
+          sprintf(tmp,"%.8f,%.8f",coordinates.mCoordinateList[c].y(),coordinates.mCoordinateList[c].x());
+          ostr << tmp;
+        }
+        c++;
+        ostr << "</TD>";
+      }
+      ostr << "</TR>\n";
+    }
+    ostr << "</TABLE>\n";
+    ostr << "</BODY></HTML>\n";
+
+    theResponse.setContent(std::string(ostr.str()));
+
+    return true;
+  }
+  catch (...)
+  {
+    throw SmartMet::Spine::Exception(BCP, "Operation failed!", NULL);
+  }
+}
+
+
+
+
+
 bool Plugin::page_value(SmartMet::Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse)
@@ -774,7 +888,7 @@ bool Plugin::page_value(SmartMet::Spine::Reactor &theReactor,
     uint cols = 0;
     uint rows = 0;
 
-    if (!Identification::gribDef.getGridDimensionsByGeometryId(contentInfo.mGeometryId,cols,rows))
+    if (!Identification::gridDef.getGridDimensionsByGeometryId(contentInfo.mGeometryId,cols,rows))
       return true;
 
     uint height = rows;
@@ -856,7 +970,7 @@ bool Plugin::page_timeseries(SmartMet::Spine::Reactor &theReactor,
     uint cols = 0;
     uint rows = 0;
 
-    if (!Identification::gribDef.getGridDimensionsByGeometryId(contentInfo.mGeometryId,cols,rows))
+    if (!Identification::gridDef.getGridDimensionsByGeometryId(contentInfo.mGeometryId,cols,rows))
       return true;
 
     uint height = rows;
@@ -988,7 +1102,7 @@ bool Plugin::page_image(SmartMet::Spine::Reactor &theReactor,
 
     v = theRequest.getParameter("messageIndex");
     if (v)
-      std::string messageIndexStr = *v;
+      messageIndexStr = *v;
 
     v = theRequest.getParameter("rotate");
     if (v  &&  *v == "no")
@@ -1012,7 +1126,7 @@ bool Plugin::page_image(SmartMet::Spine::Reactor &theReactor,
     uint flags = 0;
     T::GridData gridData;
 
-    int result = dataServer->getGridData(0,atoi(fileIdStr.c_str()),flags,atoi(messageIndexStr.c_str()),gridData);
+    int result = dataServer->getGridData(0,atoi(fileIdStr.c_str()),atoi(messageIndexStr.c_str()),flags,gridData);
 
     if (result != 0)
     {
@@ -1104,7 +1218,7 @@ bool Plugin::page_map(SmartMet::Spine::Reactor &theReactor,
 
     v = theRequest.getParameter("messageIndex");
     if (v)
-      std::string messageIndexStr = *v;
+      messageIndexStr = *v;
 
 
     v = theRequest.getParameter("hue");
@@ -1262,7 +1376,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 
     v = theRequest.getParameter("messageIndex");
     if (v)
-      std::string messageIndexStr = *v;
+      messageIndexStr = *v;
 
     v = theRequest.getParameter("start");
     if (v)
@@ -1458,9 +1572,9 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
       {
         std::string pId = *it;
         std::string pName = *it;
-        Identification::ParameterDefinition_fmi def;
+        Identification::FmiParameterDef def;
 
-        if (Identification::gribDef.mMessageIdentifier_fmi.getParameterDefByName(*it,def))
+        if (Identification::gridDef.getFmiParameterDefByName(*it,def))
         {
           pId = def.mFmiParameterId;
           pName = def.mParameterName;
@@ -1701,9 +1815,9 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
         uint cols = 0;
         uint rows = 0;
 
-        Identification::gribDef.getGeometryNameById(*it,gName);
+        Identification::gridDef.getGeometryNameById(*it,gName);
 
-        if (Identification::gribDef.getGridDimensionsByGeometryId(*it,cols,rows))
+        if (Identification::gridDef.getGridDimensionsByGeometryId(*it,cols,rows))
           st = gName + " (" + std::to_string(cols) + " x " + std::to_string(rows) + ")";
         else
           st = gName;
@@ -1821,13 +1935,13 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     // ### Modes:
 
 
-    const char *modes[] = {"image","image(rotated)","map","info","table(full)","table(sample)"};
+    const char *modes[] = {"image","image(rotated)","map","info","table(full)","table(sample)","coordinates(full)","coordinates(sample)"};
 
     ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>Presentation:</TD></TR>\n";
     ostr << "<TR height=\"30\"><TD>\n";
     ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&presentation=' + this.options[this.selectedIndex].value)\">\n";
 
-    for (uint a=0; a<6; a++)
+    for (uint a=0; a<8; a++)
     {
       if (presentation.length() == 0)
         presentation = modes[a];
@@ -1939,7 +2053,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     ostr << "<TR height=\"30\"><TD><INPUT type=\"text\" id=\"gridValue\"></TD></TR>\n";
 
     ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>Timeseries:</TD></TR>\n";
-    ostr << "<TR height=\"100\"><TD><IMG id=\"timeseries\" style=\"height:100; max-width:250;\" alt=\"\" src=\"/grid-gui?page=timeseries&fileId=0&messageIndex=0\"></TD></TR>\n";
+    ostr << "<TR height=\"100\"><TD><IMG id=\"timeseries\" style=\"height:100; max-width:250;\" alt=\"\" src=\"/grid-gui?page=timeseries&fileId=0&messageIndex=" << messageIndexStr << "\"></TD></TR>\n";
 
     ostr << "<TR height=\"50%\"><TD></TD></TR>\n";
     ostr << "</TABLE>\n";
@@ -1969,6 +2083,13 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
       ostr << "</IFRAME></TD>";
     }
     else
+    if (presentation == "coordinates(sample)"  || presentation == "coordinates(full)")
+    {
+      ostr << "<TD><IFRAME width=\"100%\" height=\"100%\" src=\"grid-gui?page=coordinates&presentation=" + presentation + "&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "\">";
+      ostr << "<p>Your browser does not support iframes.</p>\n";
+      ostr << "</IFRAME></TD>";
+    }
+    else
     if (presentation == "info")
     {
       ostr << "<TD><IFRAME width=\"100%\" height=\"100%\" src=\"grid-gui?page=info&presentation=" + presentation + "&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "\">";
@@ -1978,8 +2099,8 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 
     ostr << "</TR>\n";
 
-    Identification::ParameterDefinition_fmi pDef;
-    if (Identification::gribDef.mMessageIdentifier_fmi.getParameterDefById(parameterIdStr,pDef))
+    Identification::FmiParameterDef pDef;
+    if (Identification::gridDef.getFmiParameterDefById(parameterIdStr,pDef))
       ostr << "<TR><TD style=\"height:25; vertical-align:middle; text-align:left; font-size:12;\">" << pDef.mParameterDescription << "</TD></TR>\n";
 
     //ostr << "</TABLE>\n";
@@ -2027,6 +2148,9 @@ bool Plugin::request(SmartMet::Spine::Reactor &theReactor,
 
     if (page == "table")
       return page_table(theReactor,theRequest,theResponse);
+
+    if (page == "coordinates")
+      return page_coordinates(theReactor,theRequest,theResponse);
 
     if (page == "value")
       return page_value(theReactor,theRequest,theResponse);

@@ -64,6 +64,10 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
                       const SmartMet::Spine::HTTP::Request& theRequest,
                       SmartMet::Spine::HTTP::Response& theResponse);
 
+    bool page_coordinates(SmartMet::Spine::Reactor& theReactor,
+                      const SmartMet::Spine::HTTP::Request& theRequest,
+                      SmartMet::Spine::HTTP::Response& theResponse);
+
     bool page_image(SmartMet::Spine::Reactor& theReactor,
                       const SmartMet::Spine::HTTP::Request& theRequest,
                       SmartMet::Spine::HTTP::Response& theResponse);
@@ -98,7 +102,7 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
     const std::string         itsModuleName;
     SmartMet::Spine::Reactor* itsReactor;
     libconfig::Config         itsConfig;
-    std::string               itsGridConfigDirectory;
+    std::string               itsGridConfigFile;
 
 
 };  // class Plugin
