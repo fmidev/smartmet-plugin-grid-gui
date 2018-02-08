@@ -789,7 +789,7 @@ bool Plugin::page_coordinates(SmartMet::Spine::Reactor &theReactor,
 
     // ### Column index header:
 
-    ostr << "<TR bgColor=\"#E0E0E0\"><TD></TD><TD></TD>";
+    ostr << "<TR bgColor=\"#E0E0E0\"><TD></TD>";
     for (uint x=0; x<width; x++)
     {
       ostr << "<TD>" << x << "</TD>";
