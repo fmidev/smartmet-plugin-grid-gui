@@ -17,6 +17,8 @@ BuildRequires: libconfig-devel
 Requires: libconfig
 Requires: smartmet-library-macgyver >= 18.2.6
 Requires: smartmet-library-spine >= 18.1.15
+Requires: smartmet-server >= 17.11.10
+Requires: smartmet-engine-grid >= 18.2.8
 Requires: boost-date-time
 Provides: %{SPECNAME}
 
