@@ -40,8 +40,7 @@ ifeq ($(CXX), clang++)
 
  INCLUDES = \
 	-isystem $(includedir) \
-	-isystem $(includedir)/smartmet \
-	-isystem $(includedir)/mysql
+	-isystem $(includedir)/smartmet
 
 else
 
@@ -53,9 +52,10 @@ else
 	-Winline \
 	-Wno-multichar \
 	-Wno-pmf-conversions \
-	-Woverloaded-virtual  \
 	-Wpointer-arith \
 	-Wredundant-decls \
+
+#	-Woverloaded-virtual
 
  FLAGS_RELEASE = -Wuninitialized
 
@@ -63,8 +63,7 @@ else
 	-I$(includedir) \
 	-I$(includedir)/smartmet \
 	-I$(includedir)/smartmet/grid-files \
-	-I$(includedir)/smartmet/grid-content \
-	-I$(includedir)/mysql
+	-I$(includedir)/smartmet/grid-content
 
 endif
 
@@ -81,7 +80,8 @@ endif
 
 LIBS = -L$(libdir) \
 	-lsmartmet-spine \
-	-lsmartmet-macgyver
+	-lsmartmet-macgyver \
+	-lboost_date_time
 
 # What to install
 
