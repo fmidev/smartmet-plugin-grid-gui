@@ -903,7 +903,7 @@ bool Plugin::page_value(SmartMet::Spine::Reactor &theReactor,
 
     uint flags = 0;
     T::ParamValue value;
-    dataServer->getGridValueByPoint(0,fileId,messageIndex,flags,T::CoordinateType::GRID_COORDINATES,xx,yy,T::InterpolationMethod::Linear,value);
+    dataServer->getGridValueByPoint(0,fileId,messageIndex,flags,T::CoordinateType::GRID_COORDINATES,xx,yy,T::AreaInterpolationMethod::Linear,value);
 
     if (value != ParamValueMissing)
       theResponse.setContent(std::to_string(value));
@@ -1004,7 +1004,7 @@ bool Plugin::page_timeseries(SmartMet::Spine::Reactor &theReactor,
       if (info->mGeometryId == contentInfo.mGeometryId  &&  info->mForecastType == contentInfo.mForecastType  &&  info->mForecastNumber == contentInfo.mForecastNumber)
       {
         T::ParamValue value;
-        if (dataServer->getGridValueByPoint(0,info->mFileId,info->mMessageIndex,flags,T::CoordinateType::GRID_COORDINATES,xx,yy,T::InterpolationMethod::Linear,value) == 0)
+        if (dataServer->getGridValueByPoint(0,info->mFileId,info->mMessageIndex,flags,T::CoordinateType::GRID_COORDINATES,xx,yy,T::AreaInterpolationMethod::Linear,value) == 0)
         {
           if (value != ParamValueMissing)
           {
@@ -1239,7 +1239,7 @@ bool Plugin::page_map(SmartMet::Spine::Reactor &theReactor,
     uint flags = 0;
     T::ParamValue_vec values;
 
-    int result = dataServer->getGridValueVectorByRectangle(0,atoi(fileIdStr.c_str()),atoi(messageIndexStr.c_str()),flags,T::CoordinateType::LATLON_COORDINATES,columns,rows,-180,90,360/(double)columns,-180/(double)rows,T::InterpolationMethod::Nearest,values);
+    int result = dataServer->getGridValueVectorByRectangle(0,atoi(fileIdStr.c_str()),atoi(messageIndexStr.c_str()),flags,T::CoordinateType::LATLON_COORDINATES,columns,rows,-180,90,360/(double)columns,-180/(double)rows,T::AreaInterpolationMethod::Nearest,values);
     if (result != 0)
     {
       std::ostringstream ostr;
