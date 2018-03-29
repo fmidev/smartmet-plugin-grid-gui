@@ -418,7 +418,7 @@ bool Plugin::page_info(SmartMet::Spine::Reactor &theReactor,
     if (v)
       messageIndexStr = *v;
 
-    if (fileIdStr.length() == 0)
+    if (fileIdStr.empty())
       return true;
 
 
@@ -599,7 +599,7 @@ bool Plugin::page_table(SmartMet::Spine::Reactor &theReactor,
       messageIndexStr = *v;
 
 
-    if (fileIdStr.length() == 0)
+    if (fileIdStr.empty())
       return true;
 
     std::ostringstream ostr;
@@ -742,7 +742,7 @@ bool Plugin::page_coordinates(SmartMet::Spine::Reactor &theReactor,
       messageIndexStr = *v;
 
 
-    if (fileIdStr.length() == 0)
+    if (fileIdStr.empty())
       return true;
 
     std::ostringstream ostr;
@@ -1442,10 +1442,8 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     ostr << "  var txt = httpGet(url);\n";
     ostr << "  document.getElementById('gridValue').value = txt;\n";
 
-    ostr << "  var url2 = \"/grid-gui?page=timeseries&presentation=\" + presentation + \"&fileId=\" + fileId + \"&messagIndex=\" + messageIndex + \"&x=\" + prosX + \"&y=\" + prosY;\n";
-    //ostr << "  var txt2 = httpGet(url2);\n";
-    //ostr << "  document.getElementById('timeseries').value = txt2;\n";
-    ostr << "  document.getElementById('timeseries').src = url2;\n";
+    //ostr << "  var url2 = \"/grid-gui?page=timeseries&presentation=\" + presentation + \"&fileId=\" + fileId + \"&messagIndex=\" + messageIndex + \"&x=\" + prosX + \"&y=\" + prosY;\n";
+    //ostr << "  document.getElementById('timeseries').src = url2;\n";
 
     //ostr << "  alert(\"You clicked at: (\"+posX+\",\"+posY+\")\");\n";
     ostr << "}\n";
@@ -1569,10 +1567,18 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
         {
           pId = def.mFmiParameterId;
           pName = def.mParameterName;
-          unitStr = def.mParameterUnits;
+          if (parameterIdStr == pId || parameterIdStr.empty())
+            unitStr = def.mParameterUnits;
+
+          Identification::NewbaseParameterDef nbParamDef;
+          if (Identification::gridDef.getNewbaseParameterDefByFmiId(pId,nbParamDef)  &&  !nbParamDef.mParameterName.empty())
+          {
+            pName = pName + " (" + nbParamDef.mParameterName + ")";
+          }
         }
 
-        if (parameterIdStr.length() == 0)
+
+        if (parameterIdStr.empty())
           parameterIdStr = pId;
 
         if (parameterIdStr == pId)
@@ -1609,7 +1615,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
       {
         T::ContentInfo *g = contentInfoList.getContentInfoByIndex(a);
 
-        if (parameterLevelIdStr.length() == 0)
+        if (parameterLevelIdStr.empty())
         {
           parameterLevelIdStr = std::to_string((int)g->mFmiParameterLevelId);
           levelId = (int)g->mFmiParameterLevelId;
@@ -1658,7 +1664,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
         {
           if (levelId == g->mFmiParameterLevelId)
           {
-            if (parameterLevelStr.length() == 0)
+            if (parameterLevelStr.empty())
             {
               parameterLevelStr = std::to_string((int)g->mParameterLevel);
               level = g->mParameterLevel;
@@ -1701,7 +1707,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
           {
             if (level == g->mParameterLevel)
             {
-              if (forecastTypeStr.length() == 0)
+              if (forecastTypeStr.empty())
               {
                 forecastTypeStr = std::to_string((int)g->mForecastType);
                 forecastType = g->mForecastType;
@@ -1745,7 +1751,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
             {
               if (forecastType == g->mForecastType)
               {
-                if (forecastNumberStr.length() == 0)
+                if (forecastNumberStr.empty())
                 {
                   forecastNumberStr = std::to_string((int)g->mForecastNumber);
                   forecastNumber = g->mForecastNumber;
@@ -1880,7 +1886,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
                 if (currentCont != NULL  &&  nextCont == NULL)
                   nextCont = g;
 
-                if (startTime.length() == 0)
+                if (startTime.empty())
                   startTime = g->mForecastTime;
 
                 if (startTime == g->mForecastTime)
@@ -1934,7 +1940,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 
     for (uint a=0; a<8; a++)
     {
-      if (presentation.length() == 0)
+      if (presentation.empty())
         presentation = modes[a];
 
       if (presentation == modes[a])
@@ -2042,10 +2048,10 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 
     ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>Value:</TD></TR>\n";
     ostr << "<TR height=\"30\"><TD><INPUT type=\"text\" id=\"gridValue\"></TD></TR>\n";
-
+/*
     ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>Timeseries:</TD></TR>\n";
     ostr << "<TR height=\"100\"><TD><IMG id=\"timeseries\" style=\"height:100; max-width:250;\" alt=\"\" src=\"/grid-gui?page=timeseries&fileId=0&messageIndex=" << messageIndexStr << "\"></TD></TR>\n";
-
+*/
     ostr << "<TR height=\"50%\"><TD></TD></TR>\n";
     ostr << "</TABLE>\n";
     ostr << "</TD>\n";
