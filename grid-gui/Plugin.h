@@ -9,6 +9,7 @@
 #include <spine/Reactor.h>
 #include <spine/HTTP.h>
 #include <engines/grid/Engine.h>
+#include <grid-files/common/ImageFunctions.h>
 
 
 namespace SmartMet
@@ -41,6 +42,9 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
   private:
 
     Plugin();
+
+    bool isLand(double lon,double lat);
+
     bool request(SmartMet::Spine::Reactor& theReactor,
                       const SmartMet::Spine::HTTP::Request& theRequest,
                       SmartMet::Spine::HTTP::Response& theResponse);
@@ -79,10 +83,12 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
 
     void saveImage(const char *imageFile,
                       T::GridData&  gridData,
+                      T::Coordinate_vec& coordinates,
                       unsigned char hue,
                       unsigned char saturation,
                       unsigned char blur,
-                      bool rotate);
+                      uint landBorder,
+                      std::string landMask);
 
     void saveMap(const char *imageFile,
                       uint columns,
@@ -90,7 +96,9 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
                       T::ParamValue_vec& values,
                       unsigned char hue,
                       unsigned char saturation,
-                      unsigned char blur);
+                      unsigned char blur,
+                      uint landBorder,
+                      std::string landMask);
 
     void saveTimeSeries(const char *imageFile,std::vector<T::ParamValue>& valueList,int idx,std::set<int> dayIdx);
 
@@ -100,6 +108,8 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
     SmartMet::Spine::Reactor* itsReactor;
     ConfigurationFile         itsConfigurationFile;
     std::string               itsGridConfigFile;
+    std::string               itsLandSeaMaskFile;
+    CImage                    itsLandSeaMask;
 
 
 };  // class Plugin

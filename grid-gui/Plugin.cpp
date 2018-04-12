@@ -7,7 +7,6 @@
 #include "Plugin.h"
 
 #include <grid-files/common/GeneralFunctions.h>
-#include <grid-files/common/ImageFunctions.h>
 #include <grid-files/identification/GridDef.h>
 #include <spine/SmartMet.h>
 #include <macgyver/TimeFormatter.h>
@@ -23,25 +22,31 @@ namespace GridGui
 using namespace SmartMet::Spine;
 
 
-const char *levelDefinition[] =
+const char *colorNames[] = {"none","grey","dark-grey","light-grey","black","white","blue","red","yellow",NULL};
+uint colorValues[] = {0xFFFFFFFF,0x808080,0x404040,0xC0C0C0,0x000000,0xFFFFFF,0x0000FF,0xFF0000,0xFFFF00};
+
+uint getColorValue(const char *colorName)
 {
-  "0",
-  "1 Gound or water surface",
-  "2 Pressure level",
-  "3 Hybrid level",
-  "4 Altitude",
-  "5 Top of atmosphere",
-  "6 Height above ground in meters",
-  "7 Mean sea level",
-  "8 Entire atmosphere",
-  "9 Depth below land surface",
-  "10 Depth below some surface",
-  "11 Level at specified pressure difference from ground to level",
-  "12 Max equivalent potential temperature level",
-  "13 Layer between two metric heights above ground",
-  "14 Layer between two depths below land surface",
-  "15 Isothermal level, temperature in 1/100 K"
-};
+  try
+  {
+    uint c = 0;
+    while (colorNames[c] != NULL)
+    {
+      if (strcasecmp(colorName,colorNames[c]) == 0)
+        return colorValues[c];
+      c++;
+    }
+    return 0xFFFFFFFF;
+  }
+  catch (...)
+  {
+    throw SmartMet::Spine::Exception(BCP, "Operation failed!", NULL);
+  }
+}
+
+
+
+
 
 
 // ----------------------------------------------------------------------
@@ -55,6 +60,13 @@ Plugin::Plugin(SmartMet::Spine::Reactor *theReactor, const char *theConfig)
 {
   try
   {
+    const char *configAttribute[] =
+    {
+        "smartmet.plugin.grid-gui.grid-files.configFile",
+        "smartmet.plugin.grid-gui.land-sea-mask-file",
+        NULL
+    };
+
     itsReactor = theReactor;
 
     if (theReactor->getRequiredAPIVersion() != SMARTMET_API_VERSION)
@@ -65,16 +77,29 @@ Plugin::Plugin(SmartMet::Spine::Reactor *theReactor, const char *theConfig)
             this, "/grid-gui", boost::bind(&Plugin::callRequestHandler, this, _1, _2, _3)))
       throw SmartMet::Spine::Exception(BCP, "Failed to register GridGui request handler");
 
+
     itsConfigurationFile.readFile(theConfig);
 
-    if (!itsConfigurationFile.getAttributeValue("grid-files.configFile",itsGridConfigFile))
+    uint t=0;
+    while (configAttribute[t] != NULL)
     {
-      SmartMet::Spine::Exception exception(BCP, "The 'grid-files.configFile' attribute not specified in the config file!");
-      exception.addParameter("ConfigurationFile",theConfig);
-      throw exception;
+      if (!itsConfigurationFile.findAttribute(configAttribute[t]))
+      {
+        SmartMet::Spine::Exception exception(BCP, "Missing configuration attribute!");
+        exception.addParameter("File",theConfig);
+        exception.addParameter("Attribute",configAttribute[t]);
+        throw exception;
+      }
+      t++;
     }
 
+    itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.grid-files.configFile",itsGridConfigFile);
+    itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.land-sea-mask-file",itsLandSeaMaskFile);
+
+
     Identification::gridDef.init(itsGridConfigFile.c_str());
+
+    jpg_load(itsLandSeaMaskFile.c_str(),itsLandSeaMask);
   }
   catch (...)
   {
@@ -107,6 +132,8 @@ void Plugin::init()
       throw Spine::Exception(BCP, "The 'grid-engine' unavailable!");
 
     itsGridEngine = reinterpret_cast<Engine::Grid::Engine*>(engine);
+
+
   }
   catch (...)
   {
@@ -140,10 +167,50 @@ void Plugin::shutdown()
 
 
 
-void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_vec&  values,unsigned char hue,unsigned char saturation,unsigned char blur)
+
+bool Plugin::isLand(double lon,double lat)
 {
   try
   {
+    if (itsLandSeaMask.pixel == NULL)
+      return false;
+
+    if (lon >= 180)
+      lon = lon - 360;
+
+    if (lat >= 90)
+      lat = lat - 90;
+
+    int x = (int)round((lon+180)*10);
+    int y = (int)round((lat+90)*10);
+
+    if (x >= 0  &&  x < itsLandSeaMask.width  &&  y >= 0  &&  y < itsLandSeaMask.height)
+    {
+      int pos = ((itsLandSeaMask.height-y-1)*itsLandSeaMask.width + x);
+
+      if (pos >= 0  &&  pos < (itsLandSeaMask.height*itsLandSeaMask.width)  &&  itsLandSeaMask.pixel[pos] < 0x808080)
+        return true;
+    }
+    return false;
+  }
+  catch (...)
+  {
+    throw SmartMet::Spine::Exception(BCP, "Operation failed!", NULL);
+  }
+}
+
+
+
+
+
+void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_vec&  values,unsigned char hue,unsigned char saturation,unsigned char blur,uint landBorder,std::string landMask)
+{
+  try
+  {
+    bool showLandMask = false;
+    if (landMask != "none")
+      showLandMask = true;
+
     double maxValue = -1000000000;
     double minValue = 1000000000;
 
@@ -168,23 +235,32 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
       }
     }
 
+    int width = columns;
+    int height = rows;
+
     uint xx = columns / 36;
     uint yy = rows / 18;
+
+    double xd = 360/(double)width;
+    double yd = 180/(double)height;
 
     double dd = maxValue - minValue;
     double step = dd / 200;
 
-    int width = columns;
-    int height = rows;
 
     unsigned long *image = new unsigned long[width*height];
 
     //unsigned char hue = 30;
     //unsigned char saturation = 128;
     uint c = 0;
+    int ss = 2;
+    bool yLand[width];
+    for (int x=0; x<width; x++)
+      yLand[x] = false;
 
     for (int y=0; y<height; y++)
     {
+      bool prevLand = false;
       for (int x=0; x<width; x++)
       {
         T::ParamValue val = values[c];
@@ -194,12 +270,56 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
         v = v * blur;
         v = v + 55;
         uint col = hsv_to_rgb(hue,saturation,(unsigned char)v);
+
+        double xc = xd*((double)x-((double)width/2));
+        double yc = yd*((double)(height-y-1)-((double)height/2));
+
+        //printf("%f,%f\n",xc,yc);
+
         if (val == ParamValueMissing)
           col = 0xE8E8E8;
+
+        bool land = isLand(xc,yc);
+
+        if (showLandMask)
+        {
+          if ((x % ss) == 0)
+          {
+            if (land)
+            {
+              if (val == ParamValueMissing)
+                col = 0xC8C8C8;
+              else
+                col = hsv_to_rgb(0,0,(unsigned char)v);
+            }
+            else
+            {
+              if (val == ParamValueMissing)
+                col = 0xD8D8D8;
+            }
+          }
+        }
+
+        if (landBorder != 0xFFFFFFFF)
+        {
+          if (land & (!prevLand || !yLand[x]))
+            col = landBorder;
+
+          if (!land)
+          {
+            if (prevLand  &&  x > 0)
+              image[y*width + x-1] = landBorder;
+
+            if (yLand[x] &&  y > 0)
+              image[(y-1)*width + x] = landBorder;
+          }
+        }
 
         if ((x % xx) == 0  ||  (y % yy) == 0)
           col = 0xFFFFFF;
 
+        yLand[x] = land;
+        prevLand = land;
         image[y*width + x] = col;
         c++;
       }
@@ -217,10 +337,21 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
 
 
 
-void Plugin::saveImage(const char *imageFile,T::GridData&  gridData,unsigned char hue,unsigned char saturation,unsigned char blur,bool rotate)
+
+void Plugin::saveImage(const char *imageFile,T::GridData&  gridData,T::Coordinate_vec& coordinates,unsigned char hue,unsigned char saturation,unsigned char blur,uint landBorder,std::string landMask)
 {
   try
   {
+    bool landSeaMask = true;
+    if (coordinates.size() == 0)
+      landSeaMask = false;
+
+
+    bool showLandMask = false;
+    if (landMask != "none")
+      showLandMask = true;
+
+    //printf("*** COORDINATES %u\n",(uint)coordinates.size());
     double maxValue = -1000000000;
     double minValue = 1000000000;
 
@@ -252,27 +383,78 @@ void Plugin::saveImage(const char *imageFile,T::GridData&  gridData,unsigned cha
     double dd = maxValue - minValue;
     double step = dd / 200;
 
+    bool rotate = true;
+    if ((int)coordinates.size() > (10*width)  &&  coordinates[0].y() < coordinates[10*width].y())
+      rotate = true;
+    else
+      rotate = false;
 
     unsigned long *image = new unsigned long[size];
-    //unsigned char hue = 250; // 30;
-    //unsigned char saturation = 84; // = 128;
     uint c = 0;
+    int ss = 2;
+
+    bool yLand[width];
+    for (int x=0; x<width; x++)
+      yLand[x] = false;
 
     if (!rotate)
     {
       for (int y=0; y<height; y++)
       {
+        bool prevLand = false;
         for (int x=0; x<width; x++)
         {
           T::ParamValue val = gridData.mValues[c];
+
           uint v = 200 - (uint)((val - minValue) / step);
           v = v / blur;
           v = v * blur;
           v = v + 55;
           uint col = hsv_to_rgb(hue,saturation,(unsigned char)v);
+
           if (val == ParamValueMissing)
             col = 0xE8E8E8;
 
+          bool land = false;
+          if (landSeaMask)
+            land = isLand(coordinates[c].x(),coordinates[c].y());
+
+          if (showLandMask)
+          {
+            if ((x % ss) == 0)
+            {
+              if (landSeaMask && land)
+              {
+                if (val == ParamValueMissing)
+                  col = 0xC8C8C8;
+                else
+                  col = hsv_to_rgb(0,0,(unsigned char)v);
+              }
+              else
+              {
+                if (val == ParamValueMissing)
+                  col = 0xD8D8D8;
+              }
+            }
+          }
+
+          if (landBorder != 0xFFFFFFFF)
+          {
+            if (land & (!prevLand || !yLand[x]))
+              col = landBorder;
+
+            if (!land)
+            {
+              if (prevLand  &&  x > 0)
+                image[y*width + x-1] = landBorder;
+
+              if (yLand[x] &&  y > 0)
+                image[(y-1)*width + x] = landBorder;
+            }
+          }
+
+          yLand[x] = land;
+          prevLand = land;
           image[y*width + x] = col;
           c++;
         }
@@ -282,6 +464,7 @@ void Plugin::saveImage(const char *imageFile,T::GridData&  gridData,unsigned cha
     {
       for (int y=height-1; y>=0; y--)
       {
+        bool prevLand = false;
         for (int x=0; x<width; x++)
         {
           T::ParamValue val = gridData.mValues[c];
@@ -290,9 +473,50 @@ void Plugin::saveImage(const char *imageFile,T::GridData&  gridData,unsigned cha
           v = v * blur;
           v = v + 55;
           uint col = hsv_to_rgb(hue,saturation,(unsigned char)v);
+
           if (val == ParamValueMissing)
             col = 0xE8E8E8;
 
+          bool land = false;
+          if (landSeaMask)
+            land = isLand(coordinates[c].x(),coordinates[c].y());
+
+          if (showLandMask)
+          {
+            if ((x % ss) == 0)
+            {
+              if (landSeaMask && land)
+              {
+                if (val == ParamValueMissing)
+                  col = 0xC8C8C8;
+                else
+                  col = hsv_to_rgb(0,0,(unsigned char)v);
+              }
+              else
+              {
+                if (val == ParamValueMissing)
+                  col = 0xD8D8D8;
+              }
+            }
+          }
+
+          if (landBorder != 0xFFFFFFFF)
+          {
+            if (land & (!prevLand || !yLand[x]))
+              col = landBorder;
+
+            if (!land)
+            {
+              if (prevLand  &&  x > 0)
+                image[y*width + x-1] = landBorder;
+
+              if (yLand[x] &&  (y+1) < height)
+                image[(y+1)*width + x] = landBorder;
+            }
+          }
+
+          yLand[x] = land;
+          prevLand = land;
           image[y*width + x] = col;
           c++;
         }
@@ -616,6 +840,8 @@ bool Plugin::page_table(SmartMet::Spine::Reactor &theReactor,
       return true;
     }
 
+    T::Coordinate_vec coordinates = Identification::gridDef.getGridCoordinatesByGeometryId(gridData.mGeometryId);
+    /*
     T::GridCoordinates coordinates;
     result = dataServer->getGridCoordinates(0,atoi(fileIdStr.c_str()),atoi(messageIndexStr.c_str()),flags,T::CoordinateType::ORIGINAL_COORDINATES,coordinates);
     if (result != 0)
@@ -626,6 +852,7 @@ bool Plugin::page_table(SmartMet::Spine::Reactor &theReactor,
       theResponse.setContent(std::string(ostr.str()));
       return true;
     }
+    */
 
 
     uint c = 0;
@@ -660,7 +887,7 @@ bool Plugin::page_table(SmartMet::Spine::Reactor &theReactor,
     ostr << "<TR bgColor=\"#D0D0D0\"><TD></TD><TD></TD>";
     for (uint x=0; x<width; x++)
     {
-      sprintf(tmp,"%.3f",coordinates.mCoordinateList[x].x());
+      sprintf(tmp,"%.3f",coordinates[x].x());
       ostr << "<TD>" << tmp << "</TD>";
     }
     ostr << "</TR>\n";
@@ -674,7 +901,7 @@ bool Plugin::page_table(SmartMet::Spine::Reactor &theReactor,
 
       // ### Row index and Y coordinate:
 
-      sprintf(tmp,"%.3f",coordinates.mCoordinateList[c].y());
+      sprintf(tmp,"%.3f",coordinates[c].y());
       ostr << "<TR><TD bgColor=\"#E0E0E0\">" << y << "</TD><TD bgColor=\"#D0D0D0\">" << tmp << "</TD>";
 
       // ### Columns:
@@ -888,8 +1115,8 @@ bool Plugin::page_value(SmartMet::Spine::Reactor &theReactor,
     double xx = (double)(xPos * (double)width);
     double yy = (double)(yPos * (double)height);
 
-    if (presentation == "image(rotated)")
-      yy = height-yy;
+    //if (presentation == "image(rotated)")
+    //  yy = height-yy;
 
     uint flags = 0;
     T::ParamValue value;
@@ -970,8 +1197,8 @@ bool Plugin::page_timeseries(SmartMet::Spine::Reactor &theReactor,
     double xx = (double)(xPos * (double)width);
     double yy = (double)(yPos * (double)height);
 
-    if (presentation == "image(rotated)")
-      yy = height-yy;
+    //if (presentation == "image(rotated)")
+    //  yy = height-yy;
 
     T::ContentInfoList contentInfoList;
     contentServer->getContentListByParameterAndGenerationId(0,contentInfo.mGenerationId,T::ParamKeyType::FMI_ID,contentInfo.mFmiParameterId,T::ParamLevelIdType::FMI,contentInfo.mFmiParameterLevelId,contentInfo.mParameterLevel,contentInfo.mParameterLevel,-2,-2,-2,"19000101T000000","23000101T000000",0,contentInfoList);
@@ -1080,11 +1307,13 @@ bool Plugin::page_image(SmartMet::Spine::Reactor &theReactor,
 
     std::string fileIdStr = "";
     std::string messageIndexStr = "0";
-    std::string hueStr = "110";
-    std::string saturationStr = "0";
-    bool rotate = false;
-    std::string presentation = "image(rotated)";
+    std::string hueStr = "128";
+    std::string saturationStr = "60";
+    std::string presentation = "image";
     std::string blurStr = "1";
+    std::string geometryIdStr = "0";
+    std::string landBorderStr = "grey";
+    std::string landMaskStr = "none";
 
     boost::optional<std::string> v;
     v = theRequest.getParameter("fileId");
@@ -1095,12 +1324,9 @@ bool Plugin::page_image(SmartMet::Spine::Reactor &theReactor,
     if (v)
       messageIndexStr = *v;
 
-    v = theRequest.getParameter("rotate");
-    if (v  &&  *v == "no")
-       rotate = false;
-
-    if (v  &&  *v == "yes")
-       rotate = true;
+    v = theRequest.getParameter("geometryId");
+    if (v)
+      geometryIdStr = *v;
 
     v = theRequest.getParameter("hue");
     if (v)
@@ -1113,6 +1339,14 @@ bool Plugin::page_image(SmartMet::Spine::Reactor &theReactor,
     v = theRequest.getParameter("blur");
     if (v)
       blurStr = *v;
+
+    v = theRequest.getParameter("landBorder");
+    if (v)
+      landBorderStr = *v;
+
+    v = theRequest.getParameter("landMask");
+    if (v)
+      landMaskStr = *v;
 
     uint flags = 0;
     T::GridData gridData;
@@ -1128,11 +1362,31 @@ bool Plugin::page_image(SmartMet::Spine::Reactor &theReactor,
       theResponse.setContent(std::string(ostr.str()));
       return true;
     }
+    T::Coordinate_vec coordinates;
+    if (gridData.mGeometryId != 0)
+      coordinates = Identification::gridDef.getGridLatLonCoordinatesByGeometryId(gridData.mGeometryId);
+    else
+      coordinates = Identification::gridDef.getGridLatLonCoordinatesByGeometryId(atoi(geometryIdStr.c_str()));
+    /*
+    //T::GridCoordinates coordinates;
+    result = dataServer->getGridCoordinates(0,atoi(fileIdStr.c_str()),atoi(messageIndexStr.c_str()),flags,T::CoordinateType::LATLON_COORDINATES,coordinates);
+    if (result != 0)
+    {
+      std::ostringstream ostr;
+      ostr << "<HTML><BODY>\n";
+      ostr << "DataServer request 'getGridCoordinates()' failed : " << result << "\n";
+      ostr << "</BODY></HTML>\n";
+      theResponse.setContent(std::string(ostr.str()));
+      return true;
+    }
+   */
 
+
+    uint landBorder = getColorValue(landBorderStr.c_str());
 
     char fname[200];
     sprintf(fname,"/tmp/image_%llu.jpg",getTime());
-    saveImage(fname,gridData,(unsigned char)atoi(hueStr.c_str()),(unsigned char)atoi(saturationStr.c_str()),(unsigned char)atoi(blurStr.c_str()),rotate);
+    saveImage(fname,gridData,coordinates,(unsigned char)atoi(hueStr.c_str()),(unsigned char)atoi(saturationStr.c_str()),(unsigned char)atoi(blurStr.c_str()),landBorder,landMaskStr);
 
     long long sz = getFileSize(fname);
     if (sz > 0)
@@ -1141,7 +1395,7 @@ bool Plugin::page_image(SmartMet::Spine::Reactor &theReactor,
       std::vector<char> *content = new std::vector<char>();
       content->reserve(sz);
 
-      boost::shared_ptr<std::vector<char> > sContent;
+      boost::shared_ptr<std::vector<char>> sContent;
       sContent.reset(content);
 
       FILE *file = fopen(fname,"r");
@@ -1198,9 +1452,11 @@ bool Plugin::page_map(SmartMet::Spine::Reactor &theReactor,
 
     std::string fileIdStr = "";
     std::string messageIndexStr = "0";
-    std::string hueStr = "110";
-    std::string saturationStr = "0";
+    std::string hueStr = "128";
+    std::string saturationStr = "60";
     std::string blurStr = "1";
+    std::string landBorderStr = "grey";
+    std::string landMaskStr = "none";
 
     boost::optional<std::string> v;
     v = theRequest.getParameter("fileId");
@@ -1224,6 +1480,14 @@ bool Plugin::page_map(SmartMet::Spine::Reactor &theReactor,
     if (v)
       blurStr = *v;
 
+    v = theRequest.getParameter("landBorder");
+    if (v)
+      landBorderStr = *v;
+
+    v = theRequest.getParameter("landMask");
+    if (v)
+      landMaskStr = *v;
+
     uint columns = 1800;
     uint rows = 900;
     uint flags = 0;
@@ -1240,10 +1504,11 @@ bool Plugin::page_map(SmartMet::Spine::Reactor &theReactor,
       return true;
     }
 
+    uint landBorder = getColorValue(landBorderStr.c_str());
 
     char fname[200];
     sprintf(fname,"/tmp/image_%llu.jpg",getTime());
-    saveMap(fname,columns,rows,values,(unsigned char)atoi(hueStr.c_str()),(unsigned char)atoi(saturationStr.c_str()),(unsigned char)atoi(blurStr.c_str()));
+    saveMap(fname,columns,rows,values,(unsigned char)atoi(hueStr.c_str()),(unsigned char)atoi(saturationStr.c_str()),(unsigned char)atoi(blurStr.c_str()),landBorder,landMaskStr);
 
     long long sz = getFileSize(fname);
     if (sz > 0)
@@ -1315,14 +1580,16 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     std::string fileIdStr = "";
     std::string messageIndexStr = "0";
     std::string parameterLevelIdStr;
-    std::string hueStr = "110";
+    std::string hueStr = "128";
     std::string forecastTypeStr = "";
     std::string forecastNumberStr = "";
-    std::string saturationStr = "0";
+    std::string saturationStr = "60";
     std::string blurStr = "1";
+    std::string landBorderStr = "grey";
+    std::string landMaskStr = "none";
     std::string startTime = "";
     std::string unitStr = "";
-    std::string presentation = "image(rotated)";
+    std::string presentation = "image";
 
     boost::optional<std::string> v;
     v = theRequest.getParameter("producerId");
@@ -1384,6 +1651,14 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     v = theRequest.getParameter("blur");
     if (v)
       blurStr = *v;
+
+    v = theRequest.getParameter("landBorder");
+    if (v)
+      landBorderStr = *v;
+
+    v = theRequest.getParameter("landMask");
+    if (v)
+      landMaskStr = *v;
 
     std::ostringstream ostr;
 
@@ -1461,6 +1736,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     T::ProducerInfoList producerInfoList;
     contentServer->getProducerInfoList(0,producerInfoList);
     uint len = producerInfoList.getLength();
+    producerInfoList.sortByName();
     uint pid = (uint)atoi(producerIdStr.c_str());
 
     ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>Producer:</TD></TR>\n";
@@ -1468,7 +1744,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 
     if (len > 0)
     {
-      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&producerId=' + this.options[this.selectedIndex].value)\">\n";
+      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&producerId=' + this.options[this.selectedIndex].value)\">\n";
       for (uint t=0; t<len; t++)
       {
         T::ProducerInfo *p = producerInfoList.getProducerInfoByIndex(t);
@@ -1501,7 +1777,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 
     if (len > 0)
     {
-      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&producerId=" + producerIdStr + "&generationId=' + this.options[this.selectedIndex].value)\">\n";
+      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&producerId=" + producerIdStr + "&generationId=' + this.options[this.selectedIndex].value)\">\n";
 
 
       if (gid == 0)
@@ -1556,7 +1832,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 
     if (paramKeyList.size() > 0)
     {
-      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&parameterId=' + this.options[this.selectedIndex].value)\">\n";
+      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&parameterId=' + this.options[this.selectedIndex].value)\">\n";
       for (auto it=paramKeyList.begin(); it!=paramKeyList.end(); ++it)
       {
         std::string pId = *it;
@@ -1610,7 +1886,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     {
       contentInfoList.sort(T::ContentInfo::ComparisonMethod::fmiId_fmiLevelId_level_starttime_file_message);
 
-      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&parameterId=" + parameterIdStr + "&levelId=' + this.options[this.selectedIndex].value)\">\n";
+      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&parameterId=" + parameterIdStr + "&levelId=' + this.options[this.selectedIndex].value)\">\n";
       for (uint a=0; a<len; a++)
       {
         T::ContentInfo *g = contentInfoList.getContentInfoByIndex(a);
@@ -1624,8 +1900,9 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
         if (prevLevelId < (int)g->mFmiParameterLevelId)
         {
           std::string lStr = std::to_string((int)g->mFmiParameterLevelId);
-          if (g->mFmiParameterLevelId > 0  && (int)g->mFmiParameterLevelId < 16)
-            lStr = levelDefinition[(int)g->mFmiParameterLevelId];
+          Identification::LevelDef levelDef;
+          if (Identification::gridDef.getFmiLevelDef(g->mFmiParameterLevelId,levelDef))
+            lStr = std::to_string((int)g->mFmiParameterLevelId) + " " + levelDef.mDescription;
 
           if (levelId == g->mFmiParameterLevelId)
             ostr << "<OPTION selected value=\"" <<  (int)g->mFmiParameterLevelId << "\">" <<  lStr << "</OPTION>\n";
@@ -1655,7 +1932,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     {
       contentInfoList.sort(T::ContentInfo::ComparisonMethod::fmiId_level_starttime_file_message);
 
-      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=' + this.options[this.selectedIndex].value)\">\n";
+      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=' + this.options[this.selectedIndex].value)\">\n";
       for (uint a=0; a<len; a++)
       {
         T::ContentInfo *g = contentInfoList.getContentInfoByIndex(a);
@@ -1696,7 +1973,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     {
       contentInfoList.sort(T::ContentInfo::ComparisonMethod::fmiId_fmiLevelId_level_starttime_file_message);
 
-      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&forecastType=' + this.options[this.selectedIndex].value)\">\n";
+      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&forecastType=' + this.options[this.selectedIndex].value)\">\n";
       for (uint a=0; a<len; a++)
       {
         T::ContentInfo *g = contentInfoList.getContentInfoByIndex(a);
@@ -1738,7 +2015,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 
     if (len > 0)
     {
-      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=' + this.options[this.selectedIndex].value)\">\n";
+      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=' + this.options[this.selectedIndex].value)\">\n";
       for (uint a=0; a<len; a++)
       {
         T::ContentInfo *g = contentInfoList.getContentInfoByIndex(a);
@@ -1802,7 +2079,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     if (geometryIdList.size() > 0)
     {
       //ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=' + this.options[this.selectedIndex].value)\">\n";
-      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&geometryId=' + this.options[this.selectedIndex].value)\">\n";
+      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&geometryId=' + this.options[this.selectedIndex].value)\">\n";
 
       for (auto it=geometryIdList.begin(); it!=geometryIdList.end(); ++it)
       {
@@ -1842,7 +2119,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     len = contentInfoList.getLength();
     std::string prevTime = "19000101T0000";
 
-    ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>Time:</TD></TR>\n";
+    ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>Time (UTC):</TD></TR>\n";
     ostr << "<TR height=\"30\"><TD><TABLE><TR><TD>\n";
 
     //ostr << "<TR height=\"30\"><TD>\n";
@@ -1859,13 +2136,10 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
       ostr << "<SELECT id=\"timeselect\" onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" + presentation + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "' + this.options[this.selectedIndex].value)\"";
 
       if (presentation == "image")
-        ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=image&rotate=no' + this.options[this.selectedIndex].value)\"";
-
-      if (presentation == "image(rotated)")
-        ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=image&rotate=yes' + this.options[this.selectedIndex].value)\"";
+        ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=image&&geometryId=" << geometryIdStr << "' + this.options[this.selectedIndex].value)\"";
 
       if (presentation == "map")
-        ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=map' + this.options[this.selectedIndex].value)\"";
+        ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=map&geometryId=" << geometryIdStr << "' + this.options[this.selectedIndex].value)\"";
 
       ostr << " >\n";
 
@@ -1881,7 +2155,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
             {
               if (forecastNumber == g->mForecastNumber)
               {
-                std::string url = "&start=" + g->mForecastTime + "&fileId=" + std::to_string(g->mFileId) + "&messageIndex=" + std::to_string(g->mMessageIndex) + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr;
+                std::string url = "&start=" + g->mForecastTime + "&fileId=" + std::to_string(g->mFileId) + "&messageIndex=" + std::to_string(g->mMessageIndex) + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr;
 
                 if (currentCont != NULL  &&  nextCont == NULL)
                   nextCont = g;
@@ -1918,12 +2192,12 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     //ostr << "<TR><TD><TABLE height=\"30\"><TR>\n";
 
     if (prevCont != NULL)
-      ostr << "<TD width=\"20\" > <button type=\"button\" onClick=\"getPage(this,parent,'/grid-gui?page=main&presentation=" + presentation + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + prevCont->mForecastTime + "&fileId=" + std::to_string(prevCont->mFileId) + "&messageIndex=" + std::to_string(prevCont->mMessageIndex) + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "');\">&lt;</button></TD>\n";
+      ostr << "<TD width=\"20\" > <button type=\"button\" onClick=\"getPage(this,parent,'/grid-gui?page=main&presentation=" + presentation + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + prevCont->mForecastTime + "&fileId=" + std::to_string(prevCont->mFileId) + "&messageIndex=" + std::to_string(prevCont->mMessageIndex) + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "');\">&lt;</button></TD>\n";
     else
       ostr << "<TD width=\"20\"><button type=\"button\">&lt;</button></TD></TD>\n";
 
     if (nextCont != NULL)
-      ostr << "<TD width=\"20\"><button type=\"button\" onClick=\"getPage(this,parent,'/grid-gui?page=main&presentation=" + presentation + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + nextCont->mForecastTime + "&fileId=" + std::to_string(nextCont->mFileId) + "&messageIndex=" + std::to_string(nextCont->mMessageIndex) + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "');\">&gt;</button></TD>\n";
+      ostr << "<TD width=\"20\"><button type=\"button\" onClick=\"getPage(this,parent,'/grid-gui?page=main&presentation=" + presentation + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + nextCont->mForecastTime + "&fileId=" + std::to_string(nextCont->mFileId) + "&messageIndex=" + std::to_string(nextCont->mMessageIndex) + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "');\">&gt;</button></TD>\n";
     else
       ostr << "<TD width=\"20\"><button type=\"button\">&gt;</button></TD></TD>\n";
 
@@ -1932,13 +2206,13 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     // ### Modes:
 
 
-    const char *modes[] = {"image","image(rotated)","map","info","table(full)","table(sample)","coordinates(full)","coordinates(sample)"};
+    const char *modes[] = {"image","map","info","table(full)","table(sample)","coordinates(full)","coordinates(sample)"};
 
     ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>Presentation:</TD></TR>\n";
     ostr << "<TR height=\"30\"><TD>\n";
-    ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&presentation=' + this.options[this.selectedIndex].value)\">\n";
+    ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&presentation=' + this.options[this.selectedIndex].value)\">\n";
 
-    for (uint a=0; a<8; a++)
+    for (uint a=0; a<7; a++)
     {
       if (presentation.empty())
         presentation = modes[a];
@@ -1953,20 +2227,17 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 
 
 
-    if (presentation == "image" || presentation == "image(rotated)" || presentation == "map")
+    if (presentation == "image" || presentation == "map")
     {
       ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>Hue:</TD></TR>\n";
       ostr << "<TR height=\"30\"><TD>\n";
-      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&hue=' + this.options[this.selectedIndex].value)\"";
+      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&hue=' + this.options[this.selectedIndex].value)\"";
 
       if (presentation == "image")
-        ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=image&rotate=no&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&hue=' + this.options[this.selectedIndex].value)\"";
-
-      if (presentation == "image(rotated)")
-        ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=image&rotate=yes&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&hue=' + this.options[this.selectedIndex].value)\"";
+        ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=image&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&hue=' + this.options[this.selectedIndex].value)\"";
 
       if (presentation == "map")
-        ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=map&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&hue=' + this.options[this.selectedIndex].value)\"";
+        ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=map&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&hue=' + this.options[this.selectedIndex].value)\"";
 
       ostr << " >\n";
 
@@ -1986,16 +2257,13 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 
       ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>Saturation:</TD></TR>\n";
       ostr << "<TR height=\"30\"><TD>\n";
-      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&geometryId=" + geometryIdStr + "&generationId=" + generationIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&blur=" + blurStr + "&saturation=' + this.options[this.selectedIndex].value)\"";
+      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&geometryId=" + geometryIdStr + "&generationId=" + generationIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&blur=" + blurStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&saturation=' + this.options[this.selectedIndex].value)\"";
 
       if (presentation == "image")
-        ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=image&rotate=no&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&blur=" + blurStr + "&saturation=' + this.options[this.selectedIndex].value)\"";
-
-      if (presentation == "image(rotated)")
-        ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=image&rotate=yes&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&blur=" + blurStr + "&saturation=' + this.options[this.selectedIndex].value)\"";
+        ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=image&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&blur=" + blurStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&saturation=' + this.options[this.selectedIndex].value)\"";
 
       if (presentation == "map")
-        ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=map&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&blur=" + blurStr + "&saturation=' + this.options[this.selectedIndex].value)\"";
+        ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=map&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&blur=" + blurStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&saturation=' + this.options[this.selectedIndex].value)\"";
 
       ostr << " >\n";
 
@@ -2016,16 +2284,13 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 
       ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>Blur:</TD></TR>\n";
       ostr << "<TR height=\"30\"><TD>\n";
-      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=' + this.options[this.selectedIndex].value)\"";
+      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&blur=' + this.options[this.selectedIndex].value)\"";
 
       if (presentation == "image")
-        ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=image&rotate=no&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=' + this.options[this.selectedIndex].value)\"";
-
-      if (presentation == "image(rotated)")
-        ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=image&rotate=yes&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=' + this.options[this.selectedIndex].value)\"";
+        ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=image&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&blur=' + this.options[this.selectedIndex].value)\"";
 
       if (presentation == "map")
-        ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=map&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=' + this.options[this.selectedIndex].value)\"";
+        ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=map&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&blur=' + this.options[this.selectedIndex].value)\"";
 
       ostr << " >\n";
 
@@ -2041,7 +2306,63 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
       ostr << "</SELECT>\n";
       ostr << "</TD></TR>\n";
 
+
+      ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>Land border:</TD></TR>\n";
+      ostr << "<TR height=\"30\"><TD>\n";
+      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&landBorder=' + this.options[this.selectedIndex].value)\"";
+
+      if (presentation == "image")
+        ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=image&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&landBorder=' + this.options[this.selectedIndex].value)\"";
+
+      if (presentation == "map")
+        ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=map&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&landBorder=' + this.options[this.selectedIndex].value)\"";
+
+      ostr << " >\n";
+
+      uint a = 0;
+      while (colorNames[a] != NULL)
+      {
+        if (landBorderStr == colorNames[a])
+          ostr << "<OPTION selected value=\"" << colorNames[a] << "\">" <<  colorNames[a] << "</OPTION>\n";
+        else
+          ostr << "<OPTION value=\"" <<  colorNames[a] << "\">" <<  colorNames[a] << "</OPTION>\n";
+
+        a++;
+      }
+      ostr << "</SELECT>\n";
+      ostr << "</TD></TR>\n";
     }
+
+
+
+
+    ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>Land mask:</TD></TR>\n";
+    ostr << "<TR height=\"30\"><TD>\n";
+    ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landBorder=" + landBorderStr + "&landMask=' + this.options[this.selectedIndex].value)\"";
+
+    if (presentation == "image")
+      ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=image&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landBorder=" + landBorderStr + "&landMask=' + this.options[this.selectedIndex].value)\"";
+
+    if (presentation == "map")
+      ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=map&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landBorder=" + landBorderStr + "&landMask=' + this.options[this.selectedIndex].value)\"";
+
+    ostr << " >\n";
+
+    const char *landMasks[] = {"none","simple",NULL};
+    uint a = 0;
+    while (landMasks[a] != NULL)
+    {
+      if (landMaskStr == landMasks[a])
+        ostr << "<OPTION selected value=\"" << landMasks[a] << "\">" <<  landMasks[a] << "</OPTION>\n";
+      else
+        ostr << "<OPTION value=\"" <<  landMasks[a] << "\">" <<  landMasks[a] << "</OPTION>\n";
+
+      a++;
+    }
+    ostr << "</SELECT>\n";
+    ostr << "</TD></TR>\n";
+
+
 
     ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>Units:</TD></TR>\n";
     ostr << "<TR height=\"30\"><TD><INPUT type=\"text\" value=\"" << unitStr << "\"></TD></TR>\n";
@@ -2060,17 +2381,12 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     //ostr << "<TABLE width=\"100%\" height=\"100%\"><TR>\n";
     if (presentation == "image")
     {
-      ostr << "<TD><IMG id=\"myimage\" style=\"background:#000000; max-width:1800; height:100%; max-height:100%;\" src=\"/grid-gui?page=image&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "&rotate=no&hue=" << hueStr << "&saturation=" << saturationStr << "&blur=" << blurStr <<  "\" onclick=\"getImageCoords(event,this," << fileIdStr << "," << messageIndexStr << ",'" << presentation << "');\"></TD>";
-    }
-    else
-    if (presentation == "image(rotated)")
-    {
-      ostr << "<TD><IMG id=\"myimage\" style=\"background:#000000; max-width:1800; height:100%; max-height:100%;\" src=\"/grid-gui?page=image&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "&rotate=yes&hue=" << hueStr << "&saturation=" << saturationStr << "&blur=" << blurStr <<  "\" onclick=\"getImageCoords(event,this," << fileIdStr << "," << messageIndexStr << ",'" << presentation << "');\"></TD>";
+      ostr << "<TD><IMG id=\"myimage\" style=\"background:#000000; max-width:1800; height:100%; max-height:100%;\" src=\"/grid-gui?page=image&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "&geometryId=" << geometryIdStr << "&hue=" << hueStr << "&saturation=" << saturationStr << "&blur=" << blurStr << "&landBorder=" << landBorderStr << "&landMask=" << landMaskStr <<  "\" onclick=\"getImageCoords(event,this," << fileIdStr << "," << messageIndexStr << ",'" << presentation << "');\"></TD>";
     }
     else
     if (presentation == "map")
     {
-      ostr << "<TD><IMG id=\"myimage\" style=\"background:#000000; max-width:100%; height:100%;\" src=\"/grid-gui?page=map&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "&hue=" << hueStr << "&saturation=" << saturationStr << "&blur=" << blurStr <<  "\"></TD>";
+      ostr << "<TD><IMG id=\"myimage\" style=\"background:#000000; max-width:100%; height:100%;\" src=\"/grid-gui?page=map&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "&hue=" << hueStr << "&saturation=" << saturationStr << "&blur=" << blurStr << "&landBorder=" << landBorderStr << "&landMask=" << landMaskStr <<  "\"></TD>";
     }
     else
     if (presentation == "table(sample)"  || presentation == "table(full)")
