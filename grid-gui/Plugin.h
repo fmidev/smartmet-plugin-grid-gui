@@ -88,7 +88,8 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
                       unsigned char saturation,
                       unsigned char blur,
                       uint landBorder,
-                      std::string landMask);
+                      std::string landMask,
+                      std::string seaMask);
 
     void saveMap(const char *imageFile,
                       uint columns,
@@ -98,7 +99,8 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
                       unsigned char saturation,
                       unsigned char blur,
                       uint landBorder,
-                      std::string landMask);
+                      std::string landMask,
+                      std::string seaMask);
 
     void saveTimeSeries(const char *imageFile,std::vector<T::ParamValue>& valueList,int idx,std::set<int> dayIdx);
 
