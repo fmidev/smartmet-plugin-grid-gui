@@ -84,9 +84,11 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
     void saveImage(const char *imageFile,
                       T::GridData&  gridData,
                       T::Coordinate_vec& coordinates,
+                      T::Coordinate_vec& lineCoordinates,
                       unsigned char hue,
                       unsigned char saturation,
                       unsigned char blur,
+                      uint coordinateLines,
                       uint landBorder,
                       std::string landMask,
                       std::string seaMask);
@@ -103,6 +105,13 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
                       std::string seaMask);
 
     void saveTimeSeries(const char *imageFile,std::vector<T::ParamValue>& valueList,int idx,std::set<int> dayIdx);
+
+    void getGenerations(T::GenerationInfoList& generationInfoList,std::set<std::string>& generations);
+    void getLevelIds(T::ContentInfoList& contentInfoList,std::set<int>& levelIds);
+    void getLevels(T::ContentInfoList& contentInfoList,int levelId,std::set<int>& levels);
+    void getForecastTypes(T::ContentInfoList& contentInfoList,int levelId,int level,std::set<int>& forecastTypes);
+    void getForecastNumbers(T::ContentInfoList& contentInfoList,int levelId,int level,int forecastType,std::set<int>& forecastNumbers);
+    void getGeometries(T::ContentInfoList& contentInfoList,int levelId,int level,int forecastType,int forecastNumber,std::set<int>& geometries);
 
 
     Engine::Grid::Engine*     itsGridEngine;
