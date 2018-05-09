@@ -5,6 +5,8 @@
 // ======================================================================
 
 #pragma once
+
+#include "ColorMapFile.h"
 #include <spine/SmartMetPlugin.h>
 #include <spine/Reactor.h>
 #include <spine/HTTP.h>
@@ -91,7 +93,8 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
                       uint coordinateLines,
                       uint landBorder,
                       std::string landMask,
-                      std::string seaMask);
+                      std::string seaMask,
+                      std::string colorMapName);
 
     void saveMap(const char *imageFile,
                       uint columns,
@@ -102,9 +105,12 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
                       unsigned char blur,
                       uint landBorder,
                       std::string landMask,
-                      std::string seaMask);
+                      std::string seaMask,
+                      std::string colorMapName);
 
     void saveTimeSeries(const char *imageFile,std::vector<T::ParamValue>& valueList,int idx,std::set<int> dayIdx);
+
+    T::ColorMapFile* getColorMapFile(std::string colorMapName);
 
     void getGenerations(T::GenerationInfoList& generationInfoList,std::set<std::string>& generations);
     void getLevelIds(T::ContentInfoList& contentInfoList,std::set<int>& levelIds);
@@ -121,6 +127,8 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
     std::string               itsGridConfigFile;
     std::string               itsLandSeaMaskFile;
     CImage                    itsLandSeaMask;
+    string_vec                itsColorMapFileNames;
+    T::ColorMapFile_vec       itsColorMapFiles;
 
 
 };  // class Plugin
