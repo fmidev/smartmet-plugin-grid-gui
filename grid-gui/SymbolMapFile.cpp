@@ -1,4 +1,4 @@
-#include "ColorMapFile.h"
+#include "SymbolMapFile.h"
 #include <grid-files/common/GeneralFunctions.h>
 #include <grid-files/common/AutoThreadLock.h>
 
@@ -10,7 +10,7 @@ namespace T
 
 
 
-ColorMapFile::ColorMapFile()
+SymbolMapFile::SymbolMapFile()
 {
   try
   {
@@ -26,7 +26,7 @@ ColorMapFile::ColorMapFile()
 
 
 
-ColorMapFile::ColorMapFile(std::string filename)
+SymbolMapFile::SymbolMapFile(std::string filename)
 {
   try
   {
@@ -43,14 +43,15 @@ ColorMapFile::ColorMapFile(std::string filename)
 
 
 
-ColorMapFile::ColorMapFile(const ColorMapFile& colorMapFile)
+SymbolMapFile::SymbolMapFile(const SymbolMapFile& symbolMapFile)
 {
   try
   {
-    mNames = colorMapFile.mNames;
-    mFilename = colorMapFile.mFilename;
-    mColorMap = colorMapFile.mColorMap;
-    mLastModified = colorMapFile.mLastModified;
+    mNames = symbolMapFile.mNames;
+    mFilename = symbolMapFile.mFilename;
+    mDir = symbolMapFile.mDir;
+    mSymbolMap = symbolMapFile.mSymbolMap;
+    mLastModified = symbolMapFile.mLastModified;
   }
   catch (...)
   {
@@ -62,7 +63,7 @@ ColorMapFile::ColorMapFile(const ColorMapFile& colorMapFile)
 
 
 
-ColorMapFile::~ColorMapFile()
+SymbolMapFile::~SymbolMapFile()
 {
   try
   {
@@ -76,7 +77,7 @@ ColorMapFile::~ColorMapFile()
 
 
 
-void ColorMapFile::init()
+void SymbolMapFile::init()
 {
   try
   {
@@ -93,7 +94,7 @@ void ColorMapFile::init()
 
 
 
-void ColorMapFile::init(std::string filename)
+void SymbolMapFile::init(std::string filename)
 {
   try
   {
@@ -110,7 +111,7 @@ void ColorMapFile::init(std::string filename)
 
 
 
-bool ColorMapFile::checkUpdates()
+bool SymbolMapFile::checkUpdates()
 {
   try
   {
@@ -135,27 +136,56 @@ bool ColorMapFile::checkUpdates()
 
 
 
-uint ColorMapFile::getColor(double value)
+bool SymbolMapFile::getSymbol(double value,CImage& symbol)
 {
   try
   {
     AutoThreadLock lock(&mThreadLock);
 
-    auto it = mColorMap.find(value);
-    if (it != mColorMap.end())
-      return it->second;
+    std::string filename = "";
 
-    it = mColorMap.upper_bound(value);
-    if (it != mColorMap.end())
-      return it->second;
+    auto it = mSymbolMap.find(value);
+    if (it != mSymbolMap.end())
+      filename = it->second;
 
-    if (value > mColorMap.rbegin()->first)
-      return mColorMap.rbegin()->second;
+    if (filename.empty())
+    {
+      it = mSymbolMap.upper_bound(value);
+      if (it != mSymbolMap.end())
+        filename = it->second;
 
-    if (value < mColorMap.begin()->first)
-      return mColorMap.begin()->second;
+      if (filename.empty())
+      {
+        if (value > mSymbolMap.rbegin()->first)
+          filename = mSymbolMap.rbegin()->second;
+      }
 
-    return 0xFFFFFFFF;
+      if (filename.empty())
+      {
+        if (value < mSymbolMap.begin()->first)
+          filename = mSymbolMap.begin()->second;
+      }
+    }
+
+    if (!filename.empty())
+    {
+      std::string fname = mDir + "/" + filename;
+/*
+      auto it = mSymbolCache.find(fname);
+      if (it != mSymbolCache.end())
+      {
+        symbol = it->second;
+        return true;
+      }
+*/
+      if (png_load(fname.c_str(),symbol) == 0)
+      {
+        mSymbolCache.insert(std::pair<std::string,CImage>(fname,symbol));
+        return true;
+      }
+    }
+
+    return false;
   }
   catch (...)
   {
@@ -167,7 +197,7 @@ uint ColorMapFile::getColor(double value)
 
 
 
-string_vec ColorMapFile::getNames()
+string_vec SymbolMapFile::getNames()
 {
   try
   {
@@ -183,7 +213,7 @@ string_vec ColorMapFile::getNames()
 
 
 
-bool ColorMapFile::hasName(const char *name)
+bool SymbolMapFile::hasName(const char *name)
 {
   try
   {
@@ -204,7 +234,7 @@ bool ColorMapFile::hasName(const char *name)
 
 
 
-void ColorMapFile::print(std::ostream& stream,uint level,uint optionFlags)
+void SymbolMapFile::print(std::ostream& stream,uint level,uint optionFlags)
 {
   try
   {
@@ -219,7 +249,7 @@ void ColorMapFile::print(std::ostream& stream,uint level,uint optionFlags)
 
 
 
-void ColorMapFile::loadFile()
+void SymbolMapFile::loadFile()
 {
   try
   {
@@ -231,8 +261,9 @@ void ColorMapFile::loadFile()
       throw exception;
     }
 
-    mColorMap.clear();
+    mSymbolMap.clear();
     mNames.clear();
+    mSymbolCache.clear();
 
     char st[1000];
 
@@ -272,10 +303,15 @@ void ColorMapFile::loadFile()
               mNames.push_back(std::string(field[1]));
             }
             else
+            if (strcasecmp(field[0],"DIR") == 0)
+            {
+              mDir = field[1];
+            }
+            else
             {
               double val = atof(field[0]);
-              uint color = strtoul(field[1],NULL,16);
-              mColorMap.insert(std::pair<double,unsigned int>(val,color));
+              std::string filename = field[1];
+              mSymbolMap.insert(std::pair<double,std::string>(val,filename));
             }
           }
         }

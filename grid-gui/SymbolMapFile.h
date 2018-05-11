@@ -2,6 +2,7 @@
 
 #include <grid-files/common/ThreadLock.h>
 #include <grid-files/common/Typedefs.h>
+#include <grid-files/common/ImageFunctions.h>
 #include <map>
 #include <vector>
 
@@ -11,21 +12,22 @@ namespace SmartMet
 namespace T
 {
 
-typedef std::map<double,unsigned int> ColorMap;
+typedef std::map<double,std::string> SymbolMap;
+typedef std::map<std::string,CImage> SymbolCache;
 
 
-class ColorMapFile
+class SymbolMapFile
 {
   public:
-                    ColorMapFile();
-                    ColorMapFile(std::string filename);
-                    ColorMapFile(const ColorMapFile& colorMapFile);
-    virtual         ~ColorMapFile();
+                    SymbolMapFile();
+                    SymbolMapFile(std::string filename);
+                    SymbolMapFile(const SymbolMapFile& symbolMapFile);
+    virtual         ~SymbolMapFile();
 
     void            init();
     void            init(std::string filename);
     bool            checkUpdates();
-    uint            getColor(double value);
+    bool            getSymbol(double value,CImage& symbol);
     string_vec      getNames();
     bool            hasName(const char *name);
 
@@ -37,13 +39,15 @@ class ColorMapFile
 
     string_vec      mNames;
     std::string     mFilename;
-    ColorMap        mColorMap;
+    std::string     mDir;
+    SymbolMap       mSymbolMap;
+    SymbolCache     mSymbolCache;
     time_t          mLastModified;
     ThreadLock      mThreadLock;
 };
 
 
-typedef std::vector<ColorMapFile> ColorMapFile_vec;
+typedef std::vector<SymbolMapFile> SymbolMapFile_vec;
 
 
 }  // namespace T

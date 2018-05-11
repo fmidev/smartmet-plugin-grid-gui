@@ -7,6 +7,8 @@
 #pragma once
 
 #include "ColorMapFile.h"
+#include "SymbolMapFile.h"
+#include "LocationFile.h"
 #include <spine/SmartMetPlugin.h>
 #include <spine/Reactor.h>
 #include <spine/HTTP.h>
@@ -75,6 +77,10 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
                       const SmartMet::Spine::HTTP::Request& theRequest,
                       SmartMet::Spine::HTTP::Response& theResponse);
 
+    bool page_symbols(SmartMet::Spine::Reactor& theReactor,
+                      const SmartMet::Spine::HTTP::Request& theRequest,
+                      SmartMet::Spine::HTTP::Response& theResponse);
+
     bool page_map(SmartMet::Spine::Reactor& theReactor,
                       const SmartMet::Spine::HTTP::Request& theRequest,
                       SmartMet::Spine::HTTP::Response& theResponse);
@@ -85,8 +91,6 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
 
     void saveImage(const char *imageFile,
                       T::GridData&  gridData,
-                      T::Coordinate_vec& coordinates,
-                      T::Coordinate_vec& lineCoordinates,
                       unsigned char hue,
                       unsigned char saturation,
                       unsigned char blur,
@@ -94,7 +98,10 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
                       uint landBorder,
                       std::string landMask,
                       std::string seaMask,
-                      std::string colorMapName);
+                      std::string colorMapName,
+                      T::GeometryId geometryId,
+                      std::string symbolMap,
+                      std::string locations);
 
     void saveMap(const char *imageFile,
                       uint columns,
@@ -110,7 +117,9 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
 
     void saveTimeSeries(const char *imageFile,std::vector<T::ParamValue>& valueList,int idx,std::set<int> dayIdx);
 
-    T::ColorMapFile* getColorMapFile(std::string colorMapName);
+    T::ColorMapFile*  getColorMapFile(std::string colorMapName);
+    T::SymbolMapFile* getSymbolMapFile(std::string symbolMap);
+    T::LocationFile*  getLocationFile(std::string name);
 
     void getGenerations(T::GenerationInfoList& generationInfoList,std::set<std::string>& generations);
     void getLevelIds(T::ContentInfoList& contentInfoList,std::set<int>& levelIds);
@@ -128,7 +137,11 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
     std::string               itsLandSeaMaskFile;
     CImage                    itsLandSeaMask;
     string_vec                itsColorMapFileNames;
+    string_vec                itsLocationFileNames;
+    string_vec                itsSymbolMapFileNames;
     T::ColorMapFile_vec       itsColorMapFiles;
+    T::LocationFile_vec       itsLocationFiles;
+    T::SymbolMapFile_vec      itsSymbolMapFiles;
 
 
 };  // class Plugin

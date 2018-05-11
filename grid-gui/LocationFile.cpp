@@ -1,4 +1,4 @@
-#include "ColorMapFile.h"
+#include "LocationFile.h"
 #include <grid-files/common/GeneralFunctions.h>
 #include <grid-files/common/AutoThreadLock.h>
 
@@ -10,7 +10,7 @@ namespace T
 
 
 
-ColorMapFile::ColorMapFile()
+LocationFile::LocationFile()
 {
   try
   {
@@ -26,7 +26,7 @@ ColorMapFile::ColorMapFile()
 
 
 
-ColorMapFile::ColorMapFile(std::string filename)
+LocationFile::LocationFile(std::string filename)
 {
   try
   {
@@ -43,13 +43,13 @@ ColorMapFile::ColorMapFile(std::string filename)
 
 
 
-ColorMapFile::ColorMapFile(const ColorMapFile& colorMapFile)
+LocationFile::LocationFile(const LocationFile& colorMapFile)
 {
   try
   {
     mNames = colorMapFile.mNames;
     mFilename = colorMapFile.mFilename;
-    mColorMap = colorMapFile.mColorMap;
+    mCoordinates = colorMapFile.mCoordinates;
     mLastModified = colorMapFile.mLastModified;
   }
   catch (...)
@@ -62,7 +62,7 @@ ColorMapFile::ColorMapFile(const ColorMapFile& colorMapFile)
 
 
 
-ColorMapFile::~ColorMapFile()
+LocationFile::~LocationFile()
 {
   try
   {
@@ -76,7 +76,7 @@ ColorMapFile::~ColorMapFile()
 
 
 
-void ColorMapFile::init()
+void LocationFile::init()
 {
   try
   {
@@ -93,7 +93,7 @@ void ColorMapFile::init()
 
 
 
-void ColorMapFile::init(std::string filename)
+void LocationFile::init(std::string filename)
 {
   try
   {
@@ -110,7 +110,7 @@ void ColorMapFile::init(std::string filename)
 
 
 
-bool ColorMapFile::checkUpdates()
+bool LocationFile::checkUpdates()
 {
   try
   {
@@ -135,27 +135,11 @@ bool ColorMapFile::checkUpdates()
 
 
 
-uint ColorMapFile::getColor(double value)
+T::Coordinate_vec LocationFile::getCoordinates()
 {
   try
   {
-    AutoThreadLock lock(&mThreadLock);
-
-    auto it = mColorMap.find(value);
-    if (it != mColorMap.end())
-      return it->second;
-
-    it = mColorMap.upper_bound(value);
-    if (it != mColorMap.end())
-      return it->second;
-
-    if (value > mColorMap.rbegin()->first)
-      return mColorMap.rbegin()->second;
-
-    if (value < mColorMap.begin()->first)
-      return mColorMap.begin()->second;
-
-    return 0xFFFFFFFF;
+    return mCoordinates;
   }
   catch (...)
   {
@@ -167,7 +151,7 @@ uint ColorMapFile::getColor(double value)
 
 
 
-string_vec ColorMapFile::getNames()
+string_vec LocationFile::getNames()
 {
   try
   {
@@ -183,7 +167,7 @@ string_vec ColorMapFile::getNames()
 
 
 
-bool ColorMapFile::hasName(const char *name)
+bool LocationFile::hasName(const char *name)
 {
   try
   {
@@ -204,7 +188,7 @@ bool ColorMapFile::hasName(const char *name)
 
 
 
-void ColorMapFile::print(std::ostream& stream,uint level,uint optionFlags)
+void LocationFile::print(std::ostream& stream,uint level,uint optionFlags)
 {
   try
   {
@@ -219,7 +203,7 @@ void ColorMapFile::print(std::ostream& stream,uint level,uint optionFlags)
 
 
 
-void ColorMapFile::loadFile()
+void LocationFile::loadFile()
 {
   try
   {
@@ -231,7 +215,7 @@ void ColorMapFile::loadFile()
       throw exception;
     }
 
-    mColorMap.clear();
+    mCoordinates.clear();
     mNames.clear();
 
     char st[1000];
@@ -265,17 +249,17 @@ void ColorMapFile::loadFile()
 
         if (c > 1)
         {
-          if (field[0][0] != '\0'  &&  field[1][0] != '\0')
+          if (strcasecmp(field[0],"NAME") == 0)
           {
-            if (strcasecmp(field[0],"NAME") == 0)
+            mNames.push_back(std::string(field[1]));
+          }
+          else
+          {
+            if (field[0][0] != '\0' &&  field[1][0] != '\0')
             {
-              mNames.push_back(std::string(field[1]));
-            }
-            else
-            {
-              double val = atof(field[0]);
-              uint color = strtoul(field[1],NULL,16);
-              mColorMap.insert(std::pair<double,unsigned int>(val,color));
+              double lat = atof(field[0]);
+              double lon = atof(field[1]);
+              mCoordinates.push_back(T::Coordinate(lon,lat));
             }
           }
         }
