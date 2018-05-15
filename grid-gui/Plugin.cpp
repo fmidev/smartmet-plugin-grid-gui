@@ -3215,17 +3215,17 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 
     if (presentation == "image")
     {
-      ostr << "<TD><IMG id=\"myimage\" style=\"background:#000000; max-width:1800; height:100%; max-height:100%;\" src=\"/grid-gui?page=" << presentation << "&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "&geometryId=" << geometryIdStr << "&hue=" << hueStr << "&saturation=" << saturationStr << "&blur=" << blurStr <<  "&coordinateLines=" << coordinateLinesStr << "&landBorder=" << landBorderStr << "&landMask=" << landMaskStr <<  "&seaMask=" << seaMaskStr << "&colorMap=" << colorMap <<  "\"&location= onclick=\"getImageCoords(event,this," << fileIdStr << "," << messageIndexStr << ",'" << presentation << "');\"></TD>";
+      ostr << "<TD><IMG id=\"myimage\" style=\"background:#000000; max-width:1800; height:100%; max-height:100%;\" src=\"/grid-gui?page=" << presentation << "&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "&geometryId=" << geometryIdStr << "&hue=" << hueStr << "&saturation=" << saturationStr << "&blur=" << blurStr <<  "&coordinateLines=" << coordinateLinesStr << "&landBorder=" << landBorderStr << "&landMask=" << landMaskStr <<  "&seaMask=" << seaMaskStr << "&colorMap=" << colorMap <<  "&locations= \" onclick=\"getImageCoords(event,this," << fileIdStr << "," << messageIndexStr << ",'" << presentation << "');\"/></TD>";
     }
     else
     if (presentation == "symbols")
     {
-      ostr << "<TD><IMG id=\"myimage\" style=\"background:#000000; max-width:1800; height:100%; max-height:100%;\" src=\"/grid-gui?page=" << presentation << "&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "&geometryId=" << geometryIdStr << "&hue=" << hueStr << "&saturation=" << saturationStr << "&blur=" << blurStr <<  "&coordinateLines=" << coordinateLinesStr << "&landBorder=" << landBorderStr << "&landMask=" << landMaskStr <<  "&seaMask=" << seaMaskStr << "&colorMap=" << colorMap << "&locations=" << locations << "&symbolMap=" << symbolMap << "\" onclick=\"getImageCoords(event,this," << fileIdStr << "," << messageIndexStr << ",'" << presentation << "');\"></TD>";
+      ostr << "<TD><IMG id=\"myimage\" style=\"background:#000000; max-width:1800; height:100%; max-height:100%;\" src=\"/grid-gui?page=" << presentation << "&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "&geometryId=" << geometryIdStr << "&hue=" << hueStr << "&saturation=" << saturationStr << "&blur=" << blurStr <<  "&coordinateLines=" << coordinateLinesStr << "&landBorder=" << landBorderStr << "&landMask=" << landMaskStr <<  "&seaMask=" << seaMaskStr << "&colorMap=" << colorMap << "&locations=" << locations << "&symbolMap=" << symbolMap << "\" onclick=\"getImageCoords(event,this," << fileIdStr << "," << messageIndexStr << ",'" << presentation << "');\"/></TD>";
     }
     else
     if (presentation == "map")
     {
-      ostr << "<TD><IMG id=\"myimage\" style=\"background:#000000; max-width:100%; height:100%;\" src=\"/grid-gui?page=map&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "&hue=" << hueStr << "&saturation=" << saturationStr << "&blur=" << blurStr << "&coordinateLines=" << coordinateLinesStr << "&landBorder=" << landBorderStr << "&landMask=" << landMaskStr << "&seaMask=" << seaMaskStr << "&colorMap=" << colorMap <<  "\"></TD>";
+      ostr << "<TD><IMG id=\"myimage\" style=\"background:#000000; max-width:100%; height:100%;\" src=\"/grid-gui?page=map&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "&hue=" << hueStr << "&saturation=" << saturationStr << "&blur=" << blurStr << "&coordinateLines=" << coordinateLinesStr << "&landBorder=" << landBorderStr << "&landMask=" << landMaskStr << "&seaMask=" << seaMaskStr << "&colorMap=" << colorMap <<  "\"/></TD>";
     }
     else
     if (presentation == "table(sample)" /* || presentation == "table(full)"*/)
