@@ -113,6 +113,7 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
                       unsigned char hue,
                       unsigned char saturation,
                       unsigned char blur,
+                      uint coordinateLines,
                       uint landBorder,
                       std::string landMask,
                       std::string seaMask,
