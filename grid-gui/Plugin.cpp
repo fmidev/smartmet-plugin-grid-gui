@@ -22,31 +22,6 @@ namespace GridGui
 using namespace SmartMet::Spine;
 
 
-const char *colorNames[] = {"none","grey","dark-grey","light-grey","black","white","blue","red","yellow",NULL};
-uint colorValues[] = {0xFFFFFFFF,0x808080,0x404040,0xC0C0C0,0x000000,0xFFFFFF,0x0000FF,0xFF0000,0xFFFF00};
-
-uint getColorValue(const char *colorName)
-{
-  try
-  {
-    uint c = 0;
-    while (colorNames[c] != NULL)
-    {
-      if (strcasecmp(colorName,colorNames[c]) == 0)
-        return colorValues[c];
-      c++;
-    }
-    return 0xFFFFFFFF;
-  }
-  catch (...)
-  {
-    throw SmartMet::Spine::Exception(BCP, "Operation failed!", NULL);
-  }
-}
-
-
-
-
 
 
 // ----------------------------------------------------------------------
@@ -67,10 +42,12 @@ Plugin::Plugin(SmartMet::Spine::Reactor *theReactor, const char *theConfig)
         "smartmet.plugin.grid-gui.colorMapFiles",
         "smartmet.plugin.grid-gui.symbolMapFiles",
         "smartmet.plugin.grid-gui.locationFiles",
+        "smartmet.plugin.grid-gui.colorFile",
         NULL
     };
 
     itsReactor = theReactor;
+    itsColors_lastModified = 0;
 
     if (theReactor->getRequiredAPIVersion() != SMARTMET_API_VERSION)
       throw SmartMet::Spine::Exception(BCP, "GridGui plugin and Server API version mismatch");
@@ -101,6 +78,7 @@ Plugin::Plugin(SmartMet::Spine::Reactor *theReactor, const char *theConfig)
     itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.colorMapFiles",itsColorMapFileNames);
     itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.symbolMapFiles",itsSymbolMapFileNames);
     itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.locationFiles",itsLocationFileNames);
+    itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.colorFile",itsColorFile);
 
 
     Identification::gridDef.init(itsGridConfigFile.c_str());
@@ -128,6 +106,8 @@ Plugin::Plugin(SmartMet::Spine::Reactor *theReactor, const char *theConfig)
       locationFile.init(it->c_str());
       itsLocationFiles.push_back(locationFile);
     }
+
+    loadColorFile();
   }
   catch (...)
   {
@@ -218,6 +198,98 @@ T::ColorMapFile* Plugin::getColorMapFile(std::string colorMapName)
 
 
 
+void Plugin::loadColorFile()
+{
+  try
+  {
+    FILE *file = fopen(itsColorFile.c_str(),"r");
+    if (file == NULL)
+    {
+      SmartMet::Spine::Exception exception(BCP,"Cannot open file!");
+      exception.addParameter("Filename",itsColorFile);
+      throw exception;
+    }
+
+    itsColors.clear();
+
+    char st[1000];
+
+    while (!feof(file))
+    {
+      if (fgets(st,1000,file) != NULL  &&  st[0] != '#')
+      {
+        bool ind = false;
+        char *field[100];
+        uint c = 1;
+        field[0] = st;
+        char *p = st;
+        while (*p != '\0'  &&  c < 100)
+        {
+          if (*p == '"')
+            ind = !ind;
+
+          if ((*p == ';'  || *p == '\n') && !ind)
+          {
+            *p = '\0';
+            p++;
+            field[c] = p;
+            c++;
+          }
+          else
+          {
+            p++;
+          }
+        }
+
+        if (c > 1)
+        {
+          if (field[0][0] != '\0'  &&  field[1][0] != '\0')
+          {
+            std::string colorName = field[0];
+            uint color = strtoul(field[1],NULL,16);
+
+            itsColors.push_back(std::pair<std::string,unsigned int>(colorName,color));
+          }
+        }
+      }
+    }
+    fclose(file);
+
+    itsColors_lastModified = getFileModificationTime(itsColorFile.c_str());
+  }
+  catch (...)
+  {
+    throw Spine::Exception(BCP, "Constructor failed!", NULL);
+  }
+}
+
+
+
+
+
+uint Plugin::getColorValue(std::string& colorName)
+{
+  try
+  {
+    for (auto it = itsColors.begin(); it != itsColors.end(); ++it)
+    {
+      if (it->first == colorName)
+        return it->second;
+    }
+
+    return 0xFFFFFFFF;
+  }
+  catch (...)
+  {
+    throw SmartMet::Spine::Exception(BCP, "Operation failed!", NULL);
+  }
+}
+
+
+
+
+
+
 T::SymbolMapFile* Plugin::getSymbolMapFile(std::string symbolMap)
 {
   try
@@ -303,20 +375,20 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
 {
   try
   {
-    uint landColor = getColorValue(landMask.c_str());
-    uint seaColor = getColorValue(seaMask.c_str());
+    uint landColor = getColorValue(landMask);
+    uint seaColor = getColorValue(seaMask);
 
     T::ColorMapFile *colorMapFile = NULL;
 
-    if (!colorMapName.empty() &&  strcasecmp(colorMapName.c_str(),"none") != 0)
+    if (!colorMapName.empty() &&  strcasecmp(colorMapName.c_str(),"None") != 0)
       colorMapFile = getColorMapFile(colorMapName);
 
     bool showLandMask = false;
-    if (landMask == "simple")
+    if (landMask == "Simple")
       showLandMask = true;
 
     bool showSeaMask = false;
-    if (seaMask == "simple")
+    if (seaMask == "Simple")
       showSeaMask = true;
 
     double maxValue = -1000000000;
@@ -493,11 +565,11 @@ void Plugin::saveImage(const char *imageFile,T::GridData&  gridData,unsigned cha
   {
     T::ColorMapFile *colorMapFile = NULL;
 
-    if (!colorMapName.empty() &&  strcasecmp(colorMapName.c_str(),"none") != 0)
+    if (!colorMapName.empty() &&  strcasecmp(colorMapName.c_str(),"None") != 0)
       colorMapFile = getColorMapFile(colorMapName);
 
-    uint landColor = getColorValue(landMask.c_str());
-    uint seaColor = getColorValue(seaMask.c_str());
+    uint landColor = getColorValue(landMask);
+    uint seaColor = getColorValue(seaMask);
 
     bool showSymbols = false;
     bool showValues = true;
@@ -508,11 +580,11 @@ void Plugin::saveImage(const char *imageFile,T::GridData&  gridData,unsigned cha
     }
 
     bool showLandMask = false;
-    if (landMask == "simple"  &&  !showSymbols)
+    if (landMask == "Simple"  &&  !showSymbols)
       showLandMask = true;
 
     bool showSeaMask = false;
-    if (seaMask == "simple"  &&  !showSymbols)
+    if (seaMask == "Simple"  &&  !showSymbols)
       showSeaMask = true;
 
     //printf("*** COORDINATES %u\n",(uint)coordinates.size());
@@ -1666,11 +1738,11 @@ bool Plugin::page_image(SmartMet::Spine::Reactor &theReactor,
     std::string presentation = "image";
     std::string blurStr = "1";
     std::string geometryIdStr = "0";
-    std::string coordinateLinesStr = "dark-grey";
-    std::string landBorderStr = "dark-grey";
-    std::string landMaskStr = "none";
-    std::string seaMaskStr = "none";
-    std::string colorMap = "none";
+    std::string coordinateLinesStr = "Grey";
+    std::string landBorderStr = "Grey";
+    std::string landMaskStr = "None";
+    std::string seaMaskStr = "None";
+    std::string colorMap = "None";
     std::string locations = "";
     std::string symbolMap = "";
 
@@ -1734,8 +1806,8 @@ bool Plugin::page_image(SmartMet::Spine::Reactor &theReactor,
       return true;
     }
 
-    uint landBorder = getColorValue(landBorderStr.c_str());
-    uint coordinateLines = getColorValue(coordinateLinesStr.c_str());
+    uint landBorder = getColorValue(landBorderStr);
+    uint coordinateLines = getColorValue(coordinateLinesStr);
 
     T::GeometryId geometryId = gridData.mGeometryId;
     if (geometryId == 0)
@@ -1815,13 +1887,13 @@ bool Plugin::page_symbols(SmartMet::Spine::Reactor &theReactor,
     std::string presentation = "symbols";
     std::string blurStr = "1";
     std::string geometryIdStr = "0";
-    std::string coordinateLinesStr = "dark-grey";
-    std::string landBorderStr = "dark-grey";
-    std::string landMaskStr = "none";
-    std::string seaMaskStr = "none";
-    std::string colorMap = "none";
-    std::string locations = "none";
-    std::string symbolMap = "none";
+    std::string coordinateLinesStr = "Grey";
+    std::string landBorderStr = "Grey";
+    std::string landMaskStr = "None";
+    std::string seaMaskStr = "None";
+    std::string colorMap = "None";
+    std::string locations = "None";
+    std::string symbolMap = "None";
 
     boost::optional<std::string> v;
     v = theRequest.getParameter("fileId");
@@ -1891,8 +1963,8 @@ bool Plugin::page_symbols(SmartMet::Spine::Reactor &theReactor,
       return true;
     }
 
-    uint landBorder = getColorValue(landBorderStr.c_str());
-    uint coordinateLines = getColorValue(coordinateLinesStr.c_str());
+    uint landBorder = getColorValue(landBorderStr);
+    uint coordinateLines = getColorValue(coordinateLinesStr);
 
     T::GeometryId geometryId = gridData.mGeometryId;
     if (geometryId == 0)
@@ -1970,10 +2042,10 @@ bool Plugin::page_map(SmartMet::Spine::Reactor &theReactor,
     std::string hueStr = "128";
     std::string saturationStr = "60";
     std::string blurStr = "1";
-    std::string landBorderStr = "dark-grey";
-    std::string landMaskStr = "none";
-    std::string seaMaskStr = "none";
-    std::string colorMap = "none";
+    std::string landBorderStr = "Grey";
+    std::string landMaskStr = "None";
+    std::string seaMaskStr = "None";
+    std::string colorMap = "None";
 
     boost::optional<std::string> v;
     v = theRequest.getParameter("fileId");
@@ -2029,7 +2101,7 @@ bool Plugin::page_map(SmartMet::Spine::Reactor &theReactor,
       return true;
     }
 
-    uint landBorder = getColorValue(landBorderStr.c_str());
+    uint landBorder = getColorValue(landBorderStr);
 
     char fname[200];
     sprintf(fname,"/tmp/image_%llu.jpg",getTime());
@@ -2296,16 +2368,16 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     std::string forecastNumberStr = "";
     std::string saturationStr = "60";
     std::string blurStr = "1";
-    std::string coordinateLinesStr = "dark-grey";
-    std::string landBorderStr = "dark-grey";
-    std::string landMaskStr = "none";
-    std::string seaMaskStr = "none";
-    std::string colorMap = "none";
+    std::string coordinateLinesStr = "Grey";
+    std::string landBorderStr = "Grey";
+    std::string landMaskStr = "None";
+    std::string seaMaskStr = "None";
+    std::string colorMap = "None";
     std::string startTime = "";
     std::string unitStr = "";
     std::string presentation = "image";
-    std::string symbolMap = "none";
-    std::string locations = "none";
+    std::string symbolMap = "None";
+    std::string locations = "None";
 
     boost::optional<std::string> v;
     v = theRequest.getParameter("producerId");
@@ -2395,6 +2467,12 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     v = theRequest.getParameter("symbolMap");
     if (v)
       symbolMap = *v;
+
+
+    if (getFileModificationTime(itsColorFile.c_str()) != itsColors_lastModified)
+    {
+      loadColorFile();
+    }
 
     std::ostringstream ostr;
 
@@ -2933,10 +3011,10 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
       ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&coordinateLines=" + coordinateLinesStr + "&colorMap=' + this.options[this.selectedIndex].value)\"";
       ostr << " >\n";
 
-      if (colorMap.empty() ||  colorMap == "none")
-        ostr << "<OPTION selected value=\"none\">none</OPTION>\n";
+      if (colorMap.empty() ||  colorMap == "None")
+        ostr << "<OPTION selected value=\"None\">None</OPTION>\n";
       else
-        ostr << "<OPTION value=\"none\">none</OPTION>\n";
+        ostr << "<OPTION value=\"None\">None</OPTION>\n";
 
       for (auto it = names.begin(); it != names.end(); ++it)
       {
@@ -2968,10 +3046,10 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
       ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&coordinateLines=" + coordinateLinesStr + "&locations=" + locations + "&symbolMap=' + this.options[this.selectedIndex].value)\"";
       ostr << " >\n";
 
-      if (symbolMap.empty() || symbolMap == "none")
-        ostr << "<OPTION selected value=\"none\">none</OPTION>\n";
+      if (symbolMap.empty() || symbolMap == "None")
+        ostr << "<OPTION selected value=\"None\">None</OPTION>\n";
       else
-        ostr << "<OPTION value=\"none\">none</OPTION>\n";
+        ostr << "<OPTION value=\"None\">None</OPTION>\n";
 
       for (auto it = groups.begin(); it != groups.end(); ++it)
       {
@@ -3001,10 +3079,10 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
       ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&coordinateLines=" + coordinateLinesStr + "&locations=' + this.options[this.selectedIndex].value)\"";
       ostr << " >\n";
 
-      if (locations.empty() ||  locations == "none")
-        ostr << "<OPTION selected value=\"none\">none</OPTION>\n";
+      if (locations.empty() ||  locations == "None")
+        ostr << "<OPTION selected value=\"None\">None</OPTION>\n";
       else
-        ostr << "<OPTION value=\"none\">none</OPTION>\n";
+        ostr << "<OPTION value=\"None\">None</OPTION>\n";
 
       for (auto it = names.begin(); it != names.end(); ++it)
       {
@@ -3020,7 +3098,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 
     if (presentation == "image" || presentation == "map" || presentation == "symbols")
     {
-      if ((colorMap.empty() || colorMap == "none") &&  presentation != "symbols")
+      if ((colorMap.empty() || colorMap == "None") &&  presentation != "symbols")
       {
         // ### Hue, saturation, blur
 
@@ -3090,13 +3168,12 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 
       ostr << " >\n";
 
-      uint a = 0;
-      while (colorNames[a] != NULL)
+      for (auto it = itsColors.begin(); it != itsColors.end(); ++it)
       {
-        if (coordinateLinesStr == colorNames[a])
-          ostr << "<OPTION selected value=\"" << colorNames[a] << "\">" <<  colorNames[a] << "</OPTION>\n";
+        if (coordinateLinesStr == it->first)
+          ostr << "<OPTION selected value=\"" << it->first << "\">" <<  it->first << "</OPTION>\n";
         else
-          ostr << "<OPTION value=\"" <<  colorNames[a] << "\">" <<  colorNames[a] << "</OPTION>\n";
+          ostr << "<OPTION value=\"" <<  it->first << "\">" <<  it->first << "</OPTION>\n";
 
         a++;
       }
@@ -3115,13 +3192,12 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 
       ostr << " >\n";
 
-      a = 0;
-      while (colorNames[a] != NULL)
+      for (auto it = itsColors.begin(); it != itsColors.end(); ++it)
       {
-        if (landBorderStr == colorNames[a])
-          ostr << "<OPTION selected value=\"" << colorNames[a] << "\">" <<  colorNames[a] << "</OPTION>\n";
+        if (landBorderStr == it->first)
+          ostr << "<OPTION selected value=\"" << it->first << "\">" <<  it->first << "</OPTION>\n";
         else
-          ostr << "<OPTION value=\"" <<  colorNames[a] << "\">" <<  colorNames[a] << "</OPTION>\n";
+          ostr << "<OPTION value=\"" <<  it->first << "\">" <<  it->first << "</OPTION>\n";
 
         a++;
       }
@@ -3141,7 +3217,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 
     ostr << " >\n";
 
-    const char *landMasks[] = {"simple",NULL};
+    const char *landMasks[] = {"Simple",NULL};
     a = 0;
     while (landMasks[a] != NULL)
     {
@@ -3152,13 +3228,13 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 
       a++;
     }
-    a = 0;
-    while (colorNames[a] != NULL)
+
+    for (auto it = itsColors.begin(); it != itsColors.end(); ++it)
     {
-      if (landMaskStr == colorNames[a])
-        ostr << "<OPTION selected value=\"" << colorNames[a] << "\">" <<  colorNames[a] << "</OPTION>\n";
+      if (landMaskStr == it->first)
+        ostr << "<OPTION selected value=\"" << it->first << "\">" <<  it->first << "</OPTION>\n";
       else
-        ostr << "<OPTION value=\"" <<  colorNames[a] << "\">" <<  colorNames[a] << "</OPTION>\n";
+        ostr << "<OPTION value=\"" <<  it->first << "\">" <<  it->first << "</OPTION>\n";
 
       a++;
     }
@@ -3172,7 +3248,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 
     ostr << " >\n";
 
-    const char *seaMasks[] = {"simple",NULL};
+    const char *seaMasks[] = {"Simple",NULL};
     a = 0;
     while (seaMasks[a] != NULL)
     {
@@ -3183,13 +3259,12 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 
       a++;
     }
-    a = 0;
-    while (colorNames[a] != NULL)
+    for (auto it = itsColors.begin(); it != itsColors.end(); ++it)
     {
-      if (seaMaskStr == colorNames[a])
-        ostr << "<OPTION selected value=\"" << colorNames[a] << "\">" <<  colorNames[a] << "</OPTION>\n";
+      if (seaMaskStr == it->first)
+        ostr << "<OPTION selected value=\"" << it->first << "\">" <<  it->first << "</OPTION>\n";
       else
-        ostr << "<OPTION value=\"" <<  colorNames[a] << "\">" <<  colorNames[a] << "</OPTION>\n";
+        ostr << "<OPTION value=\"" <<  it->first << "\">" <<  it->first << "</OPTION>\n";
 
       a++;
     }

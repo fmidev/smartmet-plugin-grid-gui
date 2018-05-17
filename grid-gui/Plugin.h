@@ -24,6 +24,9 @@ namespace GridGui
 {
 
 
+typedef std::vector<std::pair<std::string,unsigned int>> Colors;
+
+
 class Plugin : public SmartMetPlugin, private boost::noncopyable
 {
   public:
@@ -127,6 +130,8 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
     void getForecastTypes(T::ContentInfoList& contentInfoList,int levelId,int level,std::set<int>& forecastTypes);
     void getForecastNumbers(T::ContentInfoList& contentInfoList,int levelId,int level,int forecastType,std::set<int>& forecastNumbers);
     void getGeometries(T::ContentInfoList& contentInfoList,int levelId,int level,int forecastType,int forecastNumber,std::set<int>& geometries);
+    uint getColorValue(std::string& colorName);
+    void loadColorFile();
 
 
     Engine::Grid::Engine*     itsGridEngine;
@@ -142,11 +147,13 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
     T::ColorMapFile_vec       itsColorMapFiles;
     T::LocationFile_vec       itsLocationFiles;
     T::SymbolMapFile_vec      itsSymbolMapFiles;
-
+    std::string               itsColorFile;
+    Colors                    itsColors;
+    time_t                    itsColors_lastModified;
 
 };  // class Plugin
 
-}  // namespace GridContent
+}  // namespace GridGui
 }  // namespace Plugin
 }  // namespace SmartMet
 
