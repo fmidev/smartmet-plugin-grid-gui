@@ -617,14 +617,20 @@ void Plugin::saveImage(const char *imageFile,T::GridData&  gridData,unsigned cha
     }
 
     T::Coordinate_vec coordinates;
-    if (gridData.mGeometryId != 0)
+    if (geometryId != 0)
       coordinates = Identification::gridDef.getGridLatLonCoordinatesByGeometryId(geometryId);
+
+    if (coordinates.size() == 0  &&  gridData.mGeometryId != 0)
+      coordinates = Identification::gridDef.getGridLatLonCoordinatesByGeometryId(gridData.mGeometryId);
 
     T::Coordinate_vec lineCoordinates;
     if (coordinateLines != 0xFFFFFFFF)
     {
-      if (gridData.mGeometryId != 0)
+      if (geometryId != 0)
         lineCoordinates = Identification::gridDef.getGridLatLonCoordinateLinePointsByGeometryId(geometryId);
+
+      if (lineCoordinates.size() == 0  &&  gridData.mGeometryId != 0)
+        lineCoordinates = Identification::gridDef.getGridLatLonCoordinateLinePointsByGeometryId(gridData.mGeometryId);
     }
 
     bool landSeaMask = true;
@@ -773,7 +779,6 @@ void Plugin::saveImage(const char *imageFile,T::GridData&  gridData,unsigned cha
           if (!showValues || val == ParamValueMissing)
             col = 0xE8E8E8;
 
-          //printf("COORDINATES : %d,%d => %f,%f\n",x,y,coordinates[c].x(),coordinates[c].y());
           bool land = false;
           if (landSeaMask)
             land = isLand(coordinates[c].x(),coordinates[c].y());
@@ -1218,6 +1223,7 @@ bool Plugin::page_table(SmartMet::Spine::Reactor &theReactor,
     std::string fileIdStr = "";
     std::string messageIndexStr = "0";
     std::string presentation = "Table(sample)";
+    std::string geometryIdStr = "0";
     char tmp[1000];
 
     boost::optional<std::string> v = theRequest.getParameter("presentation");
@@ -1232,6 +1238,9 @@ bool Plugin::page_table(SmartMet::Spine::Reactor &theReactor,
     if (v)
       messageIndexStr = *v;
 
+    v = theRequest.getParameter("geometryId");
+    if (v)
+      geometryIdStr = *v;
 
     if (fileIdStr.empty())
       return true;
@@ -1250,7 +1259,12 @@ bool Plugin::page_table(SmartMet::Spine::Reactor &theReactor,
       return true;
     }
 
-    T::Coordinate_vec coordinates = Identification::gridDef.getGridCoordinatesByGeometryId(gridData.mGeometryId);
+    T::GeometryId geometryId = gridData.mGeometryId;
+    if (geometryId == 0)
+      geometryId = atoi(geometryIdStr.c_str());
+
+
+    T::Coordinate_vec coordinates = Identification::gridDef.getGridCoordinatesByGeometryId(geometryId);
     /*
     T::GridCoordinates coordinates;
     result = dataServer->getGridCoordinates(0,atoi(fileIdStr.c_str()),atoi(messageIndexStr.c_str()),flags,T::CoordinateType::ORIGINAL_COORDINATES,coordinates);
@@ -1264,10 +1278,21 @@ bool Plugin::page_table(SmartMet::Spine::Reactor &theReactor,
     }
     */
 
+    printf("*** COORDINATES %u : %d\n",geometryId,(int)coordinates.size());
 
     uint c = 0;
     uint height = gridData.mRows;
     uint width = gridData.mColumns;
+
+    uint sz = width * height;
+    if ((uint)coordinates.size() != sz)
+    {
+      ostr << "<HTML><BODY>\n";
+      ostr << "Cannot get the grid coordinates\n";
+      ostr << "</BODY></HTML>\n";
+      theResponse.setContent(std::string(ostr.str()));
+      return true;
+    }
 
     if (presentation == "Table(sample)")
     {
@@ -1377,7 +1402,6 @@ bool Plugin::page_coordinates(SmartMet::Spine::Reactor &theReactor,
     v = theRequest.getParameter("messageIndex");
     if (v)
       messageIndexStr = *v;
-
 
     if (fileIdStr.empty())
       return true;
@@ -3310,14 +3334,14 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     else
     if (presentation == "Table(sample)" /* || presentation == "table(full)"*/)
     {
-      ostr << "<TD><IFRAME width=\"100%\" height=\"100%\" src=\"grid-gui?page=table&presentation=" + presentation + "&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "\">";
+      ostr << "<TD><IFRAME width=\"100%\" height=\"100%\" src=\"grid-gui?page=table&presentation=" + presentation + "&fileId=" << fileIdStr << "&geometryId=" << geometryIdStr << "&messageIndex=" << messageIndexStr << "\">";
       ostr << "<p>Your browser does not support iframes.</p>\n";
       ostr << "</IFRAME></TD>";
     }
     else
     if (presentation == "Coordinates(sample)" /* || presentation == "coordinates(full)"*/)
     {
-      ostr << "<TD><IFRAME width=\"100%\" height=\"100%\" src=\"grid-gui?page=coordinates&presentation=" + presentation + "&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "\">";
+      ostr << "<TD><IFRAME width=\"100%\" height=\"100%\" src=\"grid-gui?page=coordinates&presentation=" + presentation + "&fileId=" << fileIdStr << "&geometryId=" << geometryIdStr << "&messageIndex=" << messageIndexStr << "\">";
       ostr << "<p>Your browser does not support iframes.</p>\n";
       ostr << "</IFRAME></TD>";
     }
