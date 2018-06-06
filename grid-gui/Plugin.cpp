@@ -532,7 +532,7 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
           }
         }
 
-        if ((x % xx) == 0  ||  (y % yy) == 0)
+        if (coordinateLines != 0xFFFFFFFF && ((x % xx) == 0  ||  (y % yy) == 0))
         {
           col = coordinateLines;
         }
@@ -2503,76 +2503,85 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
       loadColorFile();
     }
 
-    std::ostringstream ostr;
+    std::ostringstream output;
+    std::ostringstream ostr1;
+    std::ostringstream ostr2;
 
-    ostr << "<HTML>\n";
-    ostr << "<BODY>\n";
+    output << "<HTML>\n";
+    output << "<BODY>\n";
 
-    ostr << "<SCRIPT>\n";
+    output << "<SCRIPT>\n";
 
-    ostr << "var backColor;\n";
-    ostr << "var invisible = '#fefefe';\n";
-    ostr << "var buttonColor = '#808080';\n";
+    output << "var backColor;\n";
+    output << "var invisible = '#fefefe';\n";
+    output << "var buttonColor = '#808080';\n";
 
-    ostr << "function getPage(obj,frm,url)\n";
-    ostr << "{\n";
-    ostr << "  frm.location.href=url;\n";
-    ostr << "}\n";
+    output << "function getPage(obj,frm,url)\n";
+    output << "{\n";
+    output << "  frm.location.href=url;\n";
+    output << "}\n";
 
-    ostr << "function setImage(img,url)\n";
-    ostr << "{\n";
-    ostr << "  img.src = url;\n";
-    ostr << "}\n";
+    output << "function setImage(img,url)\n";
+    output << "{\n";
+    output << "  img.src = url;\n";
+    output << "}\n";
 
-    ostr << "function mouseOver(obj)\n";
-    ostr << "{\n";
-    ostr << "  if (obj.bgColor != invisible)\n";
-    ostr << "  {\n";
-    ostr << "    backColor = obj.bgColor;\n";
-    ostr << "    obj.bgColor='#FF8040';\n";
-    ostr << "  }\n";
-    ostr << "}\n";
+    output << "function mouseOver(obj)\n";
+    output << "{\n";
+    output << "  if (obj.bgColor != invisible)\n";
+    output << "  {\n";
+    output << "    backColor = obj.bgColor;\n";
+    output << "    obj.bgColor='#FF8040';\n";
+    output << "  }\n";
+    output << "}\n";
 
-    ostr << "function mouseOut(obj)\n";
-    ostr << "{\n";
-    ostr << "  if (obj.bgColor != invisible)\n";
-    ostr << "  {\n";
-    ostr << "    obj.bgColor=backColor;\n";
-    ostr << "  }\n";
-    ostr << "}\n";
+    output << "function mouseOut(obj)\n";
+    output << "{\n";
+    output << "  if (obj.bgColor != invisible)\n";
+    output << "  {\n";
+    output << "    obj.bgColor=backColor;\n";
+    output << "  }\n";
+    output << "}\n";
 
-    ostr << "function httpGet(theUrl)\n";
-    ostr << "{\n";
-    ostr << "  var xmlHttp = new XMLHttpRequest();\n";
-    ostr << "  xmlHttp.open(\"GET\", theUrl, false );\n";
-    ostr << "  xmlHttp.send( null );\n";
-    ostr << "  return xmlHttp.responseText;\n";
-    ostr << "}\n";
+    output << "function keyDown(event,obj,img,url)\n";
+    output << "{\n";
+    output << "  var index = obj.selectedIndex\n";
+    output << "  var keyCode = ('which' in event) ? event.which : event.keyCode;\n";
+    output << "  if (keyCode == 38  &&  index > 0) index--;\n";
+    output << "  if (keyCode == 40) index++;\n";
 
-    ostr << "function getImageCoords(event,img,fileId,messageIndex,presentation) {\n";
-    ostr << "  var posX = event.offsetX?(event.offsetX):event.pageX-img.offsetLeft;\n";
-    ostr << "  var posY = event.offsetY?(event.offsetY):event.pageY-img.offsetTop;\n";
-    ostr << "  var prosX = posX / img.width;\n";
-    ostr << "  var prosY = posY / img.height;\n";
-    ostr << "  var url = \"/grid-gui?page=value&presentation=\" + presentation + \"&fileId=\" + fileId + \"&messagIndex=\" + messageIndex + \"&x=\" + prosX + \"&y=\" + prosY;\n";
+    output << "  setImage(img,url + obj.options[index].value);\n";
+    //output << "  alert (\"The Unicode key code is: \" + keyCode);\n";
+    output << "}\n";
 
-    //ostr << "  document.getElementById('gridValue').value = url;\n";
-    ostr << "  var txt = httpGet(url);\n";
-    ostr << "  document.getElementById('gridValue').value = txt;\n";
+    output << "function httpGet(theUrl)\n";
+    output << "{\n";
+    output << "  var xmlHttp = new XMLHttpRequest();\n";
+    output << "  xmlHttp.open(\"GET\", theUrl, false );\n";
+    output << "  xmlHttp.send( null );\n";
+    output << "  return xmlHttp.responseText;\n";
+    output << "}\n";
 
-    //ostr << "  var url2 = \"/grid-gui?page=timeseries&presentation=\" + presentation + \"&fileId=\" + fileId + \"&messagIndex=\" + messageIndex + \"&x=\" + prosX + \"&y=\" + prosY;\n";
-    //ostr << "  document.getElementById('timeseries').src = url2;\n";
+    output << "function getImageCoords(event,img,fileId,messageIndex,presentation) {\n";
+    output << "  var posX = event.offsetX?(event.offsetX):event.pageX-img.offsetLeft;\n";
+    output << "  var posY = event.offsetY?(event.offsetY):event.pageY-img.offsetTop;\n";
+    output << "  var prosX = posX / img.width;\n";
+    output << "  var prosY = posY / img.height;\n";
+    output << "  var url = \"/grid-gui?page=value&presentation=\" + presentation + \"&fileId=\" + fileId + \"&messagIndex=\" + messageIndex + \"&x=\" + prosX + \"&y=\" + prosY;\n";
 
-    //ostr << "  alert(\"You clicked at: (\"+posX+\",\"+posY+\")\");\n";
-    ostr << "}\n";
-    ostr << "</SCRIPT>\n";
+    //output << "  document.getElementById('gridValue').value = url;\n";
+    output << "  var txt = httpGet(url);\n";
+    output << "  document.getElementById('gridValue').value = txt;\n";
+
+    //output << "  var url2 = \"/grid-gui?page=timeseries&presentation=\" + presentation + \"&fileId=\" + fileId + \"&messagIndex=\" + messageIndex + \"&x=\" + prosX + \"&y=\" + prosY;\n";
+    //output << "  document.getElementById('timeseries').src = url2;\n";
+
+    //output << "  alert(\"You clicked at: (\"+posX+\",\"+posY+\")\");\n";
+    output << "}\n";
+    output << "</SCRIPT>\n";
 
 
-    ostr << "<TABLE width=\"100%\" height=\"100%\">\n";
-    ostr << "<TR><TD  bgcolor=\"#C0C0C0\" width=\"180\" rowspan=\"2\">\n";
-
-    ostr << "<TABLE width=\"100%\" height=\"100%\">\n";
-
+    ostr1 << "<TABLE width=\"100%\" height=\"100%\">\n";
 
     // ### Producers:
 
@@ -2582,12 +2591,12 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     producerInfoList.sortByName();
     uint pid = (uint)atoi(producerIdStr.c_str());
 
-    ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>Producer:</TD></TR>\n";
-    ostr << "<TR height=\"30\"><TD>\n";
+    ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Producer:</TD></TR>\n";
+    ostr1 << "<TR height=\"30\"><TD>\n";
 
     if (len > 0)
     {
-      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&producerId=' + this.options[this.selectedIndex].value)\">\n";
+      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&producerId=' + this.options[this.selectedIndex].value)\">\n";
       for (uint t=0; t<len; t++)
       {
         T::ProducerInfo *p = producerInfoList.getProducerInfoByIndex(t);
@@ -2599,13 +2608,13 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
         }
 
         if (pid == p->mProducerId)
-          ostr << "<OPTION selected value=\"" <<  p->mProducerId << "\">" <<  p->mName << "</OPTION>\n";
+          ostr1 << "<OPTION selected value=\"" <<  p->mProducerId << "\">" <<  p->mName << "</OPTION>\n";
         else
-          ostr << "<OPTION value=\"" <<  p->mProducerId << "\">" <<  p->mName << "</OPTION>\n";
+          ostr1 << "<OPTION value=\"" <<  p->mProducerId << "\">" <<  p->mName << "</OPTION>\n";
       }
-      ostr << "</SELECT>\n";
+      ostr1 << "</SELECT>\n";
     }
-    ostr << "</TD></TR>\n";
+    ostr1 << "</TD></TR>\n";
 
 
     // ### Generations:
@@ -2621,8 +2630,8 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     getGenerations(generationInfoList,generations);
 
 
-    ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>Generation:</TD></TR>\n";
-    ostr << "<TR height=\"30\"><TD>\n";
+    ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Generation:</TD></TR>\n";
+    ostr1 << "<TR height=\"30\"><TD>\n";
 
     if (generations.size() > 0)
     {
@@ -2630,7 +2639,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
       if (generations.size() == 1)
         disabled = "disabled";
 
-      ostr << "<SELECT " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&producerId=" + producerIdStr + "&geometryId=" + geometryIdStr + "&generationId=' + this.options[this.selectedIndex].value)\">\n";
+      ostr1 << "<SELECT style=\"width:250px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&producerId=" + producerIdStr + "&geometryId=" + geometryIdStr + "&generationId=' + this.options[this.selectedIndex].value)\">\n";
 
       for (auto it = generations.rbegin(); it != generations.rend(); ++it)
       {
@@ -2644,14 +2653,14 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
           }
 
           if (gid == g->mGenerationId)
-            ostr << "<OPTION selected value=\"" <<  g->mGenerationId << "\">" <<  g->mName << "</OPTION>\n";
+            ostr1 << "<OPTION selected value=\"" <<  g->mGenerationId << "\">" <<  g->mName << "</OPTION>\n";
           else
-            ostr << "<OPTION value=\"" <<  g->mGenerationId << "\">" <<  g->mName << "</OPTION>\n";
+            ostr1 << "<OPTION value=\"" <<  g->mGenerationId << "\">" <<  g->mName << "</OPTION>\n";
         }
       }
-      ostr << "</SELECT>\n";
+      ostr1 << "</SELECT>\n";
     }
-    ostr << "</TD></TR>\n";
+    ostr1 << "</TD></TR>\n";
 
 
     // ### Parameters:
@@ -2659,12 +2668,12 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     std::set<std::string> paramKeyList;
     contentServer->getContentParamKeyListByGenerationId(0,gid,T::ParamKeyType::FMI_NAME,paramKeyList);
 
-    ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>Parameter:</TD></TR>\n";
-    ostr << "<TR height=\"30\"><TD>\n";
+    ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Parameter:</TD></TR>\n";
+    ostr1 << "<TR height=\"30\"><TD>\n";
 
     if (paramKeyList.size() > 0)
     {
-      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=' + this.options[this.selectedIndex].value)\">\n";
+      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=' + this.options[this.selectedIndex].value)\">\n";
       for (auto it=paramKeyList.begin(); it!=paramKeyList.end(); ++it)
       {
         std::string pId = *it;
@@ -2691,16 +2700,16 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 
         if (parameterIdStr == pId)
         {
-          ostr << "<OPTION selected value=\"" <<  pId << "\">" <<  pName << "</OPTION>\n";
+          ostr1 << "<OPTION selected value=\"" <<  pId << "\">" <<  pName << "</OPTION>\n";
         }
         else
         {
-          ostr << "<OPTION value=\"" <<  pId << "\">" <<  pName << "</OPTION>\n";
+          ostr1 << "<OPTION value=\"" <<  pId << "\">" <<  pName << "</OPTION>\n";
         }
       }
-      ostr << "</SELECT>\n";
+      ostr1 << "</SELECT>\n";
     }
-    ostr << "</TD></TR>\n";
+    ostr1 << "</TD></TR>\n";
 
 
     // ### Level identifiers:
@@ -2710,8 +2719,8 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     len = contentInfoList.getLength();
     T::ParamLevelId levelId = (T::ParamLevelId)atoi(parameterLevelIdStr.c_str());
 
-    ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>Level type:</TD></TR>\n";
-    ostr << "<TR height=\"30\"><TD>\n";
+    ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Level type:</TD></TR>\n";
+    ostr1 << "<TR height=\"30\"><TD>\n";
 
     std::set<int> levelIds;
     getLevelIds(contentInfoList,levelIds);
@@ -2725,7 +2734,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
       if (levelIds.size() == 1)
         disabled = "disabled";
 
-      ostr << "<SELECT " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=' + this.options[this.selectedIndex].value)\">\n";
+      ostr1 << "<SELECT style=\"width:250px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=' + this.options[this.selectedIndex].value)\">\n";
       for (auto it = levelIds.begin(); it != levelIds.end(); ++it)
       {
         if (parameterLevelIdStr.empty())
@@ -2740,13 +2749,13 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
           lStr = std::to_string(*it) + " " + levelDef.mDescription;
 
         if (levelId == *it)
-          ostr << "<OPTION selected value=\"" <<  *it << "\">" <<  lStr << "</OPTION>\n";
+          ostr1 << "<OPTION selected value=\"" <<  *it << "\">" <<  lStr << "</OPTION>\n";
         else
-          ostr << "<OPTION value=\"" <<  *it << "\">" <<  lStr << "</OPTION>\n";
+          ostr1 << "<OPTION value=\"" <<  *it << "\">" <<  lStr << "</OPTION>\n";
       }
-      ostr << "</SELECT>\n";
+      ostr1 << "</SELECT>\n";
     }
-    ostr << "</TD></TR>\n";
+    ostr1 << "</TD></TR>\n";
 
 
     // ### Levels:
@@ -2756,8 +2765,8 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     len = contentInfoList.getLength();
     T::ParamLevel level = (T::ParamLevel)atoi(parameterLevelStr.c_str());
 
-    ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>Level:</TD></TR>\n";
-    ostr << "<TR height=\"30\"><TD>\n";
+    ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Level:</TD></TR>\n";
+    ostr1 << "<TR height=\"30\"><TD>\n";
 
     std::set<int> levels;
     getLevels(contentInfoList,levelId,levels);
@@ -2771,7 +2780,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
       if (levels.size() == 1)
         disabled = "disabled";
 
-      ostr << "<SELECT " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=' + this.options[this.selectedIndex].value)\">\n";
+      ostr1 << "<SELECT " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=' + this.options[this.selectedIndex].value)\">\n";
       for (auto it = levels.begin(); it != levels.end(); ++it)
       {
         if (parameterLevelStr.empty())
@@ -2781,21 +2790,21 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
         }
 
         if (level == *it)
-          ostr << "<OPTION selected value=\"" <<  *it << "\">" <<  *it << "</OPTION>\n";
+          ostr1 << "<OPTION selected value=\"" <<  *it << "\">" <<  *it << "</OPTION>\n";
         else
-          ostr << "<OPTION value=\"" <<  *it << "\">" <<  *it << "</OPTION>\n";
+          ostr1 << "<OPTION value=\"" <<  *it << "\">" <<  *it << "</OPTION>\n";
       }
-      ostr << "</SELECT>\n";
+      ostr1 << "</SELECT>\n";
     }
-    ostr << "</TD></TR>\n";
+    ostr1 << "</TD></TR>\n";
 
 
     // ### Forecast type:
 
     short forecastType = (short)atoi(forecastTypeStr.c_str());
 
-    ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>Forecast type and number</TD></TR>\n";
-    ostr << "<TR height=\"30\"><TD>\n";
+    ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Forecast type and number</TD></TR>\n";
+    ostr1 << "<TR height=\"30\"><TD>\n";
 
     std::set<int> forecastTypes;
     getForecastTypes(contentInfoList,levelId,level,forecastTypes);
@@ -2809,7 +2818,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
       if (forecastTypes.size() == 1)
         disabled = "disabled";
 
-      ostr << "<SELECT " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&forecastType=' + this.options[this.selectedIndex].value)\">\n";
+      ostr1 << "<SELECT " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&forecastType=' + this.options[this.selectedIndex].value)\">\n";
       for (auto it = forecastTypes.begin(); it != forecastTypes.end(); ++it)
       {
         if (forecastTypeStr.empty())
@@ -2819,11 +2828,11 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
         }
 
         if (forecastType == *it)
-          ostr << "<OPTION selected value=\"" <<  *it << "\">" <<  *it << "</OPTION>\n";
+          ostr1 << "<OPTION selected value=\"" <<  *it << "\">" <<  *it << "</OPTION>\n";
         else
-          ostr << "<OPTION value=\"" <<  *it << "\">" << *it << "</OPTION>\n";
+          ostr1 << "<OPTION value=\"" <<  *it << "\">" << *it << "</OPTION>\n";
       }
-      ostr << "</SELECT>\n";
+      ostr1 << "</SELECT>\n";
     }
 
 
@@ -2842,7 +2851,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
       if (forecastNumbers.size() == 1)
         disabled = "disabled";
 
-      ostr << "<SELECT " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=' + this.options[this.selectedIndex].value)\">\n";
+      ostr1 << "<SELECT " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=' + this.options[this.selectedIndex].value)\">\n";
       for (auto it = forecastNumbers.begin(); it != forecastNumbers.end(); ++it)
       {
         if (forecastNumberStr.empty())
@@ -2852,20 +2861,20 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
         }
 
         if (*it == forecastNumber)
-          ostr << "<OPTION selected value=\"" <<  *it << "\">" <<  *it << "</OPTION>\n";
+          ostr1 << "<OPTION selected value=\"" <<  *it << "\">" <<  *it << "</OPTION>\n";
         else
-          ostr << "<OPTION value=\"" <<  *it << "\">" <<  *it << "</OPTION>\n";
+          ostr1 << "<OPTION value=\"" <<  *it << "\">" <<  *it << "</OPTION>\n";
       }
-      ostr << "</SELECT>\n";
+      ostr1 << "</SELECT>\n";
     }
-    ostr << "</TD></TR>\n";
+    ostr1 << "</TD></TR>\n";
 
     // ### Geometries:
 
     T::GeometryId geometryId  = (T::GeometryId)atoi(geometryIdStr.c_str());
 
-    ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>Geometry:</TD></TR>\n";
-    ostr << "<TR height=\"30\"><TD>\n";
+    ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Geometry:</TD></TR>\n";
+    ostr1 << "<TR height=\"30\"><TD>\n";
 
     std::set<int> geometries;
     getGeometries(contentInfoList,levelId,level,forecastType,forecastNumber,geometries);
@@ -2879,7 +2888,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
       if (geometries.size() == 1)
         disabled = "disabled";
 
-      ostr << "<SELECT " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&geometryId=' + this.options[this.selectedIndex].value)\">\n";
+      ostr1 << "<SELECT style=\"width:250px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&geometryId=' + this.options[this.selectedIndex].value)\">\n";
 
       for (auto it=geometries.begin(); it!=geometries.end(); ++it)
       {
@@ -2903,13 +2912,13 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
         }
 
         if (geometryId == *it)
-          ostr << "<OPTION selected value=\"" <<  *it << "\">" <<  st << "</OPTION>\n";
+          ostr1 << "<OPTION selected value=\"" <<  *it << "\">" <<  st << "</OPTION>\n";
         else
-          ostr << "<OPTION value=\"" <<  *it << "\">" <<  st << "</OPTION>\n";
+          ostr1 << "<OPTION value=\"" <<  *it << "\">" <<  st << "</OPTION>\n";
       }
-      ostr << "</SELECT>\n";
+      ostr1 << "</SELECT>\n";
     }
-    ostr << "</TD></TR>\n";
+    ostr1 << "</TD></TR>\n";
 
 
     // ### Times:
@@ -2919,8 +2928,8 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     len = contentInfoList.getLength();
     std::string prevTime = "19000101T0000";
 
-    ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>Time (UTC):</TD></TR>\n";
-    ostr << "<TR height=\"30\"><TD><TABLE><TR><TD>\n";
+    ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Time (UTC):</TD></TR>\n";
+    ostr1 << "<TR height=\"30\"><TD><TABLE><TR><TD>\n";
 
     T::ContentInfo *prevCont = NULL;
     T::ContentInfo *currentCont = NULL;
@@ -2930,12 +2939,12 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     {
       contentInfoList.sort(T::ContentInfo::ComparisonMethod::fmiName_level_starttime_file_message);
 
-      ostr << "<SELECT id=\"timeselect\" onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" + presentation + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&locations=" + locations + "&symbolMap=" + symbolMap + "' + this.options[this.selectedIndex].value)\"";
+      ostr1 << "<SELECT id=\"timeselect\" onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" + presentation + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&locations=" + locations + "&symbolMap=" + symbolMap + "' + this.options[this.selectedIndex].value)\"";
 
       if (presentation == "Image" ||  presentation == "Map"  ||  presentation == "Symbols")
-        ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&geometryId=" << geometryIdStr << "&locations=" << locations << "&symbolMap=" << symbolMap << "' + this.options[this.selectedIndex].value)\"";
+        ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&geometryId=" << geometryIdStr << "&locations=" << locations << "&symbolMap=" << symbolMap << "')\"";
 
-      ostr << " >\n";
+      ostr1 << " >\n";
 
       for (uint a=0; a<len; a++)
       {
@@ -2960,13 +2969,13 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
                 if (startTime == g->mForecastTime)
                 {
                   currentCont = g;
-                  ostr << "<OPTION selected value=\"" <<  url << "\">" <<  g->mForecastTime << "</OPTION>\n";
+                  ostr1 << "<OPTION selected value=\"" <<  url << "\">" <<  g->mForecastTime << "</OPTION>\n";
                   fileIdStr = std::to_string(g->mFileId);
                   messageIndexStr = std::to_string(g->mMessageIndex);
                 }
                 else
                 {
-                  ostr << "<OPTION value=\"" <<  url << "\">" <<  g->mForecastTime << "</OPTION>\n";
+                  ostr1 << "<OPTION value=\"" <<  url << "\">" <<  g->mForecastTime << "</OPTION>\n";
                 }
 
                 if (currentCont == NULL)
@@ -2978,30 +2987,30 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
           }
         }
       }
-      ostr << "</SELECT>\n";
+      ostr1 << "</SELECT>\n";
     }
-    ostr << "</TD>\n";
+    ostr1 << "</TD>\n";
 
     if (prevCont != NULL)
-      ostr << "<TD width=\"20\" > <button type=\"button\" onClick=\"getPage(this,parent,'/grid-gui?page=main&presentation=" + presentation + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + prevCont->mForecastTime + "&fileId=" + std::to_string(prevCont->mFileId) + "&messageIndex=" + std::to_string(prevCont->mMessageIndex) + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "');\">&lt;</button></TD>\n";
+      ostr1 << "<TD width=\"20\" > <button type=\"button\" onClick=\"getPage(this,parent,'/grid-gui?page=main&presentation=" + presentation + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + prevCont->mForecastTime + "&fileId=" + std::to_string(prevCont->mFileId) + "&messageIndex=" + std::to_string(prevCont->mMessageIndex) + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "');\">&lt;</button></TD>\n";
     else
-      ostr << "<TD width=\"20\"><button type=\"button\">&lt;</button></TD></TD>\n";
+      ostr1 << "<TD width=\"20\"><button type=\"button\">&lt;</button></TD></TD>\n";
 
     if (nextCont != NULL)
-      ostr << "<TD width=\"20\"><button type=\"button\" onClick=\"getPage(this,parent,'/grid-gui?page=main&presentation=" + presentation + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + nextCont->mForecastTime + "&fileId=" + std::to_string(nextCont->mFileId) + "&messageIndex=" + std::to_string(nextCont->mMessageIndex) + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "');\">&gt;</button></TD>\n";
+      ostr1 << "<TD width=\"20\"><button type=\"button\" onClick=\"getPage(this,parent,'/grid-gui?page=main&presentation=" + presentation + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + nextCont->mForecastTime + "&fileId=" + std::to_string(nextCont->mFileId) + "&messageIndex=" + std::to_string(nextCont->mMessageIndex) + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "');\">&gt;</button></TD>\n";
     else
-      ostr << "<TD width=\"20\"><button type=\"button\">&gt;</button></TD></TD>\n";
+      ostr1 << "<TD width=\"20\"><button type=\"button\">&gt;</button></TD></TD>\n";
 
-    ostr << "</TR></TABLE></TD></TR>\n";
+    ostr1 << "</TR></TABLE></TD></TR>\n";
 
 
     // ### Presentation:
 
     const char *modes[] = {"Image","Map","Symbols","Info","Table(sample)","Coordinates(sample)",NULL};
 
-    ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>Presentation:</TD></TR>\n";
-    ostr << "<TR height=\"30\"><TD>\n";
-    ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&presentation=' + this.options[this.selectedIndex].value)\">\n";
+    ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Presentation:</TD></TR>\n";
+    ostr1 << "<TR height=\"30\"><TD>\n";
+    ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&presentation=' + this.options[this.selectedIndex].value)\">\n";
 
     uint a = 0;
     while (modes[a] != NULL)
@@ -3010,14 +3019,14 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
         presentation = modes[a];
 
       if (presentation == modes[a])
-        ostr << "<OPTION selected value=\"" <<  modes[a] << "\">" <<  modes[a] << "</OPTION>\n";
+        ostr1 << "<OPTION selected value=\"" <<  modes[a] << "\">" <<  modes[a] << "</OPTION>\n";
       else
-        ostr << "<OPTION value=\"" <<  modes[a] << "\">" <<  modes[a] << "</OPTION>\n";
+        ostr1 << "<OPTION value=\"" <<  modes[a] << "\">" <<  modes[a] << "</OPTION>\n";
 
       a++;
     }
-    ostr << "</SELECT>\n";
-    ostr << "</TD></TR>\n";
+    ostr1 << "</SELECT>\n";
+    ostr1 << "</TD></TR>\n";
 
 
 
@@ -3034,26 +3043,26 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
           names.insert(*name);
       }
 
-      ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>Color map:</TD></TR>\n";
-      ostr << "<TR height=\"30\"><TD>\n";
-      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&coordinateLines=" + coordinateLinesStr + "&colorMap=' + this.options[this.selectedIndex].value)\"";
-      ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&coordinateLines=" + coordinateLinesStr + "&colorMap=' + this.options[this.selectedIndex].value)\"";
-      ostr << " >\n";
+      ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Color map:</TD></TR>\n";
+      ostr1 << "<TR height=\"30\"><TD>\n";
+      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&coordinateLines=" + coordinateLinesStr + "&colorMap=' + this.options[this.selectedIndex].value)\"";
+      ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&coordinateLines=" + coordinateLinesStr + "&colorMap=')\"";
+      ostr1 << " >\n";
 
       if (colorMap.empty() ||  colorMap == "None")
-        ostr << "<OPTION selected value=\"None\">None</OPTION>\n";
+        ostr1 << "<OPTION selected value=\"None\">None</OPTION>\n";
       else
-        ostr << "<OPTION value=\"None\">None</OPTION>\n";
+        ostr1 << "<OPTION value=\"None\">None</OPTION>\n";
 
       for (auto it = names.begin(); it != names.end(); ++it)
       {
         if (colorMap == *it)
-          ostr << "<OPTION selected value=\"" << *it << "\">" <<  *it << "</OPTION>\n";
+          ostr1 << "<OPTION selected value=\"" << *it << "\">" <<  *it << "</OPTION>\n";
         else
-          ostr << "<OPTION value=\"" <<  *it << "\">" <<  *it << "</OPTION>\n";
+          ostr1 << "<OPTION value=\"" <<  *it << "\">" <<  *it << "</OPTION>\n";
       }
-      ostr << "</SELECT>\n";
-      ostr << "</TD></TR>\n";
+      ostr1 << "</SELECT>\n";
+      ostr1 << "</TD></TR>\n";
     }
 
     if (presentation == "Symbols")
@@ -3069,26 +3078,26 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
           groups.insert(*name);
       }
 
-      ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>Symbol group:</TD></TR>\n";
-      ostr << "<TR height=\"30\"><TD>\n";
-      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&coordinateLines=" + coordinateLinesStr + "&locations=" + locations + "&symbolMap=' + this.options[this.selectedIndex].value)\"";
-      ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&coordinateLines=" + coordinateLinesStr + "&locations=" + locations + "&symbolMap=' + this.options[this.selectedIndex].value)\"";
-      ostr << " >\n";
+      ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Symbol group:</TD></TR>\n";
+      ostr1 << "<TR height=\"30\"><TD>\n";
+      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&coordinateLines=" + coordinateLinesStr + "&locations=" + locations + "&symbolMap=' + this.options[this.selectedIndex].value)\"";
+      ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&coordinateLines=" + coordinateLinesStr + "&locations=" + locations + "&symbolMap=')\"";
+      ostr1 << " >\n";
 
       if (symbolMap.empty() || symbolMap == "None")
-        ostr << "<OPTION selected value=\"None\">None</OPTION>\n";
+        ostr1 << "<OPTION selected value=\"None\">None</OPTION>\n";
       else
-        ostr << "<OPTION value=\"None\">None</OPTION>\n";
+        ostr1 << "<OPTION value=\"None\">None</OPTION>\n";
 
       for (auto it = groups.begin(); it != groups.end(); ++it)
       {
         if (symbolMap == *it)
-          ostr << "<OPTION selected value=\"" << *it << "\">" <<  *it << "</OPTION>\n";
+          ostr1 << "<OPTION selected value=\"" << *it << "\">" <<  *it << "</OPTION>\n";
         else
-          ostr << "<OPTION value=\"" <<  *it << "\">" <<  *it << "</OPTION>\n";
+          ostr1 << "<OPTION value=\"" <<  *it << "\">" <<  *it << "</OPTION>\n";
       }
-      ostr << "</SELECT>\n";
-      ostr << "</TD></TR>\n";
+      ostr1 << "</SELECT>\n";
+      ostr1 << "</TD></TR>\n";
 
 
       // ### Symbol locations:
@@ -3102,26 +3111,26 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
           names.insert(*name);
       }
 
-      ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>Symbol locations:</TD></TR>\n";
-      ostr << "<TR height=\"30\"><TD>\n";
-      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&coordinateLines=" + coordinateLinesStr + "&symbolMap=" + symbolMap + "&locations=' + this.options[this.selectedIndex].value)\"";
-      ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&coordinateLines=" + coordinateLinesStr + "&locations=' + this.options[this.selectedIndex].value)\"";
-      ostr << " >\n";
+      ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Symbol locations:</TD></TR>\n";
+      ostr1 << "<TR height=\"30\"><TD>\n";
+      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&coordinateLines=" + coordinateLinesStr + "&symbolMap=" + symbolMap + "&locations=' + this.options[this.selectedIndex].value)\"";
+      ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&coordinateLines=" + coordinateLinesStr + "&locations=')\"";
+      ostr1 << " >\n";
 
       if (locations.empty() ||  locations == "None")
-        ostr << "<OPTION selected value=\"None\">None</OPTION>\n";
+        ostr1 << "<OPTION selected value=\"None\">None</OPTION>\n";
       else
-        ostr << "<OPTION value=\"None\">None</OPTION>\n";
+        ostr1 << "<OPTION value=\"None\">None</OPTION>\n";
 
       for (auto it = names.begin(); it != names.end(); ++it)
       {
         if (locations == *it)
-          ostr << "<OPTION selected value=\"" << *it << "\">" <<  *it << "</OPTION>\n";
+          ostr1 << "<OPTION selected value=\"" << *it << "\">" <<  *it << "</OPTION>\n";
         else
-          ostr << "<OPTION value=\"" <<  *it << "\">" <<  *it << "</OPTION>\n";
+          ostr1 << "<OPTION value=\"" <<  *it << "\">" <<  *it << "</OPTION>\n";
       }
-      ostr << "</SELECT>\n";
-      ostr << "</TD></TR>\n";
+      ostr1 << "</SELECT>\n";
+      ostr1 << "</TD></TR>\n";
     }
 
 
@@ -3131,128 +3140,131 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
       {
         // ### Hue, saturation, blur
 
-        ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>Hue, saturation and blur</TD></TR>\n";
-        ostr << "<TR height=\"30\"><TD>\n";
-        ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&hue=' + this.options[this.selectedIndex].value)\"";
-        ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&seaMask=" + seaMaskStr + "&hue=' + this.options[this.selectedIndex].value)\"";
-        ostr << " >\n";
+        ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Hue, saturation and blur</TD></TR>\n";
+        ostr1 << "<TR height=\"30\"><TD>\n";
+        ostr1 << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&hue=' + this.options[this.selectedIndex].value)\"";
+        ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&hue=')\"";
+        ostr1 << " >\n";
 
 
         uint hue = (uint)atoi(hueStr.c_str());
         for (uint a=0; a<256; a++)
         {
           if (a == hue)
-            ostr << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+            ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
           else
-            ostr << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+            ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
         }
-        ostr << "</SELECT>\n";
+        ostr1 << "</SELECT>\n";
 
 
         uint saturation = (uint)atoi(saturationStr.c_str());
-        ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&geometryId=" + geometryIdStr + "&generationId=" + generationIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&seaMask=" + seaMaskStr + "&landMask=" + landMaskStr + "&saturation=' + this.options[this.selectedIndex].value)\"";
-        ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&saturation=' + this.options[this.selectedIndex].value)\"";
-        ostr << " >\n";
+        ostr1 << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&geometryId=" + geometryIdStr + "&generationId=" + generationIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&seaMask=" + seaMaskStr + "&landMask=" + landMaskStr + "&saturation=' + this.options[this.selectedIndex].value)\"";
+        ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&saturation=')\"";
+        ostr1 << " >\n";
 
 
         for (uint a=0; a<256; a++)
         {
           if (a == saturation)
-            ostr << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+            ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
           else
-            ostr << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+            ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
         }
-        ostr << "</SELECT>\n";
+        ostr1 << "</SELECT>\n";
 
 
-        ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&coordinateLines=" + coordinateLinesStr + "&blur=' + this.options[this.selectedIndex].value)\"";
-        ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&coordinateLines=" + coordinateLinesStr + "&blur=' + this.options[this.selectedIndex].value)\"";
-        ostr << " >\n";
+        ostr1 << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&coordinateLines=" + coordinateLinesStr + "&blur=' + this.options[this.selectedIndex].value)\"";
+        ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&coordinateLines=" + coordinateLinesStr + "&blur=')\"";
+        ostr1 << " >\n";
 
 
         uint blur = (uint)atoi(blurStr.c_str());
         for (uint a=1; a<=200; a++)
         {
           if (a == blur)
-            ostr << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+            ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
           else
-            ostr << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+            ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
         }
-        ostr << "</SELECT>\n";
-        ostr << "</TD></TR>\n";
+        ostr1 << "</SELECT>\n";
+        ostr1 << "</TD></TR>\n";
       }
 
 
       // ### Coordinate lines:
 
-      ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>Coordinate lines:</TD></TR>\n";
-      ostr << "<TR height=\"30\"><TD>\n";
-      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&coordinateLines=' + this.options[this.selectedIndex].value)\"";
+      ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Coordinate lines:</TD></TR>\n";
+      ostr1 << "<TR height=\"30\"><TD>\n";
+      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&coordinateLines=' + this.options[this.selectedIndex].value)\"";
 
       if (presentation == "Image")
-        ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=image&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&coordinateLines=' + this.options[this.selectedIndex].value)\"";
+        ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=image&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&coordinateLines=')\"";
 
       if (presentation == "Map")
-        ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=map&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&coordinateLines=' + this.options[this.selectedIndex].value)\"";
+        ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=map&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&coordinateLines=')\"";
 
-      ostr << " >\n";
+      ostr1 << " >\n";
 
       for (auto it = itsColors.begin(); it != itsColors.end(); ++it)
       {
         if (coordinateLinesStr == it->first)
-          ostr << "<OPTION selected value=\"" << it->first << "\">" <<  it->first << "</OPTION>\n";
+          ostr1 << "<OPTION selected value=\"" << it->first << "\">" <<  it->first << "</OPTION>\n";
         else
-          ostr << "<OPTION value=\"" <<  it->first << "\">" <<  it->first << "</OPTION>\n";
+          ostr1 << "<OPTION value=\"" <<  it->first << "\">" <<  it->first << "</OPTION>\n";
 
         a++;
       }
-      ostr << "</SELECT>\n";
-      ostr << "</TD></TR>\n";
+      ostr1 << "</SELECT>\n";
+      ostr1 << "</TD></TR>\n";
 
 
       // ### Land border:
 
-      ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>Land border:</TD></TR>\n";
-      ostr << "<TR height=\"30\"><TD>\n";
-      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&landBorder=' + this.options[this.selectedIndex].value)\"";
+      ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Land border:</TD></TR>\n";
+      ostr1 << "<TR height=\"30\"><TD>\n";
+      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&landBorder=' + this.options[this.selectedIndex].value)\"";
 
       if (presentation == "Image" || presentation == "Map" || presentation == "Symbols")
-        ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&landBorder=' + this.options[this.selectedIndex].value)\"";
+        ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&landBorder=')\"";
 
-      ostr << " >\n";
+      ostr1 << " >\n";
 
       for (auto it = itsColors.begin(); it != itsColors.end(); ++it)
       {
         if (landBorderStr == it->first)
-          ostr << "<OPTION selected value=\"" << it->first << "\">" <<  it->first << "</OPTION>\n";
+          ostr1 << "<OPTION selected value=\"" << it->first << "\">" <<  it->first << "</OPTION>\n";
         else
-          ostr << "<OPTION value=\"" <<  it->first << "\">" <<  it->first << "</OPTION>\n";
+          ostr1 << "<OPTION value=\"" <<  it->first << "\">" <<  it->first << "</OPTION>\n";
 
         a++;
       }
-      ostr << "</SELECT>\n";
-      ostr << "</TD></TR>\n";
+      ostr1 << "</SELECT>\n";
+      ostr1 << "</TD></TR>\n";
 
 
       // ### Land and sea masks:
 
-      ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>Land and sea masks:</TD></TR>\n";
-      ostr << "<TR height=\"30\"><TD>\n";
-      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&landMask=' + this.options[this.selectedIndex].value)\"";
+      ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Land and sea masks:</TD></TR>\n";
+      ostr1 << "<TR height=\"30\"><TD>\n";
+      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&landMask=' + this.options[this.selectedIndex].value)\"";
 
       if (presentation == "Image" || presentation == "Map" || presentation == "Symbols")
-        ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&landMask=' + this.options[this.selectedIndex].value)\"";
+        ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&landMask=')\"";
 
-      ostr << " >\n";
+      //if (presentation == "Image" || presentation == "Map" || presentation == "Symbols")
+      //  ostr1 << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&landMask=' + this.options[this.selectedIndex].value)\"";
+
+      ostr1 << " >\n";
 
       const char *landMasks[] = {"Simple",NULL};
       a = 0;
       while (landMasks[a] != NULL)
       {
         if (landMaskStr == landMasks[a])
-          ostr << "<OPTION selected value=\"" << landMasks[a] << "\">" <<  landMasks[a] << "</OPTION>\n";
+          ostr1 << "<OPTION selected value=\"" << landMasks[a] << "\">" <<  landMasks[a] << "</OPTION>\n";
         else
-          ostr << "<OPTION value=\"" <<  landMasks[a] << "\">" <<  landMasks[a] << "</OPTION>\n";
+          ostr1 << "<OPTION value=\"" <<  landMasks[a] << "\">" <<  landMasks[a] << "</OPTION>\n";
 
         a++;
       }
@@ -3260,110 +3272,126 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
       for (auto it = itsColors.begin(); it != itsColors.end(); ++it)
       {
         if (landMaskStr == it->first)
-          ostr << "<OPTION selected value=\"" << it->first << "\">" <<  it->first << "</OPTION>\n";
+          ostr1 << "<OPTION selected value=\"" << it->first << "\">" <<  it->first << "</OPTION>\n";
         else
-          ostr << "<OPTION value=\"" <<  it->first << "\">" <<  it->first << "</OPTION>\n";
+          ostr1 << "<OPTION value=\"" <<  it->first << "\">" <<  it->first << "</OPTION>\n";
 
         a++;
       }
-      ostr << "</SELECT>\n";
+      ostr1 << "</SELECT>\n";
 
 
-      ostr << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&seaMask=' + this.options[this.selectedIndex].value)\"";
+      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&seaMask=' + this.options[this.selectedIndex].value)\"";
 
       if (presentation == "Image" || presentation == "Map" || presentation == "Symbols")
-        ostr << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&seaMask=' + this.options[this.selectedIndex].value)\"";
+        ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&seaMask=')\"";
 
-      ostr << " >\n";
+      ostr1 << " >\n";
 
       const char *seaMasks[] = {"Simple",NULL};
       a = 0;
       while (seaMasks[a] != NULL)
       {
         if (seaMaskStr == seaMasks[a])
-          ostr << "<OPTION selected value=\"" << seaMasks[a] << "\">" <<  seaMasks[a] << "</OPTION>\n";
+          ostr1 << "<OPTION selected value=\"" << seaMasks[a] << "\">" <<  seaMasks[a] << "</OPTION>\n";
         else
-          ostr << "<OPTION value=\"" <<  seaMasks[a] << "\">" <<  seaMasks[a] << "</OPTION>\n";
+          ostr1 << "<OPTION value=\"" <<  seaMasks[a] << "\">" <<  seaMasks[a] << "</OPTION>\n";
 
         a++;
       }
       for (auto it = itsColors.begin(); it != itsColors.end(); ++it)
       {
         if (seaMaskStr == it->first)
-          ostr << "<OPTION selected value=\"" << it->first << "\">" <<  it->first << "</OPTION>\n";
+          ostr1 << "<OPTION selected value=\"" << it->first << "\">" <<  it->first << "</OPTION>\n";
         else
-          ostr << "<OPTION value=\"" <<  it->first << "\">" <<  it->first << "</OPTION>\n";
+          ostr1 << "<OPTION value=\"" <<  it->first << "\">" <<  it->first << "</OPTION>\n";
 
         a++;
       }
 
-      ostr << "</SELECT>\n";
-      ostr << "</TD></TR>\n";
+      ostr1 << "</SELECT>\n";
+      ostr1 << "</TD></TR>\n";
 
 
       // ### Units:
 
-      ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>Units:</TD></TR>\n";
-      ostr << "<TR height=\"30\"><TD><INPUT type=\"text\" value=\"" << unitStr << "\"></TD></TR>\n";
+      ostr1 << "<TR height=\"15\" style=\"font-size:12; width:250px;\"><TD>Units:</TD></TR>\n";
+      ostr1 << "<TR height=\"30\"><TD><INPUT type=\"text\" value=\"" << unitStr << "\"></TD></TR>\n";
 
 
       // ## Value:
 
-      ostr << "<TR height=\"15\" style=\"font-size:12;\"><TD>Value:</TD></TR>\n";
-      ostr << "<TR height=\"30\"><TD><INPUT type=\"text\" id=\"gridValue\"></TD></TR>\n";
+      ostr1 << "<TR height=\"15\" style=\"font-size:12; width:250px;\"><TD>Value:</TD></TR>\n";
+      ostr1 << "<TR height=\"30\"><TD><INPUT type=\"text\" id=\"gridValue\"></TD></TR>\n";
     }
 
-    ostr << "<TR height=\"50%\"><TD></TD></TR>\n";
-    ostr << "</TABLE>\n";
-    ostr << "</TD>\n";
+    ostr1 << "<TR height=\"50%\"><TD></TD></TR>\n";
+    ostr1 << "</TABLE>\n";
+
+
+    ostr2 << "<TABLE width=\"100%\" height=\"100%\">\n";
 
     if (presentation == "Image")
     {
-      ostr << "<TD><IMG id=\"myimage\" style=\"background:#000000; max-width:1800; height:100%; max-height:100%;\" src=\"/grid-gui?page=" << presentation << "&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "&geometryId=" << geometryIdStr << "&hue=" << hueStr << "&saturation=" << saturationStr << "&blur=" << blurStr <<  "&coordinateLines=" << coordinateLinesStr << "&landBorder=" << landBorderStr << "&landMask=" << landMaskStr <<  "&seaMask=" << seaMaskStr << "&colorMap=" << colorMap <<  "&locations= \" onclick=\"getImageCoords(event,this," << fileIdStr << "," << messageIndexStr << ",'" << presentation << "');\"/></TD>";
+      ostr2 << "<TR><TD><IMG id=\"myimage\" style=\"background:#000000; max-width:1800; height:100%; max-height:100%;\" src=\"/grid-gui?page=" << presentation << "&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "&geometryId=" << geometryIdStr << "&hue=" << hueStr << "&saturation=" << saturationStr << "&blur=" << blurStr <<  "&coordinateLines=" << coordinateLinesStr << "&landBorder=" << landBorderStr << "&landMask=" << landMaskStr <<  "&seaMask=" << seaMaskStr << "&colorMap=" << colorMap <<  "&locations= \" onclick=\"getImageCoords(event,this," << fileIdStr << "," << messageIndexStr << ",'" << presentation << "');\"/></TD></TR>";
     }
     else
     if (presentation == "Symbols")
     {
-      ostr << "<TD><IMG id=\"myimage\" style=\"background:#000000; max-width:1800; height:100%; max-height:100%;\" src=\"/grid-gui?page=" << presentation << "&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "&geometryId=" << geometryIdStr << "&hue=" << hueStr << "&saturation=" << saturationStr << "&blur=" << blurStr <<  "&coordinateLines=" << coordinateLinesStr << "&landBorder=" << landBorderStr << "&landMask=" << landMaskStr <<  "&seaMask=" << seaMaskStr << "&colorMap=" << colorMap << "&locations=" << locations << "&symbolMap=" << symbolMap << "\" onclick=\"getImageCoords(event,this," << fileIdStr << "," << messageIndexStr << ",'" << presentation << "');\"/></TD>";
+      ostr2 << "<TR><TD><IMG id=\"myimage\" style=\"background:#000000; max-width:1800; height:100%; max-height:100%;\" src=\"/grid-gui?page=" << presentation << "&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "&geometryId=" << geometryIdStr << "&hue=" << hueStr << "&saturation=" << saturationStr << "&blur=" << blurStr <<  "&coordinateLines=" << coordinateLinesStr << "&landBorder=" << landBorderStr << "&landMask=" << landMaskStr <<  "&seaMask=" << seaMaskStr << "&colorMap=" << colorMap << "&locations=" << locations << "&symbolMap=" << symbolMap << "\" onclick=\"getImageCoords(event,this," << fileIdStr << "," << messageIndexStr << ",'" << presentation << "');\"/></TD></TR>";
     }
     else
     if (presentation == "Map")
     {
-      ostr << "<TD><IMG id=\"myimage\" style=\"background:#000000; max-width:100%; height:100%;\" src=\"/grid-gui?page=map&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "&hue=" << hueStr << "&saturation=" << saturationStr << "&blur=" << blurStr << "&coordinateLines=" << coordinateLinesStr << "&landBorder=" << landBorderStr << "&landMask=" << landMaskStr << "&seaMask=" << seaMaskStr << "&colorMap=" << colorMap <<  "\"/></TD>";
+      ostr2 << "<TR><TD><IMG id=\"myimage\" style=\"background:#000000; max-width:100%; height:100%;\" src=\"/grid-gui?page=map&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "&hue=" << hueStr << "&saturation=" << saturationStr << "&blur=" << blurStr << "&coordinateLines=" << coordinateLinesStr << "&landBorder=" << landBorderStr << "&landMask=" << landMaskStr << "&seaMask=" << seaMaskStr << "&colorMap=" << colorMap <<  "\"/></TD></TR>";
     }
     else
     if (presentation == "Table(sample)" /* || presentation == "table(full)"*/)
     {
-      ostr << "<TD><IFRAME width=\"100%\" height=\"100%\" src=\"grid-gui?page=table&presentation=" + presentation + "&fileId=" << fileIdStr << "&geometryId=" << geometryIdStr << "&messageIndex=" << messageIndexStr << "\">";
-      ostr << "<p>Your browser does not support iframes.</p>\n";
-      ostr << "</IFRAME></TD>";
+      ostr2 << "<TR><TD><IFRAME width=\"100%\" height=\"100%\" src=\"grid-gui?page=table&presentation=" + presentation + "&fileId=" << fileIdStr << "&geometryId=" << geometryIdStr << "&messageIndex=" << messageIndexStr << "\">";
+      ostr2 << "<p>Your browser does not support iframes.</p>\n";
+      ostr2 << "</IFRAME></TD></TR>";
     }
     else
     if (presentation == "Coordinates(sample)" /* || presentation == "coordinates(full)"*/)
     {
-      ostr << "<TD><IFRAME width=\"100%\" height=\"100%\" src=\"grid-gui?page=coordinates&presentation=" + presentation + "&fileId=" << fileIdStr << "&geometryId=" << geometryIdStr << "&messageIndex=" << messageIndexStr << "\">";
-      ostr << "<p>Your browser does not support iframes.</p>\n";
-      ostr << "</IFRAME></TD>";
+      ostr2 << "<TR><TD><IFRAME width=\"100%\" height=\"100%\" src=\"grid-gui?page=coordinates&presentation=" + presentation + "&fileId=" << fileIdStr << "&geometryId=" << geometryIdStr << "&messageIndex=" << messageIndexStr << "\">";
+      ostr2 << "<p>Your browser does not support iframes.</p>\n";
+      ostr2 << "</IFRAME></TD></TR>";
     }
     else
     if (presentation == "Info")
     {
-      ostr << "<TD><IFRAME width=\"100%\" height=\"100%\" src=\"grid-gui?page=info&presentation=" + presentation + "&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "\">";
-      ostr << "<p>Your browser does not support iframes.</p>\n";
-      ostr << "</IFRAME></TD>";
+      ostr2 << "<TR><TD><IFRAME width=\"100%\" height=\"100%\" src=\"grid-gui?page=info&presentation=" + presentation + "&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "\">";
+      ostr2 << "<p>Your browser does not support iframes.</p>\n";
+      ostr2 << "</IFRAME></TD></TR>";
     }
 
-    ostr << "</TR>\n";
 
     Identification::FmiParameterDef pDef;
     if (Identification::gridDef.getFmiParameterDefByName(parameterIdStr,pDef))
-      ostr << "<TR><TD style=\"height:25; vertical-align:middle; text-align:left; font-size:12;\">" << pDef.mParameterDescription << "</TD></TR>\n";
+      ostr2 << "<TR><TD style=\"height:25; vertical-align:middle; text-align:left; font-size:12;\">" << pDef.mParameterDescription << "</TD></TR>\n";
+
+    ostr2 << "</TABLE>\n";
 
 
-    ostr << "</TABLE>\n";
-    ostr << "</BODY></HTML>\n";
 
-    theResponse.setContent(std::string(ostr.str()));
+    output << "<TABLE width=\"100%\" height=\"100%\">\n";
+    output << "<TR>\n";
+
+    output << "<TD  bgcolor=\"#C0C0C0\" width=\"180\">\n";
+    output << ostr1.str();
+    output << "</TD>\n";
+
+    output << "<TD>\n";
+    output << ostr2.str();
+    output << "</TD>\n";
+
+    output << "</TR>\n";
+    output << "</TABLE>\n";
+    output << "</BODY></HTML>\n";
+
+    theResponse.setContent(std::string(output.str()));
     return true;
   }
   catch (...)
