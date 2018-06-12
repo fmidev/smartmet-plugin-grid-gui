@@ -2200,9 +2200,28 @@ void Plugin::getLevelIds(T::ContentInfoList& contentInfoList,std::set<int>& leve
     {
       T::ContentInfo *g = contentInfoList.getContentInfoByIndex(a);
 
-      if (levelIds.find(g->mFmiParameterLevelId) == levelIds.end())
+      if (g->mFmiParameterLevelId > 0)
       {
-        levelIds.insert(g->mFmiParameterLevelId);
+        if (levelIds.find(g->mFmiParameterLevelId) == levelIds.end())
+        {
+          levelIds.insert(g->mFmiParameterLevelId);
+        }
+      }
+      else
+      if (g->mGrib1ParameterLevelId > 0)
+      {
+        if (levelIds.find(g->mGrib1ParameterLevelId+1000) == levelIds.end())
+        {
+          levelIds.insert(g->mGrib1ParameterLevelId+1000);
+        }
+      }
+      else
+      if (g->mGrib2ParameterLevelId > 0)
+      {
+        if (levelIds.find(g->mGrib2ParameterLevelId+2000) == levelIds.end())
+        {
+          levelIds.insert(g->mGrib2ParameterLevelId+2000);
+        }
       }
     }
   }
@@ -2221,12 +2240,15 @@ void Plugin::getLevels(T::ContentInfoList& contentInfoList,int levelId,std::set<
   try
   {
     uint len = contentInfoList.getLength();
+    int id = levelId % 1000;
 
     for (uint a=0; a<len; a++)
     {
       T::ContentInfo *g = contentInfoList.getContentInfoByIndex(a);
 
-      if (levelId == g->mFmiParameterLevelId)
+      if ((levelId >= 0  &&  levelId < 1000  &&  id == g->mFmiParameterLevelId) ||
+          (levelId >= 1000  &&  levelId < 2000  &&  id == g->mGrib1ParameterLevelId) ||
+          (levelId >= 2000  &&  id == g->mGrib2ParameterLevelId))
       {
         if (levels.find(g->mParameterLevel) == levels.end())
         {
@@ -2250,12 +2272,15 @@ void Plugin::getForecastTypes(T::ContentInfoList& contentInfoList,int levelId,in
   try
   {
     uint len = contentInfoList.getLength();
+    int id = levelId % 1000;
 
     for (uint a=0; a<len; a++)
     {
       T::ContentInfo *g = contentInfoList.getContentInfoByIndex(a);
 
-      if (levelId == g->mFmiParameterLevelId)
+      if ((levelId >= 0  &&  levelId < 1000  &&  id == g->mFmiParameterLevelId) ||
+          (levelId >= 1000  &&  levelId < 2000  &&  id == g->mGrib1ParameterLevelId) ||
+          (levelId >= 2000  &&  id == g->mGrib2ParameterLevelId))
       {
         if (level == g->mParameterLevel)
         {
@@ -2282,12 +2307,15 @@ void Plugin::getForecastNumbers(T::ContentInfoList& contentInfoList,int levelId,
   try
   {
     uint len = contentInfoList.getLength();
+    int id = levelId % 1000;
 
     for (uint a=0; a<len; a++)
     {
       T::ContentInfo *g = contentInfoList.getContentInfoByIndex(a);
 
-      if (levelId == g->mFmiParameterLevelId)
+      if ((levelId >= 0  &&  levelId < 1000  &&  id == g->mFmiParameterLevelId) ||
+          (levelId >= 1000  &&  levelId < 2000  &&  id == g->mGrib1ParameterLevelId) ||
+          (levelId >= 2000  &&  id == g->mGrib2ParameterLevelId))
       {
         if (level == g->mParameterLevel)
         {
@@ -2317,12 +2345,15 @@ void Plugin::getGeometries(T::ContentInfoList& contentInfoList,int levelId,int l
   try
   {
     uint len = contentInfoList.getLength();
+    int id = levelId % 1000;
 
     for (uint a=0; a<len; a++)
     {
       T::ContentInfo *g = contentInfoList.getContentInfoByIndex(a);
 
-      if (levelId == g->mFmiParameterLevelId)
+      if ((levelId >= 0  &&  levelId < 1000  &&  id == g->mFmiParameterLevelId) ||
+          (levelId >= 1000  &&  levelId < 2000  &&  id == g->mGrib1ParameterLevelId) ||
+          (levelId >= 2000  &&  id == g->mGrib2ParameterLevelId))
       {
         if (level == g->mParameterLevel)
         {
@@ -2567,13 +2598,13 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     output << "  var posY = event.offsetY?(event.offsetY):event.pageY-img.offsetTop;\n";
     output << "  var prosX = posX / img.width;\n";
     output << "  var prosY = posY / img.height;\n";
-    output << "  var url = \"/grid-gui?page=value&presentation=\" + presentation + \"&fileId=\" + fileId + \"&messagIndex=\" + messageIndex + \"&x=\" + prosX + \"&y=\" + prosY;\n";
+    output << "  var url = \"/grid-gui?page=value&presentation=\" + presentation + \"&fileId=\" + fileId + \"&messageIndex=\" + messageIndex + \"&x=\" + prosX + \"&y=\" + prosY;\n";
 
     //output << "  document.getElementById('gridValue').value = url;\n";
     output << "  var txt = httpGet(url);\n";
     output << "  document.getElementById('gridValue').value = txt;\n";
 
-    //output << "  var url2 = \"/grid-gui?page=timeseries&presentation=\" + presentation + \"&fileId=\" + fileId + \"&messagIndex=\" + messageIndex + \"&x=\" + prosX + \"&y=\" + prosY;\n";
+    //output << "  var url2 = \"/grid-gui?page=timeseries&presentation=\" + presentation + \"&fileId=\" + fileId + \"&messageIndex=\" + messageIndex + \"&x=\" + prosX + \"&y=\" + prosY;\n";
     //output << "  document.getElementById('timeseries').src = url2;\n";
 
     //output << "  alert(\"You clicked at: (\"+posX+\",\"+posY+\")\");\n";
@@ -2717,7 +2748,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     T::ContentInfoList contentInfoList;
     contentServer->getContentListByParameterAndGenerationId(0,gid,T::ParamKeyType::FMI_NAME,parameterIdStr,T::ParamLevelIdType::IGNORE,0,0,0,-2,-2,-2,"10000101T000000","30000101T000000",0,contentInfoList);
     len = contentInfoList.getLength();
-    T::ParamLevelId levelId = (T::ParamLevelId)atoi(parameterLevelIdStr.c_str());
+    int levelId = atoi(parameterLevelIdStr.c_str());
 
     ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Level type:</TD></TR>\n";
     ostr1 << "<TR height=\"30\"><TD>\n";
@@ -2727,6 +2758,8 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 
     if (levelIds.find(levelId) == levelIds.end())
       levelId = 0;
+
+    T::ParamLevelIdType levelIdType = T::ParamLevelIdType::FMI;
 
     if (levelIds.size() > 0)
     {
@@ -2745,11 +2778,40 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 
         std::string lStr = std::to_string(*it);
         Identification::LevelDef levelDef;
-        if (Identification::gridDef.getFmiLevelDef(*it,levelDef))
-          lStr = std::to_string(*it) + " " + levelDef.mDescription;
+        if (*it < 1000)
+        {
+          if (Identification::gridDef.getFmiLevelDef(*it,levelDef))
+            lStr = "FMI-" + std::to_string(*it) + " : " + levelDef.mDescription;
+          else
+            lStr = "FMI-" + std::to_string(*it) + " : ";
+        }
+        else
+        if (*it < 2000)
+        {
+          if (Identification::gridDef.getGrib1LevelDef(*it % 1000,levelDef))
+            lStr = "GRIB1-" + std::to_string(*it % 1000) + " : " + levelDef.mDescription;
+          else
+            lStr = "GRIB1-" + std::to_string(*it % 1000) + " : ";
+        }
+        else
+        {
+          if (Identification::gridDef.getGrib2LevelDef(*it % 1000,levelDef))
+            lStr = "GRIB2-" + std::to_string(*it % 1000) + " : " + levelDef.mDescription;
+          else
+            lStr = "GRIB2-" + std::to_string(*it % 1000) + " : ";
+        }
 
         if (levelId == *it)
+        {
           ostr1 << "<OPTION selected value=\"" <<  *it << "\">" <<  lStr << "</OPTION>\n";
+          if (*it < 1000)
+            levelIdType = T::ParamLevelIdType::FMI;
+          else
+          if (*it < 2000)
+            levelIdType = T::ParamLevelIdType::GRIB1;
+          else
+            levelIdType = T::ParamLevelIdType::GRIB2;
+        }
         else
           ostr1 << "<OPTION value=\"" <<  *it << "\">" <<  lStr << "</OPTION>\n";
       }
@@ -2761,7 +2823,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     // ### Levels:
 
     contentInfoList.clear();
-    contentServer->getContentListByParameterAndGenerationId(0,gid,T::ParamKeyType::FMI_NAME,parameterIdStr,T::ParamLevelIdType::FMI,levelId,0,0x7FFFFFFF,-2,-2,-2,"10000101T000000","30000101T000000",0,contentInfoList);
+    contentServer->getContentListByParameterAndGenerationId(0,gid,T::ParamKeyType::FMI_NAME,parameterIdStr,levelIdType,(T::ParamLevelId)(levelId % 1000),0,0x7FFFFFFF,-2,-2,-2,"10000101T000000","30000101T000000",0,contentInfoList);
     len = contentInfoList.getLength();
     T::ParamLevel level = (T::ParamLevel)atoi(parameterLevelStr.c_str());
 
@@ -2924,7 +2986,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     // ### Times:
 
     contentInfoList.clear();
-    contentServer->getContentListByParameterAndGenerationId(0,gid,T::ParamKeyType::FMI_NAME,parameterIdStr,T::ParamLevelIdType::FMI,levelId,level,level,-2,-2,-2,"10000101T000000","30000101T000000",0,contentInfoList);
+    contentServer->getContentListByParameterAndGenerationId(0,gid,T::ParamKeyType::FMI_NAME,parameterIdStr,levelIdType,(T::ParamLevelId)(levelId % 1000),level,level,-2,-2,-2,"10000101T000000","30000101T000000",0,contentInfoList);
     len = contentInfoList.getLength();
     std::string prevTime = "19000101T0000";
 
