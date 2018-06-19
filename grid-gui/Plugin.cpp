@@ -616,6 +616,8 @@ void Plugin::saveImage(const char *imageFile,T::GridData&  gridData,unsigned cha
       }
     }
 
+    printf("**** MIN %f   **** MAX %f\n",minValue,maxValue);
+
     T::Coordinate_vec coordinates;
     if (geometryId != 0)
       coordinates = Identification::gridDef.getGridLatLonCoordinatesByGeometryId(geometryId);
@@ -2709,19 +2711,46 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
       {
         std::string pId = *it;
         std::string pName = *it;
-        Identification::FmiParameterDef def;
 
-        if (Identification::gridDef.getFmiParameterDefByName(*it,def))
+        char st[100];
+        strcpy(st,it->c_str());
+
+        if (strncasecmp(st,"GRIB-",5) == 0)
         {
-          pId = def.mParameterName;
-          pName = def.mParameterName;
-          if (parameterIdStr == pId || parameterIdStr.empty())
-            unitStr = def.mParameterUnits;
+          std::string key = st+5;
 
-          Identification::NewbaseParameterDef nbParamDef;
-          if (Identification::gridDef.getNewbaseParameterDefByFmiId(def.mFmiParameterId,nbParamDef)  &&  !nbParamDef.mParameterName.empty())
+          Identification::GribParameterDef  def;
+          if (Identification::gridDef.getGribParamDefById(key,def))
           {
-            pName = pName + " (" + nbParamDef.mParameterName + ")";
+            pName = *it + " (" + def.mParameterDescription + ")";
+          }
+        }
+        else
+        if (strncasecmp(st,"NB-",3) == 0)
+        {
+          std::string key = st+3;
+
+          Identification::NewbaseParameterDef  def;
+          if (Identification::gridDef.getNewbaseParameterDefById(key,def))
+          {
+            pName = *it + " (" + def.mParameterName + ")";
+          }
+        }
+        else
+        {
+          Identification::FmiParameterDef def;
+          if (Identification::gridDef.getFmiParameterDefByName(*it,def))
+          {
+            pId = def.mParameterName;
+            pName = def.mParameterName;
+            if (parameterIdStr == pId || parameterIdStr.empty())
+              unitStr = def.mParameterUnits;
+
+            Identification::NewbaseParameterDef nbParamDef;
+            if (Identification::gridDef.getNewbaseParameterDefByFmiId(def.mFmiParameterId,nbParamDef)  &&  !nbParamDef.mParameterName.empty())
+            {
+              pName = pName + " (" + nbParamDef.mParameterName + ")";
+            }
           }
         }
 
