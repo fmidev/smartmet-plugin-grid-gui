@@ -616,8 +616,6 @@ void Plugin::saveImage(const char *imageFile,T::GridData&  gridData,unsigned cha
       }
     }
 
-    printf("**** MIN %f   **** MAX %f\n",minValue,maxValue);
-
     T::Coordinate_vec coordinates;
     if (geometryId != 0)
       coordinates = Identification::gridDef.getGridLatLonCoordinatesByGeometryId(geometryId);
@@ -2698,6 +2696,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 
     // ### Parameters:
 
+    std::string paramDescription;
     std::set<std::string> paramKeyList;
     contentServer->getContentParamKeyListByGenerationId(0,gid,T::ParamKeyType::FMI_NAME,paramKeyList);
 
@@ -2742,15 +2741,16 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
           if (Identification::gridDef.getFmiParameterDefByName(*it,def))
           {
             pId = def.mParameterName;
-            pName = def.mParameterName;
+            pName = def.mParameterName + " (" + def.mParameterDescription + ")";
             if (parameterIdStr == pId || parameterIdStr.empty())
               unitStr = def.mParameterUnits;
-
+/*
             Identification::NewbaseParameterDef nbParamDef;
             if (Identification::gridDef.getNewbaseParameterDefByFmiId(def.mFmiParameterId,nbParamDef)  &&  !nbParamDef.mParameterName.empty())
             {
               pName = pName + " (" + nbParamDef.mParameterName + ")";
             }
+*/
           }
         }
 
@@ -2761,6 +2761,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
         if (parameterIdStr == pId)
         {
           ostr1 << "<OPTION selected value=\"" <<  pId << "\">" <<  pName << "</OPTION>\n";
+          paramDescription = pName;
         }
         else
         {
@@ -3459,9 +3460,9 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     }
 
 
-    Identification::FmiParameterDef pDef;
-    if (Identification::gridDef.getFmiParameterDefByName(parameterIdStr,pDef))
-      ostr2 << "<TR><TD style=\"height:25; vertical-align:middle; text-align:left; font-size:12;\">" << pDef.mParameterDescription << "</TD></TR>\n";
+    //Identification::FmiParameterDef pDef;
+    //if (Identification::gridDef.getFmiParameterDefByName(parameterIdStr,pDef))
+    ostr2 << "<TR><TD style=\"height:25; vertical-align:middle; text-align:left; font-size:12;\">" << paramDescription << "</TD></TR>\n";
 
     ostr2 << "</TABLE>\n";
 
