@@ -43,14 +43,14 @@ LocationFile::LocationFile(std::string filename)
 
 
 
-LocationFile::LocationFile(const LocationFile& colorMapFile)
+LocationFile::LocationFile(const LocationFile& locationFile)
 {
   try
   {
-    mNames = colorMapFile.mNames;
-    mFilename = colorMapFile.mFilename;
-    mCoordinates = colorMapFile.mCoordinates;
-    mLastModified = colorMapFile.mLastModified;
+    mNames = locationFile.mNames;
+    mFilename = locationFile.mFilename;
+    mLocations = locationFile.mLocations;
+    mLastModified = locationFile.mLastModified;
   }
   catch (...)
   {
@@ -139,7 +139,29 @@ T::Coordinate_vec LocationFile::getCoordinates()
 {
   try
   {
-    return mCoordinates;
+    T::Coordinate_vec coordinates;
+
+    for (auto it = mLocations.begin(); it != mLocations.end(); ++it)
+    {
+      coordinates.push_back(T::Coordinate(it->mX,it->mY));
+    }
+    return coordinates;
+  }
+  catch (...)
+  {
+    throw Spine::Exception(BCP, "Constructor failed!", NULL);
+  }
+}
+
+
+
+
+
+T::Location_vec& LocationFile::getLocations()
+{
+  try
+  {
+    return mLocations;
   }
   catch (...)
   {
@@ -215,7 +237,7 @@ void LocationFile::loadFile()
       throw exception;
     }
 
-    mCoordinates.clear();
+    mLocations.clear();
     mNames.clear();
 
     char st[1000];
@@ -247,7 +269,7 @@ void LocationFile::loadFile()
           }
         }
 
-        if (c > 1)
+        if (c > 2)
         {
           if (strcasecmp(field[0],"NAME") == 0)
           {
@@ -255,11 +277,11 @@ void LocationFile::loadFile()
           }
           else
           {
-            if (field[0][0] != '\0' &&  field[1][0] != '\0')
+            if (field[0][0] != '\0' &&  field[1][0] != '\0'  &&  field[2][0] != '\0')
             {
-              double lat = atof(field[0]);
-              double lon = atof(field[1]);
-              mCoordinates.push_back(T::Coordinate(lon,lat));
+              double lat = atof(field[1]);
+              double lon = atof(field[2]);
+              mLocations.push_back(T::Location(field[0],lon,lat));
             }
           }
         }
