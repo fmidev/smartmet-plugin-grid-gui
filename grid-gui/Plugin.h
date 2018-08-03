@@ -31,20 +31,20 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
 {
   public:
 
-    Plugin(SmartMet::Spine::Reactor* theReactor, const char* theConfig);
+    Plugin(Spine::Reactor* theReactor, const char* theConfig);
     virtual ~Plugin();
 
     const std::string& getPluginName() const;
     int getRequiredAPIVersion() const;
-    bool queryIsFast(const SmartMet::Spine::HTTP::Request& theRequest) const;
+    bool queryIsFast(const Spine::HTTP::Request& theRequest) const;
 
   protected:
 
     void init();
     void shutdown();
-    void requestHandler(SmartMet::Spine::Reactor& theReactor,
-                      const SmartMet::Spine::HTTP::Request& theRequest,
-                      SmartMet::Spine::HTTP::Response& theResponse);
+    void requestHandler(Spine::Reactor& theReactor,
+                      const Spine::HTTP::Request& theRequest,
+                      Spine::HTTP::Response& theResponse);
 
   private:
 
@@ -52,45 +52,49 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
 
     bool isLand(double lon,double lat);
 
-    bool request(SmartMet::Spine::Reactor& theReactor,
-                      const SmartMet::Spine::HTTP::Request& theRequest,
-                      SmartMet::Spine::HTTP::Response& theResponse);
+    bool request(Spine::Reactor& theReactor,
+                      const Spine::HTTP::Request& theRequest,
+                      Spine::HTTP::Response& theResponse);
 
-    bool page_info(SmartMet::Spine::Reactor& theReactor,
-                      const SmartMet::Spine::HTTP::Request& theRequest,
-                      SmartMet::Spine::HTTP::Response& theResponse);
+    bool page_info(Spine::Reactor& theReactor,
+                      const Spine::HTTP::Request& theRequest,
+                      Spine::HTTP::Response& theResponse);
 
-    bool page_value(SmartMet::Spine::Reactor& theReactor,
-                      const SmartMet::Spine::HTTP::Request& theRequest,
-                      SmartMet::Spine::HTTP::Response& theResponse);
+    bool page_value(Spine::Reactor& theReactor,
+                      const Spine::HTTP::Request& theRequest,
+                      Spine::HTTP::Response& theResponse);
 
-    bool page_timeseries(SmartMet::Spine::Reactor& theReactor,
-                      const SmartMet::Spine::HTTP::Request& theRequest,
-                      SmartMet::Spine::HTTP::Response& theResponse);
+    bool page_timeseries(Spine::Reactor& theReactor,
+                      const Spine::HTTP::Request& theRequest,
+                      Spine::HTTP::Response& theResponse);
 
-    bool page_table(SmartMet::Spine::Reactor& theReactor,
-                      const SmartMet::Spine::HTTP::Request& theRequest,
-                      SmartMet::Spine::HTTP::Response& theResponse);
+    bool page_table(Spine::Reactor& theReactor,
+                      const Spine::HTTP::Request& theRequest,
+                      Spine::HTTP::Response& theResponse);
 
-    bool page_coordinates(SmartMet::Spine::Reactor& theReactor,
-                      const SmartMet::Spine::HTTP::Request& theRequest,
-                      SmartMet::Spine::HTTP::Response& theResponse);
+    bool page_coordinates(Spine::Reactor& theReactor,
+                      const Spine::HTTP::Request& theRequest,
+                      Spine::HTTP::Response& theResponse);
 
-    bool page_image(SmartMet::Spine::Reactor& theReactor,
-                      const SmartMet::Spine::HTTP::Request& theRequest,
-                      SmartMet::Spine::HTTP::Response& theResponse);
+    bool page_image(Spine::Reactor& theReactor,
+                      const Spine::HTTP::Request& theRequest,
+                      Spine::HTTP::Response& theResponse);
 
-    bool page_symbols(SmartMet::Spine::Reactor& theReactor,
-                      const SmartMet::Spine::HTTP::Request& theRequest,
-                      SmartMet::Spine::HTTP::Response& theResponse);
+    bool page_locations(Spine::Reactor& theReactor,
+                      const Spine::HTTP::Request& theRequest,
+                      Spine::HTTP::Response& theResponse);
 
-    bool page_map(SmartMet::Spine::Reactor& theReactor,
-                      const SmartMet::Spine::HTTP::Request& theRequest,
-                      SmartMet::Spine::HTTP::Response& theResponse);
+    bool page_symbols(Spine::Reactor& theReactor,
+                      const Spine::HTTP::Request& theRequest,
+                      Spine::HTTP::Response& theResponse);
 
-    bool page_main(SmartMet::Spine::Reactor& theReactor,
-                      const SmartMet::Spine::HTTP::Request& theRequest,
-                      SmartMet::Spine::HTTP::Response& theResponse);
+    bool page_map(Spine::Reactor& theReactor,
+                      const Spine::HTTP::Request& theRequest,
+                      Spine::HTTP::Response& theResponse);
+
+    bool page_main(Spine::Reactor& theReactor,
+                      const Spine::HTTP::Request& theRequest,
+                      Spine::HTTP::Response& theResponse);
 
     void saveImage(const char *imageFile,
                       T::GridData&  gridData,
@@ -125,6 +129,8 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
     T::SymbolMapFile* getSymbolMapFile(std::string symbolMap);
     T::LocationFile*  getLocationFile(std::string name);
 
+
+    void checkImageCache();
     void getGenerations(T::GenerationInfoList& generationInfoList,std::set<std::string>& generations);
     void getLevelIds(T::ContentInfoList& contentInfoList,std::set<int>& levelIds);
     void getLevels(T::ContentInfoList& contentInfoList,int levelId,std::set<int>& levels);
@@ -133,11 +139,12 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
     void getGeometries(T::ContentInfoList& contentInfoList,int levelId,int level,int forecastType,int forecastNumber,std::set<int>& geometries);
     uint getColorValue(std::string& colorName);
     void loadColorFile();
+    void loadImage(const char *fname,Spine::HTTP::Response &theResponse);
 
 
     Engine::Grid::Engine*     itsGridEngine;
     const std::string         itsModuleName;
-    SmartMet::Spine::Reactor* itsReactor;
+    Spine::Reactor*           itsReactor;
     ConfigurationFile         itsConfigurationFile;
     std::string               itsGridConfigFile;
     std::string               itsLandSeaMaskFile;
@@ -151,6 +158,12 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
     std::string               itsColorFile;
     Colors                    itsColors;
     time_t                    itsColors_lastModified;
+    std::string               itsImageCache_dir;
+    uint                      itsImageCache_maxImages;
+    uint                      itsImageCache_minImages;
+    bool                      itsAnimationEnabled;
+
+    std::map<std::string,std::string> itsImages;
 
 };  // class Plugin
 

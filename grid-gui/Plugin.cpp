@@ -30,7 +30,7 @@ using namespace SmartMet::Spine;
  */
 // ----------------------------------------------------------------------
 
-Plugin::Plugin(SmartMet::Spine::Reactor *theReactor, const char *theConfig)
+Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
     : SmartMetPlugin(), itsModuleName("GridGui")
 {
   try
@@ -43,19 +43,27 @@ Plugin::Plugin(SmartMet::Spine::Reactor *theReactor, const char *theConfig)
         "smartmet.plugin.grid-gui.symbolMapFiles",
         "smartmet.plugin.grid-gui.locationFiles",
         "smartmet.plugin.grid-gui.colorFile",
+        "smartmet.plugin.grid-gui.animationEnabled",
+        "smartmet.plugin.grid-gui.imageCache.directory",
+        "smartmet.plugin.grid-gui.imageCache.maxImages",
+        "smartmet.plugin.grid-gui.imageCache.minImages",
         NULL
     };
 
     itsReactor = theReactor;
     itsColors_lastModified = 0;
+    itsImageCache_dir = "/tmp";
+    itsImageCache_maxImages = 1000;
+    itsImageCache_minImages = 500;
+    itsAnimationEnabled = true;
 
     if (theReactor->getRequiredAPIVersion() != SMARTMET_API_VERSION)
-      throw SmartMet::Spine::Exception(BCP, "GridGui plugin and Server API version mismatch");
+      throw Spine::Exception(BCP, "GridGui plugin and Server API version mismatch");
 
     // Register the handler
     if (!theReactor->addContentHandler(
             this, "/grid-gui", boost::bind(&Plugin::callRequestHandler, this, _1, _2, _3)))
-      throw SmartMet::Spine::Exception(BCP, "Failed to register GridGui request handler");
+      throw Spine::Exception(BCP, "Failed to register GridGui request handler");
 
 
     itsConfigurationFile.readFile(theConfig);
@@ -65,7 +73,7 @@ Plugin::Plugin(SmartMet::Spine::Reactor *theReactor, const char *theConfig)
     {
       if (!itsConfigurationFile.findAttribute(configAttribute[t]))
       {
-        SmartMet::Spine::Exception exception(BCP, "Missing configuration attribute!");
+        Spine::Exception exception(BCP, "Missing configuration attribute!");
         exception.addParameter("File",theConfig);
         exception.addParameter("Attribute",configAttribute[t]);
         throw exception;
@@ -79,6 +87,10 @@ Plugin::Plugin(SmartMet::Spine::Reactor *theReactor, const char *theConfig)
     itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.symbolMapFiles",itsSymbolMapFileNames);
     itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.locationFiles",itsLocationFileNames);
     itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.colorFile",itsColorFile);
+    itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.animationEnabled",itsAnimationEnabled);
+    itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.imageCache.directory",itsImageCache_dir);
+    itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.imageCache.maxImages",itsImageCache_maxImages);
+    itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.imageCache.minImages",itsImageCache_minImages);
 
 
     Identification::gridDef.init(itsGridConfigFile.c_str());
@@ -108,10 +120,27 @@ Plugin::Plugin(SmartMet::Spine::Reactor *theReactor, const char *theConfig)
     }
 
     loadColorFile();
+
+
+    // Removing files from the image cache.
+
+    std::vector<std::string> filePatterns;
+    std::set<std::string> dirList;
+    std::vector<std::pair<std::string,std::string>> fileList;
+
+    filePatterns.push_back(std::string("grid-gui-image_*"));
+
+    getFileList(itsImageCache_dir.c_str(),filePatterns,false,dirList,fileList);
+
+    for (auto it = fileList.begin(); it != fileList.end(); ++it)
+    {
+      std::string fname = itsImageCache_dir + "/" + it->second;
+      remove(fname.c_str());
+    }
   }
   catch (...)
   {
-    throw SmartMet::Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", NULL);
   }
 }
 
@@ -145,7 +174,7 @@ void Plugin::init()
   }
   catch (...)
   {
-    throw SmartMet::Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", NULL);
   }
 }
 
@@ -167,7 +196,7 @@ void Plugin::shutdown()
   }
   catch (...)
   {
-    throw SmartMet::Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", NULL);
   }
 }
 
@@ -190,7 +219,7 @@ T::ColorMapFile* Plugin::getColorMapFile(std::string colorMapName)
   }
   catch (...)
   {
-    throw SmartMet::Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", NULL);
   }
 }
 
@@ -205,7 +234,7 @@ void Plugin::loadColorFile()
     FILE *file = fopen(itsColorFile.c_str(),"r");
     if (file == NULL)
     {
-      SmartMet::Spine::Exception exception(BCP,"Cannot open file!");
+      Spine::Exception exception(BCP,"Cannot open file!");
       exception.addParameter("Filename",itsColorFile);
       throw exception;
     }
@@ -281,7 +310,7 @@ uint Plugin::getColorValue(std::string& colorName)
   }
   catch (...)
   {
-    throw SmartMet::Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", NULL);
   }
 }
 
@@ -305,7 +334,7 @@ T::SymbolMapFile* Plugin::getSymbolMapFile(std::string symbolMap)
   }
   catch (...)
   {
-    throw SmartMet::Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", NULL);
   }
 }
 
@@ -328,7 +357,7 @@ T::LocationFile* Plugin::getLocationFile(std::string name)
   }
   catch (...)
   {
-    throw SmartMet::Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", NULL);
   }
 }
 
@@ -363,7 +392,7 @@ bool Plugin::isLand(double lon,double lat)
   }
   catch (...)
   {
-    throw SmartMet::Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", NULL);
   }
 }
 
@@ -546,10 +575,45 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
 
     jpeg_save(imageFile,image,height,width,100);
     delete image;
+
+    checkImageCache();
   }
   catch (...)
   {
-    throw SmartMet::Spine::Exception(BCP,"Operation failed!",NULL);
+    throw Spine::Exception(BCP,"Operation failed!",NULL);
+  }
+}
+
+
+
+
+
+void Plugin::checkImageCache()
+{
+  try
+  {
+    uint cnt = (uint)itsImages.size();
+
+    if (cnt > itsImageCache_maxImages)
+    {
+      std::map<std::string,std::string> tmpImages;
+
+      for (auto it = itsImages.begin(); it != itsImages.end(); ++it)
+      {
+        tmpImages.insert(std::pair<std::string,std::string>(it->second,it->first));
+      }
+
+      for (auto it = tmpImages.begin(); it != tmpImages.end()  &&  cnt > itsImageCache_minImages; ++it)
+      {
+        remove(it->first.c_str());
+        itsImages.erase(it->second);
+        cnt--;
+      }
+    }
+  }
+  catch (...)
+  {
+    throw Spine::Exception(BCP,"Operation failed!",NULL);
   }
 }
 
@@ -940,10 +1004,12 @@ void Plugin::saveImage(const char *imageFile,T::GridData&  gridData,unsigned cha
 
     jpeg_save(imageFile,image,height,width,100);
     delete image;
+
+    checkImageCache();
   }
   catch (...)
   {
-    throw SmartMet::Spine::Exception(BCP,"Operation failed!",NULL);
+    throw Spine::Exception(BCP,"Operation failed!",NULL);
   }
 }
 
@@ -1028,7 +1094,7 @@ void Plugin::saveTimeSeries(const char *imageFile,std::vector<T::ParamValue>& va
   }
   catch (...)
   {
-    throw SmartMet::Spine::Exception(BCP,"Operation failed!",NULL);
+    throw Spine::Exception(BCP,"Operation failed!",NULL);
   }
 }
 
@@ -1036,7 +1102,7 @@ void Plugin::saveTimeSeries(const char *imageFile,std::vector<T::ParamValue>& va
 
 
 
-bool Plugin::page_info(SmartMet::Spine::Reactor &theReactor,
+bool Plugin::page_info(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse)
 {
@@ -1063,7 +1129,6 @@ bool Plugin::page_info(SmartMet::Spine::Reactor &theReactor,
 
     std::ostringstream ostr;
 
-    //printf("CONTENT: %s:%s\n",fileIdStr.c_str(),messageIndexStr.c_str());
     T::ContentInfo contentInfo;
     int result = contentServer->getContentInfo(0,atoi(fileIdStr.c_str()),atoi(messageIndexStr.c_str()),contentInfo);
     if (result != 0)
@@ -1204,7 +1269,7 @@ bool Plugin::page_info(SmartMet::Spine::Reactor &theReactor,
   }
   catch (...)
   {
-    throw SmartMet::Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", NULL);
   }
 }
 
@@ -1212,7 +1277,87 @@ bool Plugin::page_info(SmartMet::Spine::Reactor &theReactor,
 
 
 
-bool Plugin::page_table(SmartMet::Spine::Reactor &theReactor,
+bool Plugin::page_locations(Spine::Reactor &theReactor,
+                            const HTTP::Request &theRequest,
+                            HTTP::Response &theResponse)
+{
+  try
+  {
+    auto dataServer = itsGridEngine->getDataServer_sptr();
+
+    std::string fileIdStr = "";
+    std::string messageIndexStr = "0";
+    std::string locations = "";
+
+    boost::optional<std::string> v = theRequest.getParameter("fileId");
+    if (v)
+      fileIdStr = *v;
+
+    v = theRequest.getParameter("messageIndex");
+    if (v)
+      messageIndexStr = *v;
+
+    v = theRequest.getParameter("locations");
+    if (v)
+      locations = *v;
+
+
+    if (fileIdStr.empty())
+      return true;
+
+    std::ostringstream ostr;
+
+    ostr << "<HTML><HEAD><META charset=\"UTF-8\"></META></HEAD><BODY>\n";
+    ostr << "<TABLE border=\"1\" style=\"text-align:left; font-size:10pt;\">\n";
+
+
+    T::LocationFile *locationFile = getLocationFile(locations);
+
+    if (locationFile != NULL)
+    {
+      T::Coordinate_vec coordinateList = locationFile->getCoordinates();
+      T::Location_vec locationList = locationFile->getLocations();
+      T::GridValueList valueList;
+
+      if (dataServer->getGridValueListByPointList(0,atoi(fileIdStr.c_str()),atoi(messageIndexStr.c_str()),0,T::CoordinateType::LATLON_COORDINATES,coordinateList,T::AreaInterpolationMethod::Linear,valueList) == 0)
+      {
+        for (auto it = locationList.begin(); it != locationList.end(); ++it)
+        {
+          ostr << "<TR><TD style=\"width:200;background:#F0F0F0;\">" << it->mName << "</TD>";
+          T::GridValue *rec = valueList.getGridValueByCoordinates(it->mX,it->mY);
+          if (rec != NULL &&  rec->mValue != ParamValueMissing)
+          {
+            char tmp[30];
+            sprintf(tmp,"%.3f",rec->mValue);
+            ostr << "<TD style=\"width:120; text-align:right;\">" << tmp << "</TD>";
+          }
+          else
+            ostr << "<TD> </TD>";
+
+          ostr << "</TR>";
+        }
+      }
+    }
+
+
+    ostr << "</TABLE>\n";
+    ostr << "</BODY></HTML>\n";
+
+    theResponse.setContent(std::string(ostr.str()));
+
+    return true;
+  }
+  catch (...)
+  {
+    throw Spine::Exception(BCP, "Operation failed!", NULL);
+  }
+}
+
+
+
+
+
+bool Plugin::page_table(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse)
 {
@@ -1278,7 +1423,7 @@ bool Plugin::page_table(SmartMet::Spine::Reactor &theReactor,
     }
     */
 
-    printf("*** COORDINATES %u : %d\n",geometryId,(int)coordinates.size());
+    // printf("*** COORDINATES %u : %d\n",geometryId,(int)coordinates.size());
 
     uint c = 0;
     uint height = gridData.mRows;
@@ -1370,7 +1515,7 @@ bool Plugin::page_table(SmartMet::Spine::Reactor &theReactor,
   }
   catch (...)
   {
-    throw SmartMet::Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", NULL);
   }
 }
 
@@ -1378,7 +1523,7 @@ bool Plugin::page_table(SmartMet::Spine::Reactor &theReactor,
 
 
 
-bool Plugin::page_coordinates(SmartMet::Spine::Reactor &theReactor,
+bool Plugin::page_coordinates(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse)
 {
@@ -1483,7 +1628,7 @@ bool Plugin::page_coordinates(SmartMet::Spine::Reactor &theReactor,
   }
   catch (...)
   {
-    throw SmartMet::Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", NULL);
   }
 }
 
@@ -1491,7 +1636,7 @@ bool Plugin::page_coordinates(SmartMet::Spine::Reactor &theReactor,
 
 
 
-bool Plugin::page_value(SmartMet::Spine::Reactor &theReactor,
+bool Plugin::page_value(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse)
 {
@@ -1579,7 +1724,7 @@ bool Plugin::page_value(SmartMet::Spine::Reactor &theReactor,
   }
   catch (...)
   {
-    throw SmartMet::Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", NULL);
   }
 }
 
@@ -1587,7 +1732,7 @@ bool Plugin::page_value(SmartMet::Spine::Reactor &theReactor,
 
 
 
-bool Plugin::page_timeseries(SmartMet::Spine::Reactor &theReactor,
+bool Plugin::page_timeseries(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse)
 {
@@ -1687,7 +1832,7 @@ bool Plugin::page_timeseries(SmartMet::Spine::Reactor &theReactor,
     }
 
     char fname[200];
-    sprintf(fname,"/tmp/image_%llu.jpg",getTime());
+    sprintf(fname,"%s/grid-gui-image_%llu.jpg",itsImageCache_dir.c_str(),getTime());
 
     saveTimeSeries(fname,valueList,idx,dayIdx);
 
@@ -1737,7 +1882,7 @@ bool Plugin::page_timeseries(SmartMet::Spine::Reactor &theReactor,
   }
   catch (...)
   {
-    throw SmartMet::Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", NULL);
   }
 }
 
@@ -1745,7 +1890,60 @@ bool Plugin::page_timeseries(SmartMet::Spine::Reactor &theReactor,
 
 
 
-bool Plugin::page_image(SmartMet::Spine::Reactor &theReactor,
+void Plugin::loadImage(const char *fname,Spine::HTTP::Response &theResponse)
+{
+  try
+  {
+    long long sz = getFileSize(fname);
+    if (sz > 0)
+    {
+      char buf[10000];
+      std::vector<char> *content = new std::vector<char>();
+      content->reserve(sz);
+
+      boost::shared_ptr<std::vector<char>> sContent;
+      sContent.reset(content);
+
+      FILE *file = fopen(fname,"r");
+      if (file != NULL)
+      {
+        while (!feof(file))
+        {
+          int n = fread(buf,1,10000,file);
+          if (n > 0)
+          {
+            for (int t=0; t<n; t++)
+            {
+              content->push_back(buf[t]);
+            }
+          }
+        }
+        fclose(file);
+
+        theResponse.setHeader("Content-Type","image/jpg");
+        theResponse.setContent(sContent);
+      }
+    }
+    else
+    {
+      std::ostringstream ostr;
+      ostr << "<HTML><BODY>\n";
+      ostr << "Image does not exist!\n";
+      ostr << "</BODY></HTML>\n";
+      theResponse.setContent(std::string(ostr.str()));
+    }
+  }
+  catch (...)
+  {
+    throw Spine::Exception(BCP, "Operation failed!", NULL);
+  }
+}
+
+
+
+
+
+bool Plugin::page_image(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse)
 {
@@ -1813,6 +2011,20 @@ bool Plugin::page_image(SmartMet::Spine::Reactor &theReactor,
     if (v)
       colorMap = *v;
 
+
+    std::string hash = "Image:" + fileIdStr + ":" + messageIndexStr + ":" + hueStr + ":" + saturationStr + ":" +
+      blurStr + ":" + coordinateLinesStr + ":" + landBorderStr + ":" +
+      landMaskStr + ":" + seaMaskStr + ":" + colorMap + ":" + locations + ":" + symbolMap;
+
+
+    auto it = itsImages.find(hash);
+    if (it != itsImages.end())
+    {
+      loadImage(it->second.c_str(),theResponse);
+      return true;
+    }
+
+
     uint flags = 0;
     T::GridData gridData;
 
@@ -1837,56 +2049,18 @@ bool Plugin::page_image(SmartMet::Spine::Reactor &theReactor,
 
 
     char fname[200];
-    sprintf(fname,"/tmp/image_%llu.jpg",getTime());
+    sprintf(fname,"%s/grid-gui-image_%llu.jpg",itsImageCache_dir.c_str(),getTime());
+
     saveImage(fname,gridData,(unsigned char)atoi(hueStr.c_str()),(unsigned char)atoi(saturationStr.c_str()),(unsigned char)atoi(blurStr.c_str()),coordinateLines,landBorder,landMaskStr,seaMaskStr,colorMap,geometryId,symbolMap,locations);
 
-    long long sz = getFileSize(fname);
-    if (sz > 0)
-    {
-      char buf[10000];
-      std::vector<char> *content = new std::vector<char>();
-      content->reserve(sz);
-
-      boost::shared_ptr<std::vector<char>> sContent;
-      sContent.reset(content);
-
-      FILE *file = fopen(fname,"r");
-      if (file != NULL)
-      {
-        while (!feof(file))
-        {
-          int n = fread(buf,1,10000,file);
-          if (n > 0)
-          {
-            for (int t=0; t<n; t++)
-            {
-              content->push_back(buf[t]);
-            }
-          }
-        }
-        fclose(file);
-        remove(fname);
-
-        theResponse.setHeader("Content-Type","image/jpg");
-        theResponse.setContent(sContent);
-      }
-      return true;
-    }
-    else
-    {
-      std::ostringstream ostr;
-      ostr << "<HTML><BODY>\n";
-      ostr << "Image does not exist!\n";
-      ostr << "</BODY></HTML>\n";
-      theResponse.setContent(std::string(ostr.str()));
-      return true;
-    }
+    loadImage(fname,theResponse);
+    itsImages.insert(std::pair<std::string,std::string>(hash,fname));
 
     return true;
   }
   catch (...)
   {
-    throw SmartMet::Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", NULL);
   }
 }
 
@@ -1894,7 +2068,7 @@ bool Plugin::page_image(SmartMet::Spine::Reactor &theReactor,
 
 
 
-bool Plugin::page_symbols(SmartMet::Spine::Reactor &theReactor,
+bool Plugin::page_symbols(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse)
 {
@@ -1970,6 +2144,19 @@ bool Plugin::page_symbols(SmartMet::Spine::Reactor &theReactor,
     if (v)
       symbolMap = *v;
 
+
+    std::string hash = "Symbols:" + fileIdStr + ":" + messageIndexStr + ":" + hueStr + ":" + saturationStr + ":" +
+      blurStr + ":" + coordinateLinesStr + ":" + landBorderStr + ":" +
+      landMaskStr + ":" + seaMaskStr + ":" + colorMap + ":" + locations + ":" + symbolMap;
+
+
+    auto it = itsImages.find(hash);
+    if (it != itsImages.end())
+    {
+      loadImage(it->second.c_str(),theResponse);
+      return true;
+    }
+
     uint flags = 0;
     T::GridData gridData;
 
@@ -1994,56 +2181,17 @@ bool Plugin::page_symbols(SmartMet::Spine::Reactor &theReactor,
 
 
     char fname[200];
-    sprintf(fname,"/tmp/image_%llu.jpg",getTime());
+    sprintf(fname,"/%s/grid-gui-image_%llu.jpg",itsImageCache_dir.c_str(),getTime());
     saveImage(fname,gridData,(unsigned char)atoi(hueStr.c_str()),(unsigned char)atoi(saturationStr.c_str()),(unsigned char)atoi(blurStr.c_str()),coordinateLines,landBorder,landMaskStr,seaMaskStr,colorMap,geometryId,symbolMap,locations);
 
-    long long sz = getFileSize(fname);
-    if (sz > 0)
-    {
-      char buf[10000];
-      std::vector<char> *content = new std::vector<char>();
-      content->reserve(sz);
-
-      boost::shared_ptr<std::vector<char>> sContent;
-      sContent.reset(content);
-
-      FILE *file = fopen(fname,"r");
-      if (file != NULL)
-      {
-        while (!feof(file))
-        {
-          int n = fread(buf,1,10000,file);
-          if (n > 0)
-          {
-            for (int t=0; t<n; t++)
-            {
-              content->push_back(buf[t]);
-            }
-          }
-        }
-        fclose(file);
-        remove(fname);
-
-        theResponse.setHeader("Content-Type","image/jpg");
-        theResponse.setContent(sContent);
-      }
-      return true;
-    }
-    else
-    {
-      std::ostringstream ostr;
-      ostr << "<HTML><BODY>\n";
-      ostr << "Image does not exist!\n";
-      ostr << "</BODY></HTML>\n";
-      theResponse.setContent(std::string(ostr.str()));
-      return true;
-    }
+    loadImage(fname,theResponse);
+    itsImages.insert(std::pair<std::string,std::string>(hash,fname));
 
     return true;
   }
   catch (...)
   {
-    throw SmartMet::Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", NULL);
   }
 }
 
@@ -2051,7 +2199,7 @@ bool Plugin::page_symbols(SmartMet::Spine::Reactor &theReactor,
 
 
 
-bool Plugin::page_map(SmartMet::Spine::Reactor &theReactor,
+bool Plugin::page_map(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse)
 {
@@ -2112,6 +2260,18 @@ bool Plugin::page_map(SmartMet::Spine::Reactor &theReactor,
     if (v)
       colorMap = *v;
 
+    std::string hash = "Map:" + fileIdStr + ":" + messageIndexStr + ":" + hueStr + ":" + saturationStr + ":" +
+      blurStr + ":" + coordinateLinesStr + ":" + landBorderStr + ":" +
+      landMaskStr + ":" + seaMaskStr + ":" + colorMap;
+
+
+    auto it = itsImages.find(hash);
+    if (it != itsImages.end())
+    {
+      loadImage(it->second.c_str(),theResponse);
+      return true;
+    }
+
     uint columns = 1800;
     uint rows = 900;
     uint flags = 0;
@@ -2133,56 +2293,17 @@ bool Plugin::page_map(SmartMet::Spine::Reactor &theReactor,
     uint landBorder = getColorValue(landBorderStr);
 
     char fname[200];
-    sprintf(fname,"/tmp/image_%llu.jpg",getTime());
+    sprintf(fname,"/%s/grid-gui-image_%llu.jpg",itsImageCache_dir.c_str(),getTime());
     saveMap(fname,columns,rows,values,(unsigned char)atoi(hueStr.c_str()),(unsigned char)atoi(saturationStr.c_str()),(unsigned char)atoi(blurStr.c_str()),coordinateLines,landBorder,landMaskStr,seaMaskStr,colorMap);
 
-    long long sz = getFileSize(fname);
-    if (sz > 0)
-    {
-      char buf[10000];
-      std::vector<char> *content = new std::vector<char>();
-      content->reserve(sz);
-
-      boost::shared_ptr<std::vector<char> > sContent;
-      sContent.reset(content);
-
-      FILE *file = fopen(fname,"r");
-      if (file != NULL)
-      {
-        while (!feof(file))
-        {
-          int n = fread(buf,1,10000,file);
-          if (n > 0)
-          {
-            for (int t=0; t<n; t++)
-            {
-              content->push_back(buf[t]);
-            }
-          }
-        }
-        fclose(file);
-        remove(fname);
-
-        theResponse.setHeader("Content-Type","image/jpg");
-        theResponse.setContent(sContent);
-      }
-      return true;
-    }
-    else
-    {
-      std::ostringstream ostr;
-      ostr << "<HTML><BODY>\n";
-      ostr << "Map does not exist!\n";
-      ostr << "</BODY></HTML>\n";
-      theResponse.setContent(std::string(ostr.str()));
-      return true;
-    }
+    loadImage(fname,theResponse);
+    itsImages.insert(std::pair<std::string,std::string>(hash,fname));
 
     return true;
   }
   catch (...)
   {
-    throw SmartMet::Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", NULL);
   }
 }
 
@@ -2227,7 +2348,7 @@ void Plugin::getLevelIds(T::ContentInfoList& contentInfoList,std::set<int>& leve
   }
   catch (...)
   {
-    throw SmartMet::Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", NULL);
   }
 }
 
@@ -2259,7 +2380,7 @@ void Plugin::getLevels(T::ContentInfoList& contentInfoList,int levelId,std::set<
   }
   catch (...)
   {
-    throw SmartMet::Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", NULL);
   }
 }
 
@@ -2294,7 +2415,7 @@ void Plugin::getForecastTypes(T::ContentInfoList& contentInfoList,int levelId,in
   }
   catch (...)
   {
-    throw SmartMet::Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", NULL);
   }
 }
 
@@ -2332,7 +2453,7 @@ void Plugin::getForecastNumbers(T::ContentInfoList& contentInfoList,int levelId,
   }
   catch (...)
   {
-    throw SmartMet::Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", NULL);
   }
 }
 
@@ -2373,7 +2494,7 @@ void Plugin::getGeometries(T::ContentInfoList& contentInfoList,int levelId,int l
   }
   catch (...)
   {
-    throw SmartMet::Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", NULL);
   }
 }
 
@@ -2399,7 +2520,7 @@ void Plugin::getGenerations(T::GenerationInfoList& generationInfoList,std::set<s
   }
   catch (...)
   {
-    throw SmartMet::Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", NULL);
   }
 }
 
@@ -2407,7 +2528,7 @@ void Plugin::getGenerations(T::GenerationInfoList& generationInfoList,std::set<s
 
 
 
-bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
+bool Plugin::page_main(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse)
 {
@@ -2537,6 +2658,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     std::ostringstream output;
     std::ostringstream ostr1;
     std::ostringstream ostr2;
+    std::ostringstream ostr3;
 
     output << "<HTML>\n";
     output << "<BODY>\n";
@@ -2583,6 +2705,11 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 
     output << "  setImage(img,url + obj.options[index].value);\n";
     //output << "  alert (\"The Unicode key code is: \" + keyCode);\n";
+    output << "}\n";
+
+    output << "function setText(id,txt)\n";
+    output << "{\n";
+    output << "  document.getElementById(id).innerHTML = txt;\n";
     output << "}\n";
 
     output << "function httpGet(theUrl)\n";
@@ -2670,7 +2797,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
       if (generations.size() == 1)
         disabled = "disabled";
 
-      ostr1 << "<SELECT style=\"width:250px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&producerId=" + producerIdStr + "&geometryId=" + geometryIdStr + "&generationId=' + this.options[this.selectedIndex].value)\">\n";
+      ostr1 << "<SELECT style=\"width:250px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&producerId=" + producerIdStr + "&geometryId=" + geometryIdStr + "&locations=" + locations + "&generationId=' + this.options[this.selectedIndex].value)\">\n";
 
       for (auto it = generations.rbegin(); it != generations.rend(); ++it)
       {
@@ -2705,7 +2832,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 
     if (paramKeyList.size() > 0)
     {
-      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=' + this.options[this.selectedIndex].value)\">\n";
+      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&locations=" + locations + "&parameterId=' + this.options[this.selectedIndex].value)\">\n";
       for (auto it=paramKeyList.begin(); it!=paramKeyList.end(); ++it)
       {
         std::string pId = *it;
@@ -2797,7 +2924,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
       if (levelIds.size() == 1)
         disabled = "disabled";
 
-      ostr1 << "<SELECT style=\"width:250px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=' + this.options[this.selectedIndex].value)\">\n";
+      ostr1 << "<SELECT style=\"width:250px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&locations=" + locations + "&parameterId=" + parameterIdStr + "&levelId=' + this.options[this.selectedIndex].value)\">\n";
       for (auto it = levelIds.begin(); it != levelIds.end(); ++it)
       {
         if (parameterLevelIdStr.empty())
@@ -2872,7 +2999,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
       if (levels.size() == 1)
         disabled = "disabled";
 
-      ostr1 << "<SELECT " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=' + this.options[this.selectedIndex].value)\">\n";
+      ostr1 << "<SELECT " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&locations=" + locations + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=' + this.options[this.selectedIndex].value)\">\n";
       for (auto it = levels.begin(); it != levels.end(); ++it)
       {
         if (parameterLevelStr.empty())
@@ -2910,7 +3037,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
       if (forecastTypes.size() == 1)
         disabled = "disabled";
 
-      ostr1 << "<SELECT " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&forecastType=' + this.options[this.selectedIndex].value)\">\n";
+      ostr1 << "<SELECT " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&locations=" + locations + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&forecastType=' + this.options[this.selectedIndex].value)\">\n";
       for (auto it = forecastTypes.begin(); it != forecastTypes.end(); ++it)
       {
         if (forecastTypeStr.empty())
@@ -2943,7 +3070,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
       if (forecastNumbers.size() == 1)
         disabled = "disabled";
 
-      ostr1 << "<SELECT " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=' + this.options[this.selectedIndex].value)\">\n";
+      ostr1 << "<SELECT " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&locations=" + locations + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=' + this.options[this.selectedIndex].value)\">\n";
       for (auto it = forecastNumbers.begin(); it != forecastNumbers.end(); ++it)
       {
         if (forecastNumberStr.empty())
@@ -2980,7 +3107,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
       if (geometries.size() == 1)
         disabled = "disabled";
 
-      ostr1 << "<SELECT style=\"width:250px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&geometryId=' + this.options[this.selectedIndex].value)\">\n";
+      ostr1 << "<SELECT style=\"width:250px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&locations=" + locations + "&geometryId=' + this.options[this.selectedIndex].value)\">\n";
 
       for (auto it=geometries.begin(); it!=geometries.end(); ++it)
       {
@@ -3023,6 +3150,8 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Time (UTC):</TD></TR>\n";
     ostr1 << "<TR height=\"30\"><TD><TABLE><TR><TD>\n";
 
+    ostr3 << "<TABLE><TR height=\"20\">\n";
+
     T::ContentInfo *prevCont = NULL;
     T::ContentInfo *currentCont = NULL;
     T::ContentInfo *nextCont = NULL;
@@ -3033,11 +3162,37 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 
       ostr1 << "<SELECT id=\"timeselect\" onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" + presentation + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&locations=" + locations + "&symbolMap=" + symbolMap + "' + this.options[this.selectedIndex].value)\"";
 
+      std::string u;
       if (presentation == "Image" ||  presentation == "Map"  ||  presentation == "Symbols")
+      {
         ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&geometryId=" << geometryIdStr << "&locations=" << locations << "&symbolMap=" << symbolMap << "')\"";
+        u = "/grid-gui?page=" + presentation + "&geometryId=" + geometryIdStr + "&locations=" + locations + "&symbolMap=" + symbolMap;
+      }
 
       ostr1 << " >\n";
 
+      uint tCount = 0;
+      for (uint a=0; a<len; a++)
+      {
+        T::ContentInfo *g = contentInfoList.getContentInfoByIndex(a);
+
+        if (g->mGeometryId == geometryId)
+        {
+          if (prevTime < g->mForecastTime)
+          {
+            if (forecastType == g->mForecastType)
+            {
+              if (forecastNumber == g->mForecastNumber)
+              {
+                tCount++;
+              }
+            }
+          }
+        }
+      }
+
+
+      uint cc = 0;
       for (uint a=0; a<len; a++)
       {
         T::ContentInfo *g = contentInfoList.getContentInfoByIndex(a);
@@ -3057,6 +3212,19 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 
                 if (startTime.empty())
                   startTime = g->mForecastTime;
+
+                if (tCount < 100  ||  (g->mForecastTime >= startTime  &&  cc < 100))
+                {
+                  if (cc == 0)
+                    ostr3 << "<TD style=\"text-align:center; font-size:12;width:120;background:#F0F0F0;\" id=\"ftime\">" + startTime + "</TD>\n";
+
+                  if (u > " ")
+                    ostr3 << "<TD style=\"width:5; background:#E0E0E0;\" onmouseout=\"this.style='width:5;background:#E0E0E0;'\" onmouseover=\"this.style='width:5;background:#FF0000;'; setText('ftime','" + g->mForecastTime + "');setImage(document.getElementById('myimage'),'" + u + url + "');\" > </TD>\n";
+                  else
+                    ostr3 << "<TD style=\"width:5; background:#E0E0E0;\"> </TD>\n";
+
+                  cc++;
+                }
 
                 if (startTime == g->mForecastTime)
                 {
@@ -3095,10 +3263,11 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 
     ostr1 << "</TR></TABLE></TD></TR>\n";
 
+    ostr3 << "</TR></TABLE>\n";
 
     // ### Presentation:
 
-    const char *modes[] = {"Image","Map","Symbols","Info","Table(sample)","Coordinates(sample)",NULL};
+    const char *modes[] = {"Image","Map","Symbols","Locations","Info","Table(sample)","Coordinates(sample)",NULL};
 
     ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Presentation:</TD></TR>\n";
     ostr1 << "<TR height=\"30\"><TD>\n";
@@ -3191,8 +3360,11 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
       ostr1 << "</SELECT>\n";
       ostr1 << "</TD></TR>\n";
 
+    }
 
-      // ### Symbol locations:
+    if (presentation == "Symbols" ||  presentation == "Locations")
+    {
+      // ### Locations:
 
       std::set<std::string> names;
 
@@ -3203,19 +3375,25 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
           names.insert(*name);
       }
 
-      ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Symbol locations:</TD></TR>\n";
+      ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Locations:</TD></TR>\n";
       ostr1 << "<TR height=\"30\"><TD>\n";
       ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&coordinateLines=" + coordinateLinesStr + "&symbolMap=" + symbolMap + "&locations=' + this.options[this.selectedIndex].value)\"";
       ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&coordinateLines=" + coordinateLinesStr + "&locations=')\"";
       ostr1 << " >\n";
 
-      if (locations.empty() ||  locations == "None")
-        ostr1 << "<OPTION selected value=\"None\">None</OPTION>\n";
-      else
-        ostr1 << "<OPTION value=\"None\">None</OPTION>\n";
+      if (presentation == "Symbols")
+      {
+        if (locations.empty() ||  locations == "None")
+          ostr1 << "<OPTION selected value=\"None\">None</OPTION>\n";
+        else
+          ostr1 << "<OPTION value=\"None\">None</OPTION>\n";
+      }
 
       for (auto it = names.begin(); it != names.end(); ++it)
       {
+        if (presentation == "Locations"  &&  (locations.empty() ||  locations == "None"))
+          locations = *it;
+
         if (locations == *it)
           ostr1 << "<OPTION selected value=\"" << *it << "\">" <<  *it << "</OPTION>\n";
         else
@@ -3423,6 +3601,9 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 
     ostr2 << "<TABLE width=\"100%\" height=\"100%\">\n";
 
+    if (itsAnimationEnabled  &&  (presentation == "Image" || presentation == "Map" || presentation == "Symbols"))
+      ostr2 << "<TR><TD style=\"height:25; width:100%; vertical-align:middle; text-align:left; font-size:12;\">" << ostr3.str() << "</TD></TR>\n";
+
     if (presentation == "Image")
     {
       ostr2 << "<TR><TD><IMG id=\"myimage\" style=\"background:#000000; max-width:1800; height:100%; max-height:100%;\" src=\"/grid-gui?page=" << presentation << "&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "&geometryId=" << geometryIdStr << "&hue=" << hueStr << "&saturation=" << saturationStr << "&blur=" << blurStr <<  "&coordinateLines=" << coordinateLinesStr << "&landBorder=" << landBorderStr << "&landMask=" << landMaskStr <<  "&seaMask=" << seaMaskStr << "&colorMap=" << colorMap <<  "&locations= \" onclick=\"getImageCoords(event,this," << fileIdStr << "," << messageIndexStr << ",'" << presentation << "');\"/></TD></TR>";
@@ -3458,6 +3639,13 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
       ostr2 << "<p>Your browser does not support iframes.</p>\n";
       ostr2 << "</IFRAME></TD></TR>";
     }
+    else
+    if (presentation == "Locations")
+    {
+      ostr2 << "<TR><TD><IFRAME width=\"100%\" height=\"100%\" src=\"grid-gui?page=locations&presentation=" + presentation + "&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "&locations=" << locations << "\">";
+      ostr2 << "<p>Your browser does not support iframes.</p>\n";
+      ostr2 << "</IFRAME></TD></TR>";
+    }
 
 
     //Identification::FmiParameterDef pDef;
@@ -3475,6 +3663,10 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
     output << ostr1.str();
     output << "</TD>\n";
 
+//    output << "<TD  bgcolor=\"#A0A0A0\" width=\"20\">\n";
+//    output << ostr3.str();
+//    output << "</TD>\n";
+
     output << "<TD>\n";
     output << ostr2.str();
     output << "</TD>\n";
@@ -3488,7 +3680,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
   }
   catch (...)
   {
-    throw SmartMet::Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", NULL);
   }
 }
 
@@ -3496,7 +3688,7 @@ bool Plugin::page_main(SmartMet::Spine::Reactor &theReactor,
 
 
 
-bool Plugin::request(SmartMet::Spine::Reactor &theReactor,
+bool Plugin::request(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse)
 {
@@ -3522,6 +3714,9 @@ bool Plugin::request(SmartMet::Spine::Reactor &theReactor,
     if (strcasecmp(page.c_str(),"info") == 0)
       return page_info(theReactor,theRequest,theResponse);
 
+    if (strcasecmp(page.c_str(),"locations") == 0)
+      return page_locations(theReactor,theRequest,theResponse);
+
     if (strcasecmp(page.c_str(),"table") == 0)
       return page_table(theReactor,theRequest,theResponse);
 
@@ -3538,7 +3733,7 @@ bool Plugin::request(SmartMet::Spine::Reactor &theReactor,
   }
   catch (...)
   {
-    throw SmartMet::Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", NULL);
   }
 }
 
@@ -3552,7 +3747,7 @@ bool Plugin::request(SmartMet::Spine::Reactor &theReactor,
  */
 // ----------------------------------------------------------------------
 
-void Plugin::requestHandler(SmartMet::Spine::Reactor &theReactor,
+void Plugin::requestHandler(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse)
 {
@@ -3560,11 +3755,21 @@ void Plugin::requestHandler(SmartMet::Spine::Reactor &theReactor,
   {
     try
     {
+      //auto headers = theRequest.getHeaders();
+      //for (auto it = headers.begin(); it != headers.end(); ++it)
+      //  std::cout << it->first << " = " << it->second << "\n";
+
       // We return JSON, hence we should enable CORS
       theResponse.setHeader("Access-Control-Allow-Origin", "*");
 
       const int expires_seconds = 1;
       boost::posix_time::ptime t_now = boost::posix_time::second_clock::universal_time();
+      boost::posix_time::ptime t_expires = t_now + boost::posix_time::seconds(expires_seconds);
+      boost::shared_ptr<Fmi::TimeFormatter> tformat(Fmi::TimeFormatter::create("http"));
+      std::string cachecontrol = "public, max-age=" + boost::lexical_cast<std::string>(expires_seconds);
+      std::string expiration = tformat->format(t_expires);
+      std::string modification = tformat->format(t_now);
+
 
       bool response = request(theReactor, theRequest, theResponse);
 
@@ -3579,13 +3784,6 @@ void Plugin::requestHandler(SmartMet::Spine::Reactor &theReactor,
 
       // Adding response headers
 
-      boost::posix_time::ptime t_expires = t_now + boost::posix_time::seconds(expires_seconds);
-      boost::shared_ptr<Fmi::TimeFormatter> tformat(Fmi::TimeFormatter::create("http"));
-      std::string cachecontrol =
-          "public, max-age=" + boost::lexical_cast<std::string>(expires_seconds);
-      std::string expiration = tformat->format(t_expires);
-      std::string modification = tformat->format(t_now);
-
       theResponse.setHeader("Cache-Control", cachecontrol.c_str());
       theResponse.setHeader("Expires", expiration.c_str());
       theResponse.setHeader("Last-Modified", modification.c_str());
@@ -3594,7 +3792,7 @@ void Plugin::requestHandler(SmartMet::Spine::Reactor &theReactor,
     {
       // Catching all exceptions
 
-      SmartMet::Spine::Exception exception(BCP, "Request processing exception!", NULL);
+      Spine::Exception exception(BCP, "Request processing exception!", NULL);
       exception.addParameter("URI", theRequest.getURI());
       exception.printError();
 
@@ -3606,11 +3804,12 @@ void Plugin::requestHandler(SmartMet::Spine::Reactor &theReactor,
       boost::algorithm::replace_all(firstMessage, "\n", " ");
       firstMessage = firstMessage.substr(0, 300);
       theResponse.setHeader("X-Content-Error", firstMessage.c_str());
+
     }
   }
   catch (...)
   {
-    throw SmartMet::Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", NULL);
   }
 }
 
@@ -3654,7 +3853,7 @@ int Plugin::getRequiredAPIVersion() const
  */
 // ----------------------------------------------------------------------
 
-bool Plugin::queryIsFast(const SmartMet::Spine::HTTP::Request & /* theRequest */) const
+bool Plugin::queryIsFast(const Spine::HTTP::Request & /* theRequest */) const
 {
   return true;
 }
