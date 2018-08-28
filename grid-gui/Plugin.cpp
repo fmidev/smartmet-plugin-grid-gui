@@ -47,7 +47,7 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
         "smartmet.plugin.grid-gui.imageCache.directory",
         "smartmet.plugin.grid-gui.imageCache.maxImages",
         "smartmet.plugin.grid-gui.imageCache.minImages",
-        NULL
+        nullptr
     };
 
     itsReactor = theReactor;
@@ -69,7 +69,7 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
     itsConfigurationFile.readFile(theConfig);
 
     uint t=0;
-    while (configAttribute[t] != NULL)
+    while (configAttribute[t] != nullptr)
     {
       if (!itsConfigurationFile.findAttribute(configAttribute[t]))
       {
@@ -140,7 +140,7 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", nullptr);
   }
 }
 
@@ -164,7 +164,7 @@ void Plugin::init()
 {
   try
   {
-    auto engine = itsReactor->getSingleton("grid", NULL);
+    auto engine = itsReactor->getSingleton("grid", nullptr);
     if (!engine)
       throw Spine::Exception(BCP, "The 'grid-engine' unavailable!");
 
@@ -174,7 +174,7 @@ void Plugin::init()
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", nullptr);
   }
 }
 
@@ -196,7 +196,7 @@ void Plugin::shutdown()
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", nullptr);
   }
 }
 
@@ -208,7 +208,7 @@ T::ColorMapFile* Plugin::getColorMapFile(std::string colorMapName)
 {
   try
   {
-    T::ColorMapFile *map = NULL;
+    T::ColorMapFile *map = nullptr;
     for (auto it = itsColorMapFiles.begin(); it != itsColorMapFiles.end(); ++it)
     {
       it->checkUpdates();
@@ -219,7 +219,7 @@ T::ColorMapFile* Plugin::getColorMapFile(std::string colorMapName)
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", nullptr);
   }
 }
 
@@ -232,7 +232,7 @@ void Plugin::loadColorFile()
   try
   {
     FILE *file = fopen(itsColorFile.c_str(),"r");
-    if (file == NULL)
+    if (file == nullptr)
     {
       Spine::Exception exception(BCP,"Cannot open file!");
       exception.addParameter("Filename",itsColorFile);
@@ -245,7 +245,7 @@ void Plugin::loadColorFile()
 
     while (!feof(file))
     {
-      if (fgets(st,1000,file) != NULL  &&  st[0] != '#')
+      if (fgets(st,1000,file) != nullptr  &&  st[0] != '#')
       {
         bool ind = false;
         char *field[100];
@@ -275,7 +275,7 @@ void Plugin::loadColorFile()
           if (field[0][0] != '\0'  &&  field[1][0] != '\0')
           {
             std::string colorName = field[0];
-            uint color = strtoul(field[1],NULL,16);
+            uint color = strtoul(field[1],nullptr,16);
 
             itsColors.push_back(std::pair<std::string,unsigned int>(colorName,color));
           }
@@ -288,7 +288,7 @@ void Plugin::loadColorFile()
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", NULL);
+    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
@@ -310,7 +310,7 @@ uint Plugin::getColorValue(std::string& colorName)
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", nullptr);
   }
 }
 
@@ -323,7 +323,7 @@ T::SymbolMapFile* Plugin::getSymbolMapFile(std::string symbolMap)
 {
   try
   {
-    T::SymbolMapFile *map = NULL;
+    T::SymbolMapFile *map = nullptr;
     for (auto it = itsSymbolMapFiles.begin(); it != itsSymbolMapFiles.end(); ++it)
     {
       it->checkUpdates();
@@ -334,7 +334,7 @@ T::SymbolMapFile* Plugin::getSymbolMapFile(std::string symbolMap)
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", nullptr);
   }
 }
 
@@ -346,7 +346,7 @@ T::LocationFile* Plugin::getLocationFile(std::string name)
 {
   try
   {
-    T::LocationFile *file = NULL;
+    T::LocationFile *file = nullptr;
     for (auto it = itsLocationFiles.begin(); it != itsLocationFiles.end(); ++it)
     {
       it->checkUpdates();
@@ -357,7 +357,7 @@ T::LocationFile* Plugin::getLocationFile(std::string name)
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", nullptr);
   }
 }
 
@@ -369,7 +369,7 @@ bool Plugin::isLand(double lon,double lat)
 {
   try
   {
-    if (itsLandSeaMask.pixel == NULL)
+    if (itsLandSeaMask.pixel == nullptr)
       return false;
 
     if (lon >= 180)
@@ -392,7 +392,7 @@ bool Plugin::isLand(double lon,double lat)
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", nullptr);
   }
 }
 
@@ -407,7 +407,7 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
     uint landColor = getColorValue(landMask);
     uint seaColor = getColorValue(seaMask);
 
-    T::ColorMapFile *colorMapFile = NULL;
+    T::ColorMapFile *colorMapFile = nullptr;
 
     if (!colorMapName.empty() &&  strcasecmp(colorMapName.c_str(),"None") != 0)
       colorMapFile = getColorMapFile(colorMapName);
@@ -479,7 +479,7 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
         v = v + 55;
         uint col = hsv_to_rgb(hue,saturation,(unsigned char)v);
 
-        if (colorMapFile != NULL)
+        if (colorMapFile != nullptr)
           col = colorMapFile->getColor(val);
 
         double xc = xd*((double)x-((double)width/2));
@@ -580,7 +580,7 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
   }
   catch (...)
   {
-    throw Spine::Exception(BCP,"Operation failed!",NULL);
+    throw Spine::Exception(BCP,"Operation failed!",nullptr);
   }
 }
 
@@ -613,7 +613,7 @@ void Plugin::checkImageCache()
   }
   catch (...)
   {
-    throw Spine::Exception(BCP,"Operation failed!",NULL);
+    throw Spine::Exception(BCP,"Operation failed!",nullptr);
   }
 }
 
@@ -625,7 +625,7 @@ void Plugin::saveImage(const char *imageFile,T::GridData&  gridData,unsigned cha
 {
   try
   {
-    T::ColorMapFile *colorMapFile = NULL;
+    T::ColorMapFile *colorMapFile = nullptr;
 
     if (!colorMapName.empty() &&  strcasecmp(colorMapName.c_str(),"None") != 0)
       colorMapFile = getColorMapFile(colorMapName);
@@ -732,7 +732,7 @@ void Plugin::saveImage(const char *imageFile,T::GridData&  gridData,unsigned cha
           v = v + 55;
           uint col = hsv_to_rgb(hue,saturation,(unsigned char)v);
 
-          if (colorMapFile != NULL)
+          if (colorMapFile != nullptr)
             col = colorMapFile->getColor(val);
 
           if (!showValues || val == ParamValueMissing)
@@ -837,7 +837,7 @@ void Plugin::saveImage(const char *imageFile,T::GridData&  gridData,unsigned cha
           v = v + 55;
           uint col = hsv_to_rgb(hue,saturation,(unsigned char)v);
 
-          if (colorMapFile != NULL)
+          if (colorMapFile != nullptr)
             col = colorMapFile->getColor(val);
 
           if (!showValues || val == ParamValueMissing)
@@ -944,7 +944,7 @@ void Plugin::saveImage(const char *imageFile,T::GridData&  gridData,unsigned cha
       T::LocationFile *locationFile = getLocationFile(locations);
       T::SymbolMapFile* symbolMapFile = getSymbolMapFile(symbolMap);
 
-      if (locationFile != NULL  &&  symbolMapFile != NULL)
+      if (locationFile != nullptr  &&  symbolMapFile != nullptr)
       {
         T::Coordinate_vec cv = locationFile->getCoordinates();
 
@@ -1009,7 +1009,7 @@ void Plugin::saveImage(const char *imageFile,T::GridData&  gridData,unsigned cha
   }
   catch (...)
   {
-    throw Spine::Exception(BCP,"Operation failed!",NULL);
+    throw Spine::Exception(BCP,"Operation failed!",nullptr);
   }
 }
 
@@ -1094,7 +1094,7 @@ void Plugin::saveTimeSeries(const char *imageFile,std::vector<T::ParamValue>& va
   }
   catch (...)
   {
-    throw Spine::Exception(BCP,"Operation failed!",NULL);
+    throw Spine::Exception(BCP,"Operation failed!",nullptr);
   }
 }
 
@@ -1269,7 +1269,7 @@ bool Plugin::page_info(Spine::Reactor &theReactor,
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", nullptr);
   }
 }
 
@@ -1313,7 +1313,7 @@ bool Plugin::page_locations(Spine::Reactor &theReactor,
 
     T::LocationFile *locationFile = getLocationFile(locations);
 
-    if (locationFile != NULL)
+    if (locationFile != nullptr)
     {
       T::Coordinate_vec coordinateList = locationFile->getCoordinates();
       T::Location_vec locationList = locationFile->getLocations();
@@ -1325,7 +1325,7 @@ bool Plugin::page_locations(Spine::Reactor &theReactor,
         {
           ostr << "<TR><TD style=\"width:200;background:#F0F0F0;\">" << it->mName << "</TD>";
           T::GridValue *rec = valueList.getGridValueByCoordinates(it->mX,it->mY);
-          if (rec != NULL &&  rec->mValue != ParamValueMissing)
+          if (rec != nullptr &&  rec->mValue != ParamValueMissing)
           {
             char tmp[30];
             sprintf(tmp,"%.3f",rec->mValue);
@@ -1349,7 +1349,7 @@ bool Plugin::page_locations(Spine::Reactor &theReactor,
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", nullptr);
   }
 }
 
@@ -1515,7 +1515,7 @@ bool Plugin::page_table(Spine::Reactor &theReactor,
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", nullptr);
   }
 }
 
@@ -1628,7 +1628,7 @@ bool Plugin::page_coordinates(Spine::Reactor &theReactor,
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", nullptr);
   }
 }
 
@@ -1724,7 +1724,7 @@ bool Plugin::page_value(Spine::Reactor &theReactor,
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", nullptr);
   }
 }
 
@@ -1821,7 +1821,7 @@ bool Plugin::page_timeseries(Spine::Reactor &theReactor,
             if (info->mFileId == fileId  &&  info->mMessageIndex == messageIndex)
               idx = (int)c;
 
-            if (strstr(info->mForecastTime.c_str(),"T000000") != NULL)
+            if (strstr(info->mForecastTime.c_str(),"T000000") != nullptr)
               dayIdx.insert(t);
 
             valueList.push_back(value);
@@ -1847,7 +1847,7 @@ bool Plugin::page_timeseries(Spine::Reactor &theReactor,
       sContent.reset(content);
 
       FILE *file = fopen(fname,"r");
-      if (file != NULL)
+      if (file != nullptr)
       {
         while (!feof(file))
         {
@@ -1882,7 +1882,7 @@ bool Plugin::page_timeseries(Spine::Reactor &theReactor,
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", nullptr);
   }
 }
 
@@ -1905,7 +1905,7 @@ void Plugin::loadImage(const char *fname,Spine::HTTP::Response &theResponse)
       sContent.reset(content);
 
       FILE *file = fopen(fname,"r");
-      if (file != NULL)
+      if (file != nullptr)
       {
         while (!feof(file))
         {
@@ -1935,7 +1935,7 @@ void Plugin::loadImage(const char *fname,Spine::HTTP::Response &theResponse)
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", nullptr);
   }
 }
 
@@ -2060,7 +2060,7 @@ bool Plugin::page_image(Spine::Reactor &theReactor,
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", nullptr);
   }
 }
 
@@ -2191,7 +2191,7 @@ bool Plugin::page_symbols(Spine::Reactor &theReactor,
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", nullptr);
   }
 }
 
@@ -2303,7 +2303,7 @@ bool Plugin::page_map(Spine::Reactor &theReactor,
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", nullptr);
   }
 }
 
@@ -2348,7 +2348,7 @@ void Plugin::getLevelIds(T::ContentInfoList& contentInfoList,std::set<int>& leve
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", nullptr);
   }
 }
 
@@ -2380,7 +2380,7 @@ void Plugin::getLevels(T::ContentInfoList& contentInfoList,int levelId,std::set<
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", nullptr);
   }
 }
 
@@ -2415,7 +2415,7 @@ void Plugin::getForecastTypes(T::ContentInfoList& contentInfoList,int levelId,in
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", nullptr);
   }
 }
 
@@ -2453,7 +2453,7 @@ void Plugin::getForecastNumbers(T::ContentInfoList& contentInfoList,int levelId,
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", nullptr);
   }
 }
 
@@ -2494,7 +2494,7 @@ void Plugin::getGeometries(T::ContentInfoList& contentInfoList,int levelId,int l
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", nullptr);
   }
 }
 
@@ -2520,7 +2520,7 @@ void Plugin::getGenerations(T::GenerationInfoList& generationInfoList,std::set<s
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", nullptr);
   }
 }
 
@@ -2781,7 +2781,7 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
     contentServer->getGenerationInfoListByProducerId(0,pid,generationInfoList);
     uint gid = (uint)atoi(generationIdStr.c_str());
 
-    if (generationInfoList.getGenerationInfoById(gid) == NULL)
+    if (generationInfoList.getGenerationInfoById(gid) == nullptr)
       gid = 0;
 
     std::set<std::string> generations;
@@ -2802,7 +2802,7 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
       for (auto it = generations.rbegin(); it != generations.rend(); ++it)
       {
         T::GenerationInfo *g = generationInfoList.getGenerationInfoByName(*it);
-        if (g != NULL)
+        if (g != nullptr)
         {
           if (gid == 0)
           {
@@ -3152,9 +3152,9 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
 
     ostr3 << "<TABLE><TR height=\"20\">\n";
 
-    T::ContentInfo *prevCont = NULL;
-    T::ContentInfo *currentCont = NULL;
-    T::ContentInfo *nextCont = NULL;
+    T::ContentInfo *prevCont = nullptr;
+    T::ContentInfo *currentCont = nullptr;
+    T::ContentInfo *nextCont = nullptr;
 
     if (len > 0)
     {
@@ -3207,7 +3207,7 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
               {
                 std::string url = "&start=" + g->mForecastTime + "&fileId=" + std::to_string(g->mFileId) + "&messageIndex=" + std::to_string(g->mMessageIndex) + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap;
 
-                if (currentCont != NULL  &&  nextCont == NULL)
+                if (currentCont != nullptr  &&  nextCont == nullptr)
                   nextCont = g;
 
                 if (startTime.empty())
@@ -3238,7 +3238,7 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
                   ostr1 << "<OPTION value=\"" <<  url << "\">" <<  g->mForecastTime << "</OPTION>\n";
                 }
 
-                if (currentCont == NULL)
+                if (currentCont == nullptr)
                   prevCont = g;
 
                 prevTime = g->mForecastTime;
@@ -3251,12 +3251,12 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
     }
     ostr1 << "</TD>\n";
 
-    if (prevCont != NULL)
+    if (prevCont != nullptr)
       ostr1 << "<TD width=\"20\" > <button type=\"button\" onClick=\"getPage(this,parent,'/grid-gui?page=main&presentation=" + presentation + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + prevCont->mForecastTime + "&fileId=" + std::to_string(prevCont->mFileId) + "&messageIndex=" + std::to_string(prevCont->mMessageIndex) + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "');\">&lt;</button></TD>\n";
     else
       ostr1 << "<TD width=\"20\"><button type=\"button\">&lt;</button></TD></TD>\n";
 
-    if (nextCont != NULL)
+    if (nextCont != nullptr)
       ostr1 << "<TD width=\"20\"><button type=\"button\" onClick=\"getPage(this,parent,'/grid-gui?page=main&presentation=" + presentation + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + nextCont->mForecastTime + "&fileId=" + std::to_string(nextCont->mFileId) + "&messageIndex=" + std::to_string(nextCont->mMessageIndex) + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "');\">&gt;</button></TD>\n";
     else
       ostr1 << "<TD width=\"20\"><button type=\"button\">&gt;</button></TD></TD>\n";
@@ -3267,14 +3267,14 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
 
     // ### Presentation:
 
-    const char *modes[] = {"Image","Map","Symbols","Locations","Info","Table(sample)","Coordinates(sample)",NULL};
+    const char *modes[] = {"Image","Map","Symbols","Locations","Info","Table(sample)","Coordinates(sample)",nullptr};
 
     ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Presentation:</TD></TR>\n";
     ostr1 << "<TR height=\"30\"><TD>\n";
     ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&presentation=' + this.options[this.selectedIndex].value)\">\n";
 
     uint a = 0;
-    while (modes[a] != NULL)
+    while (modes[a] != nullptr)
     {
       if (presentation.empty())
         presentation = modes[a];
@@ -3527,9 +3527,9 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
 
       ostr1 << " >\n";
 
-      const char *landMasks[] = {"Simple",NULL};
+      const char *landMasks[] = {"Simple",nullptr};
       a = 0;
-      while (landMasks[a] != NULL)
+      while (landMasks[a] != nullptr)
       {
         if (landMaskStr == landMasks[a])
           ostr1 << "<OPTION selected value=\"" << landMasks[a] << "\">" <<  landMasks[a] << "</OPTION>\n";
@@ -3558,9 +3558,9 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
 
       ostr1 << " >\n";
 
-      const char *seaMasks[] = {"Simple",NULL};
+      const char *seaMasks[] = {"Simple",nullptr};
       a = 0;
-      while (seaMasks[a] != NULL)
+      while (seaMasks[a] != nullptr)
       {
         if (seaMaskStr == seaMasks[a])
           ostr1 << "<OPTION selected value=\"" << seaMasks[a] << "\">" <<  seaMasks[a] << "</OPTION>\n";
@@ -3680,7 +3680,7 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", nullptr);
   }
 }
 
@@ -3733,7 +3733,7 @@ bool Plugin::request(Spine::Reactor &theReactor,
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", nullptr);
   }
 }
 
@@ -3792,7 +3792,7 @@ void Plugin::requestHandler(Spine::Reactor &theReactor,
     {
       // Catching all exceptions
 
-      Spine::Exception exception(BCP, "Request processing exception!", NULL);
+      Spine::Exception exception(BCP, "Request processing exception!", nullptr);
       exception.addParameter("URI", theRequest.getURI());
       exception.printError();
 
@@ -3809,7 +3809,7 @@ void Plugin::requestHandler(Spine::Reactor &theReactor,
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Operation failed!", NULL);
+    throw Spine::Exception(BCP, "Operation failed!", nullptr);
   }
 }
 

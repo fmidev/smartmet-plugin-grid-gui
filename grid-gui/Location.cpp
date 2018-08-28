@@ -18,7 +18,7 @@ Location::Location()
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", NULL);
+    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
@@ -36,7 +36,7 @@ Location::Location(const char *name,double x,double y)
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", NULL);
+    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
@@ -54,7 +54,7 @@ Location::Location(const Location& location)
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", NULL);
+    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
@@ -69,7 +69,7 @@ Location::~Location()
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", NULL);
+    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
@@ -87,7 +87,7 @@ void Location::print(std::ostream& stream,uint level,uint optionFlags)
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", NULL);
+    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 

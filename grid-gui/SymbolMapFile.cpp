@@ -18,7 +18,7 @@ SymbolMapFile::SymbolMapFile()
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", NULL);
+    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
@@ -35,7 +35,7 @@ SymbolMapFile::SymbolMapFile(std::string filename)
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", NULL);
+    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
@@ -55,7 +55,7 @@ SymbolMapFile::SymbolMapFile(const SymbolMapFile& symbolMapFile)
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", NULL);
+    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
@@ -70,7 +70,7 @@ SymbolMapFile::~SymbolMapFile()
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", NULL);
+    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
@@ -86,7 +86,7 @@ void SymbolMapFile::init()
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", NULL);
+    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
@@ -103,7 +103,7 @@ void SymbolMapFile::init(std::string filename)
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", NULL);
+    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
@@ -128,7 +128,7 @@ bool SymbolMapFile::checkUpdates()
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", NULL);
+    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
@@ -189,7 +189,7 @@ bool SymbolMapFile::getSymbol(double value,CImage& symbol)
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", NULL);
+    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
@@ -205,7 +205,7 @@ string_vec SymbolMapFile::getNames()
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", NULL);
+    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
@@ -226,7 +226,7 @@ bool SymbolMapFile::hasName(const char *name)
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", NULL);
+    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
@@ -241,7 +241,7 @@ void SymbolMapFile::print(std::ostream& stream,uint level,uint optionFlags)
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", NULL);
+    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
@@ -254,7 +254,7 @@ void SymbolMapFile::loadFile()
   try
   {
     FILE *file = fopen(mFilename.c_str(),"r");
-    if (file == NULL)
+    if (file == nullptr)
     {
       SmartMet::Spine::Exception exception(BCP,"Cannot open file!");
       exception.addParameter("Filename",mFilename);
@@ -269,7 +269,7 @@ void SymbolMapFile::loadFile()
 
     while (!feof(file))
     {
-      if (fgets(st,1000,file) != NULL  &&  st[0] != '#')
+      if (fgets(st,1000,file) != nullptr  &&  st[0] != '#')
       {
         bool ind = false;
         char *field[100];
@@ -323,7 +323,7 @@ void SymbolMapFile::loadFile()
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", NULL);
+    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
