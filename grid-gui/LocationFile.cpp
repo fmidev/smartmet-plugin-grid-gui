@@ -229,7 +229,7 @@ void LocationFile::loadFile()
 {
   try
   {
-    FILE *file = fopen(mFilename.c_str(),"r");
+    FILE *file = fopen(mFilename.c_str(),"re");
     if (file == nullptr)
     {
       SmartMet::Spine::Exception exception(BCP,"Cannot open file!");
@@ -279,8 +279,8 @@ void LocationFile::loadFile()
           {
             if (field[0][0] != '\0' &&  field[1][0] != '\0'  &&  field[2][0] != '\0')
             {
-              double lat = atof(field[1]);
-              double lon = atof(field[2]);
+              double lat = toDouble(field[1]);
+              double lon = toDouble(field[2]);
               mLocations.push_back(T::Location(field[0],lon,lat));
             }
           }

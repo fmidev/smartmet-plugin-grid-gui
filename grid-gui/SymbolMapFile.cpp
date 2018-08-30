@@ -253,7 +253,7 @@ void SymbolMapFile::loadFile()
 {
   try
   {
-    FILE *file = fopen(mFilename.c_str(),"r");
+    FILE *file = fopen(mFilename.c_str(),"re");
     if (file == nullptr)
     {
       SmartMet::Spine::Exception exception(BCP,"Cannot open file!");
@@ -309,7 +309,7 @@ void SymbolMapFile::loadFile()
             }
             else
             {
-              double val = atof(field[0]);
+              double val = toDouble(field[0]);
               std::string filename = field[1];
               mSymbolMap.insert(std::pair<double,std::string>(val,filename));
             }
