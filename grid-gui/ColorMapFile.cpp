@@ -223,7 +223,7 @@ void ColorMapFile::loadFile()
 {
   try
   {
-    FILE *file = fopen(mFilename.c_str(),"r");
+    FILE *file = fopen(mFilename.c_str(),"re");
     if (file == nullptr)
     {
       SmartMet::Spine::Exception exception(BCP,"Cannot open file!");
@@ -273,7 +273,7 @@ void ColorMapFile::loadFile()
             }
             else
             {
-              double val = atof(field[0]);
+              double val = toDouble(field[0]);
               uint color = strtoul(field[1],nullptr,16);
               mColorMap.insert(std::pair<double,unsigned int>(val,color));
             }
