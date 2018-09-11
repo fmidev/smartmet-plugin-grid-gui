@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-plugin-%{DIRNAME}
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
-Version: 18.8.28
+Version: 18.9.10
 Release: 1%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
@@ -21,10 +21,10 @@ BuildRequires: smartmet-library-grid-content-devel
 BuildRequires: smartmet-engine-grid-devel
 BuildRequires: gdal-devel
 Requires: libconfig
-Requires: smartmet-library-macgyver >= 18.8.20
-Requires: smartmet-library-spine >= 18.8.20
+Requires: smartmet-library-macgyver >= 18.9.5
+Requires: smartmet-library-spine >= 18.9.5
 Requires: smartmet-server >= 18.8.22
-Requires: smartmet-engine-grid >= 18.8.27
+Requires: smartmet-engine-grid >= 18.9.10
 Requires: boost-date-time
 Requires: smartmet-engine-grid
 Provides: %{SPECNAME}
@@ -51,6 +51,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/plugins/%{DIRNAME}.so
 
 %changelog
+* Mon Sep 10 2018 Mika Heiskanen <mika.heiskanen@fmi.fi> - 18.9.10-1.fmi
+- Version update
+* Fri Aug 31 2018 Mika Heiskanen <mika.heiskanen@fmi.fi> - 18.8.31-1.fmi
+- Silenced CodeChecker warnings
 * Tue Aug 28 2018 Mika Heiskanen <mika.heiskanen@fmi.fi> - 18.8.28-1.fmi
 - Packaged latest version
 * Mon Aug 27 2018 Mika Heiskanen <mika.heiskanen@fmi.fi> - 18.8.27-1.fmi
