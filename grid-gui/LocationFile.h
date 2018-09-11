@@ -18,12 +18,12 @@ class LocationFile
 {
   public:
                         LocationFile();
-                        LocationFile(std::string filename);
+                        LocationFile(const std::string& filename);
                         LocationFile(const LocationFile& locationFile);
     virtual             ~LocationFile();
 
     void                init();
-    void                init(std::string filename);
+    void                init(const std::string& filename);
     bool                checkUpdates();
     T::Coordinate_vec   getCoordinates();
     T::Location_vec&    getLocations();

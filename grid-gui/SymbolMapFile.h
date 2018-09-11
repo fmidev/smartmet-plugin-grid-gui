@@ -20,12 +20,12 @@ class SymbolMapFile
 {
   public:
                     SymbolMapFile();
-                    SymbolMapFile(std::string filename);
+                    SymbolMapFile(const std::string& filename);
                     SymbolMapFile(const SymbolMapFile& symbolMapFile);
     virtual         ~SymbolMapFile();
 
     void            init();
-    void            init(std::string filename);
+    void            init(const std::string& filename);
     bool            checkUpdates();
     bool            getSymbol(double value,CImage& symbol);
     string_vec      getNames();

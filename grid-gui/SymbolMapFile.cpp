@@ -26,7 +26,7 @@ SymbolMapFile::SymbolMapFile()
 
 
 
-SymbolMapFile::SymbolMapFile(std::string filename)
+SymbolMapFile::SymbolMapFile(const std::string& filename)
 {
   try
   {
@@ -77,6 +77,7 @@ SymbolMapFile::~SymbolMapFile()
 
 
 
+
 void SymbolMapFile::init()
 {
   try
@@ -94,7 +95,7 @@ void SymbolMapFile::init()
 
 
 
-void SymbolMapFile::init(std::string filename)
+void SymbolMapFile::init(const std::string& filename)
 {
   try
   {
@@ -119,7 +120,7 @@ bool SymbolMapFile::checkUpdates()
 
     time_t tt = getFileModificationTime(mFilename.c_str());
 
-    if (tt != mLastModified  &&  (tt+3) < time(0))
+    if (tt != mLastModified  &&  (tt+3) < time(nullptr))
     {
       loadFile();
       return true;

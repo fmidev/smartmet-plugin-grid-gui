@@ -425,6 +425,9 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
 
     uint sz = values.size();
 
+    if (sz == 0)
+      return;
+
     if (sz != (columns * rows))
     {
       printf("The number of values (%u) does not match to the grid size (%u x %u)1\n",sz,columns,rows);
@@ -480,7 +483,7 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
         v = v / blur;
         v = v * blur;
         v = v + 55;
-        uint col = hsv_to_rgb(hue,saturation,(unsigned char)v);
+        uint col = hsv_to_rgb(hue,saturation,C_UCHAR(v));
 
         if (colorMapFile != nullptr)
           col = colorMapFile->getColor(val);
@@ -511,7 +514,7 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
                 if (val == ParamValueMissing)
                   col = 0xC8C8C8;
                 else
-                  col = hsv_to_rgb(0,0,(unsigned char)v);
+                  col = hsv_to_rgb(0,0,C_UCHAR(v));
               }
               else
               {
@@ -538,7 +541,7 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
                 if (val == ParamValueMissing)
                   col = 0xC8C8C8;
                 else
-                  col = hsv_to_rgb(0,0,(unsigned char)v);
+                  col = hsv_to_rgb(0,0,C_UCHAR(v));
               }
               else
               {
@@ -577,7 +580,7 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
     }
 
     jpeg_save(imageFile,image,height,width,100);
-    delete image;
+    delete[] image;
 
     checkImageCache();
   }
@@ -662,6 +665,10 @@ void Plugin::saveImage(const char *imageFile,T::GridData&  gridData,unsigned cha
     uint size = width*height;
     std::size_t sz = gridData.mValues.size();
 
+
+    if (size == 0)
+      return;
+
     if (sz < size)
     {
       printf("ERROR: There are not enough values (= %lu) for the grid (%u x %u)!\n",sz,width,height);
@@ -733,7 +740,7 @@ void Plugin::saveImage(const char *imageFile,T::GridData&  gridData,unsigned cha
           v = v / blur;
           v = v * blur;
           v = v + 55;
-          uint col = hsv_to_rgb(hue,saturation,(unsigned char)v);
+          uint col = hsv_to_rgb(hue,saturation,C_UCHAR(v));
 
           if (colorMapFile != nullptr)
             col = colorMapFile->getColor(val);
@@ -763,7 +770,7 @@ void Plugin::saveImage(const char *imageFile,T::GridData&  gridData,unsigned cha
                   if (val == ParamValueMissing)
                     col = 0xC8C8C8;
                   else
-                    col = hsv_to_rgb(0,0,(unsigned char)v);
+                    col = hsv_to_rgb(0,0,C_UCHAR(v));
                 }
                 else
                 {
@@ -790,7 +797,7 @@ void Plugin::saveImage(const char *imageFile,T::GridData&  gridData,unsigned cha
                   if (val == ParamValueMissing)
                     col = 0xC8C8C8;
                   else
-                    col = hsv_to_rgb(0,0,(unsigned char)v);
+                    col = hsv_to_rgb(0,0,C_UCHAR(v));
                 }
                 else
                 {
@@ -838,7 +845,7 @@ void Plugin::saveImage(const char *imageFile,T::GridData&  gridData,unsigned cha
           v = v / blur;
           v = v * blur;
           v = v + 55;
-          uint col = hsv_to_rgb(hue,saturation,(unsigned char)v);
+          uint col = hsv_to_rgb(hue,saturation,C_UCHAR(v));
 
           if (colorMapFile != nullptr)
             col = colorMapFile->getColor(val);
@@ -866,7 +873,7 @@ void Plugin::saveImage(const char *imageFile,T::GridData&  gridData,unsigned cha
                   if (val == ParamValueMissing)
                     col = 0xC8C8C8;
                   else
-                    col = hsv_to_rgb(0,0,(unsigned char)v);
+                    col = hsv_to_rgb(0,0,C_UCHAR(v));
                 }
                 else
                 {
@@ -893,7 +900,7 @@ void Plugin::saveImage(const char *imageFile,T::GridData&  gridData,unsigned cha
                   if (val == ParamValueMissing)
                     col = 0xC8C8C8;
                   else
-                    col = hsv_to_rgb(0,0,(unsigned char)v);
+                    col = hsv_to_rgb(0,0,C_UCHAR(v));
                 }
                 else
                 {
@@ -1006,7 +1013,7 @@ void Plugin::saveImage(const char *imageFile,T::GridData&  gridData,unsigned cha
 
 
     jpeg_save(imageFile,image,height,width,100);
-    delete image;
+    delete[] image;
 
     checkImageCache();
   }
@@ -1066,7 +1073,7 @@ void Plugin::saveTimeSeries(const char *imageFile,std::vector<T::ParamValue>& va
 
       uint v = 200 - ((valueList[x]-minValue) / step);
       v = v + 55;
-      uint col = hsv_to_rgb(0,0,(unsigned char)v);
+      uint col = hsv_to_rgb(0,0,C_UCHAR(v));
 
       if (x == idx)
         col = 0xFF0000;
@@ -1093,7 +1100,7 @@ void Plugin::saveTimeSeries(const char *imageFile,std::vector<T::ParamValue>& va
 
     }
     jpeg_save(imageFile,image,height,width,100);
-    delete image;
+    delete[] image;
   }
   catch (...)
   {
@@ -2060,7 +2067,7 @@ bool Plugin::page_image(Spine::Reactor &theReactor,
     char fname[200];
     sprintf(fname,"%s/grid-gui-image_%llu.jpg",itsImageCache_dir.c_str(),getTime());
 
-    saveImage(fname,gridData,(unsigned char)toInt64(hueStr.c_str()),(unsigned char)toInt64(saturationStr.c_str()),(unsigned char)toInt64(blurStr.c_str()),coordinateLines,landBorder,landMaskStr,seaMaskStr,colorMap,geometryId,symbolMap,locations);
+    saveImage(fname,gridData,toUInt8(hueStr.c_str()),toUInt8(saturationStr.c_str()),toUInt8(blurStr.c_str()),coordinateLines,landBorder,landMaskStr,seaMaskStr,colorMap,geometryId,symbolMap,locations);
 
     loadImage(fname,theResponse);
     itsImages.insert(std::pair<std::string,std::string>(hash,fname));
@@ -2191,7 +2198,7 @@ bool Plugin::page_symbols(Spine::Reactor &theReactor,
 
     char fname[200];
     sprintf(fname,"/%s/grid-gui-image_%llu.jpg",itsImageCache_dir.c_str(),getTime());
-    saveImage(fname,gridData,(unsigned char)toInt64(hueStr.c_str()),(unsigned char)toInt64(saturationStr.c_str()),(unsigned char)toInt64(blurStr.c_str()),coordinateLines,landBorder,landMaskStr,seaMaskStr,colorMap,geometryId,symbolMap,locations);
+    saveImage(fname,gridData,toUInt8(hueStr.c_str()),toUInt8(saturationStr.c_str()),toUInt8(blurStr.c_str()),coordinateLines,landBorder,landMaskStr,seaMaskStr,colorMap,geometryId,symbolMap,locations);
 
     loadImage(fname,theResponse);
     itsImages.insert(std::pair<std::string,std::string>(hash,fname));
@@ -2303,7 +2310,7 @@ bool Plugin::page_map(Spine::Reactor &theReactor,
 
     char fname[200];
     sprintf(fname,"/%s/grid-gui-image_%llu.jpg",itsImageCache_dir.c_str(),getTime());
-    saveMap(fname,columns,rows,values,(unsigned char)toInt64(hueStr.c_str()),(unsigned char)toInt64(saturationStr.c_str()),(unsigned char)toInt64(blurStr.c_str()),coordinateLines,landBorder,landMaskStr,seaMaskStr,colorMap);
+    saveMap(fname,columns,rows,values,toUInt8(hueStr.c_str()),toUInt8(saturationStr.c_str()),toUInt8(blurStr.c_str()),coordinateLines,landBorder,landMaskStr,seaMaskStr,colorMap);
 
     loadImage(fname,theResponse);
     itsImages.insert(std::pair<std::string,std::string>(hash,fname));

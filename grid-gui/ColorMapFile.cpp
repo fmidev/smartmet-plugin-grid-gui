@@ -26,7 +26,7 @@ ColorMapFile::ColorMapFile()
 
 
 
-ColorMapFile::ColorMapFile(std::string filename)
+ColorMapFile::ColorMapFile(const std::string& filename)
 {
   try
   {
@@ -93,7 +93,7 @@ void ColorMapFile::init()
 
 
 
-void ColorMapFile::init(std::string filename)
+void ColorMapFile::init(const std::string& filename)
 {
   try
   {
@@ -118,7 +118,7 @@ bool ColorMapFile::checkUpdates()
 
     time_t tt = getFileModificationTime(mFilename.c_str());
 
-    if (tt != mLastModified  &&  (tt+3) < time(0))
+    if (tt != mLastModified  &&  (tt+3) < time(nullptr))
     {
       loadFile();
       return true;

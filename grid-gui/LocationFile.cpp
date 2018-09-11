@@ -26,7 +26,7 @@ LocationFile::LocationFile()
 
 
 
-LocationFile::LocationFile(std::string filename)
+LocationFile::LocationFile(const std::string& filename)
 {
   try
   {
@@ -93,7 +93,7 @@ void LocationFile::init()
 
 
 
-void LocationFile::init(std::string filename)
+void LocationFile::init(const std::string& filename)
 {
   try
   {
@@ -118,7 +118,7 @@ bool LocationFile::checkUpdates()
 
     time_t tt = getFileModificationTime(mFilename.c_str());
 
-    if (tt != mLastModified  &&  (tt+3) < time(0))
+    if (tt != mLastModified  &&  (tt+3) < time(nullptr))
     {
       loadFile();
       return true;

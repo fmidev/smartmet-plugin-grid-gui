@@ -18,12 +18,12 @@ class ColorMapFile
 {
   public:
                     ColorMapFile();
-                    ColorMapFile(std::string filename);
+                    ColorMapFile(const std::string& filename);
                     ColorMapFile(const ColorMapFile& colorMapFile);
     virtual         ~ColorMapFile();
 
     void            init();
-    void            init(std::string filename);
+    void            init(const std::string& filename);
     bool            checkUpdates();
     uint            getColor(double value);
     string_vec      getNames();
