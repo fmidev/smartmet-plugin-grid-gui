@@ -137,6 +137,38 @@ bool SymbolMapFile::checkUpdates()
 
 
 
+time_t SymbolMapFile::getLastModificationTime()
+{
+  try
+  {
+    return mLastModified;
+  }
+  catch (...)
+  {
+    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
+  }
+}
+
+
+
+
+
+std::string SymbolMapFile::getFilename()
+{
+  try
+  {
+    return mFilename;
+  }
+  catch (...)
+  {
+    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
+  }
+}
+
+
+
+
+
 bool SymbolMapFile::getSymbol(double value,CImage& symbol)
 {
   try

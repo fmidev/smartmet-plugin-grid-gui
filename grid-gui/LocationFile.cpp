@@ -135,6 +135,38 @@ bool LocationFile::checkUpdates()
 
 
 
+time_t LocationFile::getLastModificationTime()
+{
+  try
+  {
+    return mLastModified;
+  }
+  catch (...)
+  {
+    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
+  }
+}
+
+
+
+
+
+std::string LocationFile::getFilename()
+{
+  try
+  {
+    return mFilename;
+  }
+  catch (...)
+  {
+    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
+  }
+}
+
+
+
+
+
 T::Coordinate_vec LocationFile::getCoordinates()
 {
   try

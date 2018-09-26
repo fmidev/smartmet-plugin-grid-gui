@@ -26,7 +26,9 @@ class LocationFile
     void                init(const std::string& filename);
     bool                checkUpdates();
     T::Coordinate_vec   getCoordinates();
+    std::string         getFilename();
     T::Location_vec&    getLocations();
+    time_t              getLastModificationTime();
     string_vec          getNames();
     bool                hasName(const char *name);
 

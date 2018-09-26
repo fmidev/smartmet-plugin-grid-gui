@@ -27,6 +27,8 @@ class SymbolMapFile
     void            init();
     void            init(const std::string& filename);
     bool            checkUpdates();
+    time_t          getLastModificationTime();
+    std::string     getFilename();
     bool            getSymbol(double value,CImage& symbol);
     string_vec      getNames();
     bool            hasName(const char *name);

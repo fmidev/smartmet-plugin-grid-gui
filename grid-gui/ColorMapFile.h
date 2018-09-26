@@ -26,6 +26,8 @@ class ColorMapFile
     void            init(const std::string& filename);
     bool            checkUpdates();
     uint            getColor(double value);
+    std::string     getFilename();
+    time_t          getLastModificationTime();
     string_vec      getNames();
     bool            hasName(const char *name);
 

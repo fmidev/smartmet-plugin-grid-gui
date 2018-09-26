@@ -167,6 +167,38 @@ uint ColorMapFile::getColor(double value)
 
 
 
+time_t ColorMapFile::getLastModificationTime()
+{
+  try
+  {
+    return mLastModified;
+  }
+  catch (...)
+  {
+    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
+  }
+}
+
+
+
+
+
+std::string ColorMapFile::getFilename()
+{
+  try
+  {
+    return mFilename;
+  }
+  catch (...)
+  {
+    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
+  }
+}
+
+
+
+
+
 string_vec ColorMapFile::getNames()
 {
   try
