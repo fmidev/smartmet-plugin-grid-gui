@@ -627,7 +627,7 @@ void Plugin::checkImageCache()
 
 
 
-void Plugin::saveImage(const char *imageFile,T::GridData&  gridData,unsigned char hue,unsigned char saturation,unsigned char blur,uint coordinateLines,uint landBorder,std::string landMask,std::string seaMask,std::string colorMapName,T::GeometryId geometryId,std::string symbolMap,std::string locations)
+void Plugin::saveImage(const char *imageFile,T::GridData&  gridData,unsigned char hue,unsigned char saturation,unsigned char blur,uint coordinateLines,uint landBorder,std::string landMask,std::string seaMask,std::string colorMapName,T::GeometryId geometryId,std::string symbolMap,std::string locations,bool showSymbols)
 {
   try
   {
@@ -639,13 +639,9 @@ void Plugin::saveImage(const char *imageFile,T::GridData&  gridData,unsigned cha
     uint landColor = getColorValue(landMask);
     uint seaColor = getColorValue(seaMask);
 
-    bool showSymbols = false;
     bool showValues = true;
-    if (!locations.empty()  &&  strcasecmp(locations.c_str(),"None") != 0)
-    {
+    if (showSymbols)
       showValues = false;
-      showSymbols = true;
-    }
 
     bool showLandMask = false;
     if (landMask == "Simple"  &&  !showSymbols)
@@ -1979,8 +1975,6 @@ bool Plugin::page_image(Spine::Reactor &theReactor,
     std::string landMaskStr = "None";
     std::string seaMaskStr = "None";
     std::string colorMap = "None";
-    std::string locations = "None";
-    std::string symbolMap = "None";
 
     boost::optional<std::string> v;
     v = theRequest.getParameter("fileId");
@@ -2027,14 +2021,6 @@ bool Plugin::page_image(Spine::Reactor &theReactor,
     if (v)
       colorMap = *v;
 
-    v = theRequest.getParameter("locations");
-    if (v)
-      locations = *v;
-
-    v = theRequest.getParameter("symbolMap");
-    if (v)
-      symbolMap = *v;
-
 
     std::string colorMapFileName = "";
     std::string colorMapModificationTime = "";
@@ -2048,35 +2034,9 @@ bool Plugin::page_image(Spine::Reactor &theReactor,
       }
     }
 
-    std::string locationFileName = "";
-    std::string locationFileModificationTime = "";
-    if (!locations.empty() &&  strcasecmp(locations.c_str(),"None") != 0)
-    {
-      T::LocationFile *locationFile = getLocationFile(locations);
-      if (locationFile != nullptr)
-      {
-        locationFileModificationTime = std::to_string(C_UINT(locationFile->getLastModificationTime()));
-        locationFileName = locationFile->getFilename();
-      }
-    }
-
-    std::string symbolMapFileName = "";
-    std::string symbolMapModificationTime = "";
-    if (!symbolMap.empty() &&  strcasecmp(symbolMap.c_str(),"None") != 0)
-    {
-      T::SymbolMapFile* symbolMapFile = getSymbolMapFile(symbolMap);
-      if (symbolMapFile != nullptr)
-      {
-        symbolMapModificationTime = std::to_string(C_UINT(symbolMapFile->getLastModificationTime()));
-        symbolMapFileName = symbolMapFile->getFilename();
-      }
-    }
-
-
     std::string hash = "Image:" + fileIdStr + ":" + messageIndexStr + ":" + hueStr + ":" + saturationStr + ":" +
       blurStr + ":" + coordinateLinesStr + ":" + landBorderStr + ":" +
-      landMaskStr + ":" + seaMaskStr + ":" + colorMapFileName + ":" + colorMapModificationTime + ":" +
-      locationFileName + ":" + locationFileModificationTime + ":" + symbolMapFileName + ":" + symbolMapModificationTime;
+      landMaskStr + ":" + seaMaskStr + ":" + colorMapFileName + ":" + colorMapModificationTime;
 
     auto it = itsImages.find(hash);
     if (it != itsImages.end())
@@ -2112,7 +2072,7 @@ bool Plugin::page_image(Spine::Reactor &theReactor,
     char fname[200];
     sprintf(fname,"%s/grid-gui-image_%llu.jpg",itsImageCache_dir.c_str(),getTime());
 
-    saveImage(fname,gridData,toUInt8(hueStr.c_str()),toUInt8(saturationStr.c_str()),toUInt8(blurStr.c_str()),coordinateLines,landBorder,landMaskStr,seaMaskStr,colorMap,geometryId,symbolMap,locations);
+    saveImage(fname,gridData,toUInt8(hueStr.c_str()),toUInt8(saturationStr.c_str()),toUInt8(blurStr.c_str()),coordinateLines,landBorder,landMaskStr,seaMaskStr,colorMap,geometryId,"","",false);
 
     loadImage(fname,theResponse);
     itsImages.insert(std::pair<std::string,std::string>(hash,fname));
@@ -2148,7 +2108,6 @@ bool Plugin::page_symbols(Spine::Reactor &theReactor,
     std::string landBorderStr = "Grey";
     std::string landMaskStr = "None";
     std::string seaMaskStr = "None";
-    std::string colorMap = "None";
     std::string locations = "None";
     std::string symbolMap = "None";
 
@@ -2193,10 +2152,6 @@ bool Plugin::page_symbols(Spine::Reactor &theReactor,
     if (v)
       seaMaskStr = *v;
 
-    v = theRequest.getParameter("colorMap");
-    if (v)
-      colorMap = *v;
-
     v = theRequest.getParameter("locations");
     if (v)
       locations = *v;
@@ -2209,15 +2164,6 @@ bool Plugin::page_symbols(Spine::Reactor &theReactor,
 
     std::string colorMapFileName = "";
     std::string colorMapModificationTime = "";
-    if (!colorMap.empty() &&  strcasecmp(colorMap.c_str(),"None") != 0)
-    {
-      T::ColorMapFile *colorMapFile = getColorMapFile(colorMap);
-      if (colorMapFile != nullptr)
-      {
-        colorMapModificationTime = std::to_string(C_UINT(colorMapFile->getLastModificationTime()));
-        colorMapFileName = colorMapFile->getFilename();
-      }
-    }
 
     std::string locationFileName = "";
     std::string locationFileModificationTime = "";
@@ -2246,8 +2192,8 @@ bool Plugin::page_symbols(Spine::Reactor &theReactor,
 
     std::string hash = "Symbols:" + fileIdStr + ":" + messageIndexStr + ":" + hueStr + ":" + saturationStr + ":" +
       blurStr + ":" + coordinateLinesStr + ":" + landBorderStr + ":" +
-      landMaskStr + ":" + seaMaskStr + ":" + colorMapFileName + ":" + colorMapModificationTime + ":" +
-      locationFileName + ":" + locationFileModificationTime + ":" + symbolMapFileName + ":" + symbolMapModificationTime;
+      landMaskStr + ":" + seaMaskStr + ":" + locationFileName + ":" + locationFileModificationTime + ":" +
+      symbolMapFileName + ":" + symbolMapModificationTime;
 
 
     auto it = itsImages.find(hash);
@@ -2282,7 +2228,7 @@ bool Plugin::page_symbols(Spine::Reactor &theReactor,
 
     char fname[200];
     sprintf(fname,"/%s/grid-gui-image_%llu.jpg",itsImageCache_dir.c_str(),getTime());
-    saveImage(fname,gridData,toUInt8(hueStr.c_str()),toUInt8(saturationStr.c_str()),toUInt8(blurStr.c_str()),coordinateLines,landBorder,landMaskStr,seaMaskStr,colorMap,geometryId,symbolMap,locations);
+    saveImage(fname,gridData,toUInt8(hueStr.c_str()),toUInt8(saturationStr.c_str()),toUInt8(blurStr.c_str()),coordinateLines,landBorder,landMaskStr,seaMaskStr,"",geometryId,symbolMap,locations,true);
 
     loadImage(fname,theResponse);
     itsImages.insert(std::pair<std::string,std::string>(hash,fname));
@@ -2317,8 +2263,6 @@ bool Plugin::page_map(Spine::Reactor &theReactor,
     std::string landMaskStr = "None";
     std::string seaMaskStr = "None";
     std::string colorMap = "None";
-    std::string locations = "None";
-    std::string symbolMap = "None";
 
     boost::optional<std::string> v;
     v = theRequest.getParameter("fileId");
@@ -2362,15 +2306,6 @@ bool Plugin::page_map(Spine::Reactor &theReactor,
     if (v)
       colorMap = *v;
 
-    v = theRequest.getParameter("locations");
-    if (v)
-      locations = *v;
-
-    v = theRequest.getParameter("symbolMap");
-    if (v)
-      symbolMap = *v;
-
-
     std::string colorMapFileName = "";
     std::string colorMapModificationTime = "";
     if (!colorMap.empty() &&  strcasecmp(colorMap.c_str(),"None") != 0)
@@ -2383,35 +2318,9 @@ bool Plugin::page_map(Spine::Reactor &theReactor,
       }
     }
 
-    std::string locationFileName = "";
-    std::string locationFileModificationTime = "";
-    if (!locations.empty() &&  strcasecmp(locations.c_str(),"None") != 0)
-    {
-      T::LocationFile *locationFile = getLocationFile(locations);
-      if (locationFile != nullptr)
-      {
-        locationFileModificationTime = std::to_string(C_UINT(locationFile->getLastModificationTime()));
-        locationFileName = locationFile->getFilename();
-      }
-    }
-
-    std::string symbolMapFileName = "";
-    std::string symbolMapModificationTime = "";
-    if (!symbolMap.empty() &&  strcasecmp(symbolMap.c_str(),"None") != 0)
-    {
-      T::SymbolMapFile* symbolMapFile = getSymbolMapFile(symbolMap);
-      if (symbolMapFile != nullptr)
-      {
-        symbolMapModificationTime = std::to_string(C_UINT(symbolMapFile->getLastModificationTime()));
-        symbolMapFileName = symbolMapFile->getFilename();
-      }
-    }
-
-
     std::string hash = "Map:" + fileIdStr + ":" + messageIndexStr + ":" + hueStr + ":" + saturationStr + ":" +
       blurStr + ":" + coordinateLinesStr + ":" + landBorderStr + ":" +
-      landMaskStr + ":" + seaMaskStr + ":" + colorMapFileName + ":" + colorMapModificationTime + ":" +
-      locationFileName + ":" + locationFileModificationTime + ":" + symbolMapFileName + ":" + symbolMapModificationTime;
+      landMaskStr + ":" + seaMaskStr + ":" + colorMapFileName + ":" + colorMapModificationTime;
 
     auto it = itsImages.find(hash);
     if (it != itsImages.end())
@@ -2802,6 +2711,7 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
     {
       loadColorFile();
     }
+
 
     std::ostringstream output;
     std::ostringstream ostr1;
@@ -3419,7 +3329,7 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
 
     ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Presentation:</TD></TR>\n";
     ostr1 << "<TR height=\"30\"><TD>\n";
-    ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&presentation=' + this.options[this.selectedIndex].value)\">\n";
+    ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=None&locations=None&symbolMap=None" + "&presentation=' + this.options[this.selectedIndex].value)\">\n";
 
     uint a = 0;
     while (modes[a] != nullptr)

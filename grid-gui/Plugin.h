@@ -108,7 +108,8 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
                       std::string colorMapName,
                       T::GeometryId geometryId,
                       std::string symbolMap,
-                      std::string locations);
+                      std::string locations,
+                      bool showSymbols);
 
     void saveMap(const char *imageFile,
                       uint columns,
