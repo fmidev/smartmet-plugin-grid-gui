@@ -49,7 +49,9 @@ Small changes and bug fixes can be submitted via pull request. In larger contrib
 CLA is required in order to contribute. Please contact us for more information!
 
 ## Documentation
-Each module is documented in module [module wiki](../../wiki). 
+SmartMet Server Grid support ([grid-support.pdf][grid])
+[grid]: https://github.com/fmidev/smartmet-tools-grid/raw/master/doc/grid-support.pdf
+
 
 ## Communication and Resources
 You may contact us from following channels:
