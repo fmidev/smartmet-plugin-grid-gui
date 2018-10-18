@@ -627,6 +627,475 @@ void Plugin::checkImageCache()
 
 
 
+void Plugin::saveImage(const char *imageFile,uint fileId,uint messageIndex,unsigned char hue,unsigned char saturation,unsigned char blur,uint coordinateLines,uint landBorder,std::string landMask,std::string seaMask,std::string colorMapName,T::GeometryId geometryId,T::GeometryId projectionId,std::string symbolMap,std::string locations,bool showSymbols)
+{
+  try
+  {
+    auto dataServer = itsGridEngine->getDataServer_sptr();
+
+    T::GeometryId geomId = geometryId;
+    if (projectionId > 0  &&  projectionId != geometryId)
+      geomId = projectionId;
+
+    T::Coordinate_vec coordinates;
+    if (geomId != 0)
+      coordinates = Identification::gridDef.getGridLatLonCoordinatesByGeometryId(geomId);
+/*
+    if (coordinates.size() == 0  &&  gridData.mGeometryId != 0)
+    {
+      coordinates = Identification::gridDef.getGridLatLonCoordinatesByGeometryId(gridData.mGeometryId);
+      geometryId = gridData.mGeometryId;
+    }
+*/
+    T::Coordinate_vec lineCoordinates;
+    if (coordinateLines != 0xFFFFFFFF)
+    {
+      if (geomId != 0)
+        lineCoordinates = Identification::gridDef.getGridLatLonCoordinateLinePointsByGeometryId(geomId);
+/*
+      if (lineCoordinates.size() == 0  &&  gridData.mGeometryId != 0)
+        lineCoordinates = Identification::gridDef.getGridLatLonCoordinateLinePointsByGeometryId(gridData.mGeometryId);
+*/
+    }
+
+    uint flags = 0;
+    if (geomId == geometryId)
+    {
+      T::GridData gridData;
+      int result = dataServer->getGridData(0,fileId,messageIndex,flags,gridData);
+      if (result != 0)
+        throw Spine::Exception(BCP,"Data fetching failed!");
+
+      saveImage(imageFile,gridData.mColumns,gridData.mRows,gridData.mValues,coordinates,lineCoordinates,hue,saturation,blur,coordinateLines,landBorder,landMask,seaMask,colorMapName,geometryId,symbolMap,locations,showSymbols);
+    }
+    else
+    {
+      uint cols = 0;
+      uint rows = 0;
+      if (Identification::gridDef.getGridDimensionsByGeometryId(geomId,cols,rows))
+      {
+        T::ParamValue_vec values;
+
+        short interpolationMethod = T::AreaInterpolationMethod::Linear;
+        if (showSymbols)
+          interpolationMethod = T::AreaInterpolationMethod::Nearest;
+
+        //int result = dataServer->getGridValueVectorByCoordinateList(0,fileId,messageIndex,T::CoordinateTypeValue::LATLON_COORDINATES,coordinates,interpolationMethod,values);
+        int result = dataServer->getGridValueVectorByGeometryId(0,fileId,messageIndex,geomId,interpolationMethod,values);
+        if (result != 0)
+          throw Spine::Exception(BCP,"Data fetching failed!");
+
+        saveImage(imageFile,cols,rows,values,coordinates,lineCoordinates,hue,saturation,blur,coordinateLines,landBorder,landMask,seaMask,colorMapName,geomId,symbolMap,locations,showSymbols);
+      }
+    }
+  }
+  catch (...)
+  {
+    throw Spine::Exception(BCP,"Operation failed!",nullptr);
+  }
+}
+
+
+
+
+
+
+void Plugin::saveImage(const char *imageFile,int width, int height,T::ParamValue_vec& values,T::Coordinate_vec& coordinates,T::Coordinate_vec& lineCoordinates,unsigned char hue,unsigned char saturation,unsigned char blur,uint coordinateLines,uint landBorder,std::string landMask,std::string seaMask,std::string colorMapName,T::GeometryId geometryId,std::string symbolMap,std::string locations,bool showSymbols)
+{
+  try
+  {
+    T::ColorMapFile *colorMapFile = nullptr;
+
+    if (!colorMapName.empty() &&  strcasecmp(colorMapName.c_str(),"None") != 0)
+      colorMapFile = getColorMapFile(colorMapName);
+
+    uint landColor = getColorValue(landMask);
+    uint seaColor = getColorValue(seaMask);
+
+    bool showValues = true;
+    if (showSymbols)
+      showValues = false;
+
+    bool showLandMask = false;
+    if (landMask == "Simple"  &&  !showSymbols)
+      showLandMask = true;
+
+    bool showSeaMask = false;
+    if (seaMask == "Simple"  &&  !showSymbols)
+      showSeaMask = true;
+
+    //printf("*** COORDINATES %u\n",coordinates.size());
+
+    uint size = width*height;
+    std::size_t sz = values.size();
+
+    if (size == 0)
+      return;
+
+    if (sz < size)
+    {
+      printf("ERROR: There are not enough values (= %lu) for the grid (%u x %u)!\n",sz,width,height);
+      return;
+    }
+
+    //std::set<unsigned long long> cList;
+
+    double maxValue = -1000000000;
+    double minValue = 1000000000;
+
+    for (uint t=0; t<size; t++)
+    {
+      double val = values[t];
+      if (val != ParamValueMissing)
+      {
+        if (val < minValue)
+          minValue = val;
+
+        if (val > maxValue)
+          maxValue = val;
+      }
+    }
+/*
+    T::Coordinate_vec coordinates;
+    if (geometryId != 0)
+      coordinates = Identification::gridDef.getGridLatLonCoordinatesByGeometryId(geometryId);
+
+    if (coordinates.size() == 0  &&  gridData.mGeometryId != 0)
+      coordinates = Identification::gridDef.getGridLatLonCoordinatesByGeometryId(gridData.mGeometryId);
+
+    T::Coordinate_vec lineCoordinates;
+    if (coordinateLines != 0xFFFFFFFF)
+    {
+      if (geometryId != 0)
+        lineCoordinates = Identification::gridDef.getGridLatLonCoordinateLinePointsByGeometryId(geometryId);
+
+      if (lineCoordinates.size() == 0  &&  gridData.mGeometryId != 0)
+        lineCoordinates = Identification::gridDef.getGridLatLonCoordinateLinePointsByGeometryId(gridData.mGeometryId);
+    }
+*/
+    bool landSeaMask = true;
+    if (coordinates.size() == 0)
+      landSeaMask = false;
+
+    double dd = maxValue - minValue;
+    double step = dd / 200;
+
+    bool rotate = true;
+    if (coordinates.size() > C_UINT(10*width)  &&  coordinates[0].y() < coordinates[10*width].y())
+      rotate = true;
+    else
+      rotate = false;
+
+    unsigned long *image = new unsigned long[size];
+    uint c = 0;
+    int ss = 2;
+
+    bool yLand[width];
+    for (int x=0; x<width; x++)
+      yLand[x] = false;
+
+    if (!rotate)
+    {
+      for (int y=0; y<height; y++)
+      {
+        bool prevLand = false;
+        for (int x=0; x<width; x++)
+        {
+          T::ParamValue val = values[c];
+          uint v = 200 - ((val - minValue) / step);
+          v = v / blur;
+          v = v * blur;
+          v = v + 55;
+          uint col = hsv_to_rgb(hue,saturation,C_UCHAR(v));
+
+          if (colorMapFile != nullptr)
+          {
+            col = colorMapFile->getColor(val);
+          }
+
+          if (!showValues || val == ParamValueMissing)
+            col = 0xE8E8E8;
+
+          //printf("COORDINATES : %d,%d => %f,%f\n",x,y,coordinates[c].x(),coordinates[c].y());
+          bool land = false;
+          if (landSeaMask)
+            land = isLand(coordinates[c].x(),coordinates[c].y());
+
+
+          if (landColor != 0xFFFFFFFF)
+          {
+            if (landSeaMask && land)
+              col = landColor;
+          }
+          else
+          {
+            if (showLandMask)
+            {
+              if ((x % ss) == 0)
+              {
+                if (landSeaMask && land)
+                {
+                  if (val == ParamValueMissing)
+                    col = 0xC8C8C8;
+                  else
+                    col = hsv_to_rgb(0,0,C_UCHAR(v));
+                }
+                else
+                {
+                  if (val == ParamValueMissing)
+                    col = 0xD8D8D8;
+                }
+              }
+            }
+          }
+
+          if (seaColor != 0xFFFFFFFF)
+          {
+            if (landSeaMask && !land)
+              col = seaColor;
+          }
+          else
+          {
+            if (showSeaMask)
+            {
+              if ((x % ss) == 0)
+              {
+                if (landSeaMask && !land)
+                {
+                  if (val == ParamValueMissing)
+                    col = 0xC8C8C8;
+                  else
+                    col = hsv_to_rgb(0,0,C_UCHAR(v));
+                }
+                else
+                {
+                  if (val == ParamValueMissing)
+                    col = 0xD8D8D8;
+                }
+              }
+            }
+          }
+
+          if (landBorder != 0xFFFFFFFF)
+          {
+            if (land & (!prevLand || !yLand[x]))
+              col = landBorder;
+
+            if (!land)
+            {
+              if (prevLand  &&  x > 0)
+                image[y*width + x-1] = landBorder;
+
+              if (yLand[x] &&  y > 0)
+                image[(y-1)*width + x] = landBorder;
+            }
+          }
+
+      //    if ((coordinates[c].x() % 10) == 0  ||  (coordinates[c].y() % 10) == 0)
+      //      col = 0xFF0000;
+
+          yLand[x] = land;
+          prevLand = land;
+          image[y*width + x] = col;
+          c++;
+        }
+      }
+    }
+    else
+    {
+      for (int y=height-1; y>=0; y--)
+      {
+        bool prevLand = false;
+        for (int x=0; x<width; x++)
+        {
+          T::ParamValue val = values[c];
+          uint v = 200 - ((val - minValue) / step);
+          v = v / blur;
+          v = v * blur;
+          v = v + 55;
+          uint col = hsv_to_rgb(hue,saturation,C_UCHAR(v));
+
+          if (colorMapFile != nullptr)
+            col = colorMapFile->getColor(val);
+
+          if (!showValues || val == ParamValueMissing)
+            col = 0xE8E8E8;
+
+          bool land = false;
+          if (landSeaMask)
+            land = isLand(coordinates[c].x(),coordinates[c].y());
+
+          if (landColor != 0xFFFFFFFF)
+          {
+            if (landSeaMask && land)
+              col = landColor;
+          }
+          else
+          {
+            if (showLandMask)
+            {
+              if ((x % ss) == 0)
+              {
+                if (landSeaMask && land)
+                {
+                  if (val == ParamValueMissing)
+                    col = 0xC8C8C8;
+                  else
+                    col = hsv_to_rgb(0,0,C_UCHAR(v));
+                }
+                else
+                {
+                  if (val == ParamValueMissing)
+                    col = 0xD8D8D8;
+                }
+              }
+            }
+          }
+
+          if (seaColor != 0xFFFFFFFF)
+          {
+            if (landSeaMask && !land)
+              col = seaColor;
+          }
+          else
+          {
+            if (showSeaMask)
+            {
+              if ((x % ss) == 0)
+              {
+                if (landSeaMask && !land)
+                {
+                  if (val == ParamValueMissing)
+                    col = 0xC8C8C8;
+                  else
+                    col = hsv_to_rgb(0,0,C_UCHAR(v));
+                }
+                else
+                {
+                  if (val == ParamValueMissing)
+                    col = 0xD8D8D8;
+                }
+              }
+            }
+          }
+
+          if (landBorder != 0xFFFFFFFF)
+          {
+            if (land & (!prevLand || !yLand[x]))
+              col = landBorder;
+
+            if (!land)
+            {
+              if (prevLand  &&  x > 0)
+                image[y*width + x-1] = landBorder;
+
+              if (yLand[x] &&  (y+1) < height)
+                image[(y+1)*width + x] = landBorder;
+            }
+          }
+
+          yLand[x] = land;
+          prevLand = land;
+
+          image[y*width + x] = col;
+          c++;
+        }
+      }
+    }
+
+    if (coordinateLines != 0xFFFFFFFF  &&  lineCoordinates.size() > 0)
+    {
+      if (!rotate)
+      {
+        for (auto it = lineCoordinates.begin(); it != lineCoordinates.end(); ++it)
+          image[C_INT(floor(it->y()))*width + C_INT(floor(it->x()))] = coordinateLines;
+      }
+      else
+      {
+        for (auto it = lineCoordinates.begin(); it != lineCoordinates.end(); ++it)
+          image[(height-C_INT(floor(it->y()))-1)*width + C_INT(floor(it->x()))] = coordinateLines;
+      }
+    }
+
+    if (showSymbols)
+    {
+      T::LocationFile *locationFile = getLocationFile(locations);
+      T::SymbolMapFile* symbolMapFile = getSymbolMapFile(symbolMap);
+
+      if (locationFile != nullptr  &&  symbolMapFile != nullptr)
+      {
+        T::Coordinate_vec cv = locationFile->getCoordinates();
+
+        for (auto cd = cv.begin(); cd != cv.end(); ++cd)
+        {
+          double grid_i = 0;
+          double grid_j = 0;
+
+          if (Identification::gridDef.getGridPointByGeometryIdAndLatLonCoordinates(geometryId,cd->y(),cd->x(),grid_i,grid_j))
+          {
+            T::ParamValue val = values[C_INT(round(grid_j))*width + C_INT(round(grid_i))];
+
+            //if (rotate)
+            //  val = values[(height-round(grid_j)-1)*width + round(grid_i)];
+
+            CImage img;
+            if (symbolMapFile->getSymbol(val,img))
+            {
+              int xx = C_INT(round(grid_i)) - img.width/2;
+              int yy = C_INT(round(grid_j));
+              int cc = 0;
+
+              if (!rotate)
+              {
+                for (int y=0; y<img.height; y++)
+                {
+                  for (int x=0; x<img.width; x++)
+                  {
+                    uint col = img.pixel[cc];
+                    if ((col & 0xFF000000) == 0)
+                      image[(yy-img.height/2+y)*width + xx + x] = col;
+
+                    cc++;
+                  }
+                }
+              }
+              else
+              {
+                for (int y=0; y<img.height; y++)
+                {
+                  for (int x=0; x<img.width; x++)
+                  {
+                    uint col = img.pixel[cc];
+                    if ((col & 0xFF000000) == 0)
+                      image[(height-yy-1-img.height/2+y)*width + xx + x] = col;
+
+                    cc++;
+                  }
+                }
+              }
+            }
+          }
+        }
+      }
+    }
+
+
+    jpeg_save(imageFile,image,height,width,100);
+    delete[] image;
+
+    checkImageCache();
+  }
+  catch (...)
+  {
+    throw Spine::Exception(BCP,"Operation failed!",nullptr);
+  }
+}
+
+
+
+
+#if 0
+
 void Plugin::saveImage(const char *imageFile,T::GridData&  gridData,unsigned char hue,unsigned char saturation,unsigned char blur,uint coordinateLines,uint landBorder,std::string landMask,std::string seaMask,std::string colorMapName,T::GeometryId geometryId,std::string symbolMap,std::string locations,bool showSymbols)
 {
   try
@@ -1018,6 +1487,8 @@ void Plugin::saveImage(const char *imageFile,T::GridData&  gridData,unsigned cha
     throw Spine::Exception(BCP,"Operation failed!",nullptr);
   }
 }
+
+#endif
 
 
 
@@ -1970,6 +2441,7 @@ bool Plugin::page_image(Spine::Reactor &theReactor,
     std::string presentation = "Image";
     std::string blurStr = "1";
     std::string geometryIdStr = "0";
+    std::string projectionIdStr = "";
     std::string coordinateLinesStr = "Grey";
     std::string landBorderStr = "Grey";
     std::string landMaskStr = "None";
@@ -1988,6 +2460,10 @@ bool Plugin::page_image(Spine::Reactor &theReactor,
     v = theRequest.getParameter("geometryId");
     if (v)
       geometryIdStr = *v;
+
+    v = theRequest.getParameter("projectionId");
+    if (v)
+      projectionIdStr = *v;
 
     v = theRequest.getParameter("hue");
     if (v)
@@ -2022,6 +2498,9 @@ bool Plugin::page_image(Spine::Reactor &theReactor,
       colorMap = *v;
 
 
+    if (projectionIdStr.empty())
+      projectionIdStr = geometryIdStr;
+
     std::string colorMapFileName = "";
     std::string colorMapModificationTime = "";
     if (!colorMap.empty() &&  strcasecmp(colorMap.c_str(),"None") != 0)
@@ -2035,7 +2514,7 @@ bool Plugin::page_image(Spine::Reactor &theReactor,
     }
 
     std::string hash = "Image:" + fileIdStr + ":" + messageIndexStr + ":" + hueStr + ":" + saturationStr + ":" +
-      blurStr + ":" + coordinateLinesStr + ":" + landBorderStr + ":" +
+      blurStr + ":" + coordinateLinesStr + ":" + landBorderStr + ":" + projectionIdStr + ":" +
       landMaskStr + ":" + seaMaskStr + ":" + colorMapFileName + ":" + colorMapModificationTime;
 
     auto it = itsImages.find(hash);
@@ -2045,34 +2524,17 @@ bool Plugin::page_image(Spine::Reactor &theReactor,
       return true;
     }
 
-
-    uint flags = 0;
-    T::GridData gridData;
-
-    int result = dataServer->getGridData(0,toInt64(fileIdStr.c_str()),toInt64(messageIndexStr.c_str()),flags,gridData);
-
-    if (result != 0)
-    {
-      std::ostringstream ostr;
-      ostr << "<HTML><BODY>\n";
-      ostr << "DataServer request 'getGridData()' failed : " << result << "\n";
-      ostr << "</BODY></HTML>\n";
-      theResponse.setContent(std::string(ostr.str()));
-      return true;
-    }
-
+    uint fileId = toInt64(fileIdStr.c_str());
+    uint messageIndex = toInt64(messageIndexStr.c_str());
+    uint geometryId = toInt64(geometryIdStr.c_str());
+    uint projectionId = toInt64(projectionIdStr.c_str());
     uint landBorder = getColorValue(landBorderStr);
     uint coordinateLines = getColorValue(coordinateLinesStr);
-
-    T::GeometryId geometryId = gridData.mGeometryId;
-    if (geometryId == 0)
-      geometryId = toInt64(geometryIdStr.c_str());
-
 
     char fname[200];
     sprintf(fname,"%s/grid-gui-image_%llu.jpg",itsImageCache_dir.c_str(),getTime());
 
-    saveImage(fname,gridData,toUInt8(hueStr.c_str()),toUInt8(saturationStr.c_str()),toUInt8(blurStr.c_str()),coordinateLines,landBorder,landMaskStr,seaMaskStr,colorMap,geometryId,"","",false);
+    saveImage(fname,fileId,messageIndex,toUInt8(hueStr.c_str()),toUInt8(saturationStr.c_str()),toUInt8(blurStr.c_str()),coordinateLines,landBorder,landMaskStr,seaMaskStr,colorMap,geometryId,projectionId,"","",false);
 
     loadImage(fname,theResponse);
     itsImages.insert(std::pair<std::string,std::string>(hash,fname));
@@ -2104,6 +2566,7 @@ bool Plugin::page_symbols(Spine::Reactor &theReactor,
     std::string presentation = "Symbols";
     std::string blurStr = "1";
     std::string geometryIdStr = "0";
+    std::string projectionIdStr = "";
     std::string coordinateLinesStr = "Grey";
     std::string landBorderStr = "Grey";
     std::string landMaskStr = "None";
@@ -2123,6 +2586,10 @@ bool Plugin::page_symbols(Spine::Reactor &theReactor,
     v = theRequest.getParameter("geometryId");
     if (v)
       geometryIdStr = *v;
+
+    v = theRequest.getParameter("projectionId");
+    if (v)
+      projectionIdStr = *v;
 
     v = theRequest.getParameter("hue");
     if (v)
@@ -2161,6 +2628,8 @@ bool Plugin::page_symbols(Spine::Reactor &theReactor,
       symbolMap = *v;
 
 
+    if (projectionIdStr.empty())
+      projectionIdStr = geometryIdStr;
 
     std::string colorMapFileName = "";
     std::string colorMapModificationTime = "";
@@ -2191,7 +2660,7 @@ bool Plugin::page_symbols(Spine::Reactor &theReactor,
 
 
     std::string hash = "Symbols:" + fileIdStr + ":" + messageIndexStr + ":" + hueStr + ":" + saturationStr + ":" +
-      blurStr + ":" + coordinateLinesStr + ":" + landBorderStr + ":" +
+      blurStr + ":" + coordinateLinesStr + ":" + landBorderStr + ":" + projectionIdStr + ":" +
       landMaskStr + ":" + seaMaskStr + ":" + locationFileName + ":" + locationFileModificationTime + ":" +
       symbolMapFileName + ":" + symbolMapModificationTime;
 
@@ -2203,32 +2672,16 @@ bool Plugin::page_symbols(Spine::Reactor &theReactor,
       return true;
     }
 
-    uint flags = 0;
-    T::GridData gridData;
-
-    int result = dataServer->getGridData(0,toInt64(fileIdStr.c_str()),toInt64(messageIndexStr.c_str()),flags,gridData);
-
-    if (result != 0)
-    {
-      std::ostringstream ostr;
-      ostr << "<HTML><BODY>\n";
-      ostr << "DataServer request 'getGridData()' failed : " << result << "\n";
-      ostr << "</BODY></HTML>\n";
-      theResponse.setContent(std::string(ostr.str()));
-      return true;
-    }
-
+    uint fileId = toInt64(fileIdStr.c_str());
+    uint messageIndex = toInt64(messageIndexStr.c_str());
+    uint geometryId = toInt64(geometryIdStr.c_str());
+    uint projectionId = toInt64(projectionIdStr.c_str());
     uint landBorder = getColorValue(landBorderStr);
     uint coordinateLines = getColorValue(coordinateLinesStr);
 
-    T::GeometryId geometryId = gridData.mGeometryId;
-    if (geometryId == 0)
-      geometryId = toInt64(geometryIdStr.c_str());
-
-
     char fname[200];
     sprintf(fname,"/%s/grid-gui-image_%llu.jpg",itsImageCache_dir.c_str(),getTime());
-    saveImage(fname,gridData,toUInt8(hueStr.c_str()),toUInt8(saturationStr.c_str()),toUInt8(blurStr.c_str()),coordinateLines,landBorder,landMaskStr,seaMaskStr,"",geometryId,symbolMap,locations,true);
+    saveImage(fname,fileId,messageIndex,toUInt8(hueStr.c_str()),toUInt8(saturationStr.c_str()),toUInt8(blurStr.c_str()),coordinateLines,landBorder,landMaskStr,seaMaskStr,"",geometryId,projectionId,symbolMap,locations,true);
 
     loadImage(fname,theResponse);
     itsImages.insert(std::pair<std::string,std::string>(hash,fname));
@@ -2596,6 +3049,7 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
     std::string producerIdStr = "";
     std::string generationIdStr = "";
     std::string geometryIdStr = "";
+    std::string projectionIdStr = "";
     std::string parameterIdStr = "";
     std::string parameterLevelStr = "";
     std::string fileIdStr = "";
@@ -2629,6 +3083,10 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
     v = theRequest.getParameter("geometryId");
     if (v)
       geometryIdStr = *v;
+
+    v = theRequest.getParameter("projectionId");
+    if (v)
+      projectionIdStr = *v;
 
     v = theRequest.getParameter("parameterId");
     if (v)
@@ -3178,9 +3636,9 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
         Identification::gridDef.getGeometryNameById(*it,gName);
 
         if (Identification::gridDef.getGridDimensionsByGeometryId(*it,cols,rows))
-          st = gName + " (" + std::to_string(cols) + " x " + std::to_string(rows) + ")";
+          st = std::to_string(*it) + ":" + gName + " (" + std::to_string(cols) + " x " + std::to_string(rows) + ")";
         else
-          st = gName;
+          st = std::to_string(*it) + ":" + gName;
 
         if (geometryId == 0)
         {
@@ -3196,6 +3654,10 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
       ostr1 << "</SELECT>\n";
     }
     ostr1 << "</TD></TR>\n";
+
+
+    if (projectionIdStr.empty())
+      projectionIdStr = geometryIdStr;
 
 
     // ### Times:
@@ -3218,13 +3680,13 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
     {
       contentInfoList.sort(T::ContentInfo::ComparisonMethod::fmiName_level_starttime_file_message);
 
-      ostr1 << "<SELECT id=\"timeselect\" onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" + presentation + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&locations=" + locations + "&symbolMap=" + symbolMap + "' + this.options[this.selectedIndex].value)\"";
+      ostr1 << "<SELECT id=\"timeselect\" onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" + presentation + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&locations=" + locations + "&symbolMap=" + symbolMap + "' + this.options[this.selectedIndex].value)\"";
 
       std::string u;
       if (presentation == "Image" ||  presentation == "Map"  ||  presentation == "Symbols")
       {
-        ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&geometryId=" << geometryIdStr << "&locations=" << locations << "&symbolMap=" << symbolMap << "')\"";
-        u = "/grid-gui?page=" + presentation + "&geometryId=" + geometryIdStr + "&locations=" + locations + "&symbolMap=" + symbolMap;
+        ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&geometryId=" << geometryIdStr << "&projectionId=" << projectionIdStr << "&locations=" << locations << "&symbolMap=" << symbolMap << "')\"";
+        u = "/grid-gui?page=" + presentation + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&locations=" + locations + "&symbolMap=" + symbolMap;
       }
 
       ostr1 << " >\n";
@@ -3310,12 +3772,12 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
     ostr1 << "</TD>\n";
 
     if (prevCont != nullptr)
-      ostr1 << "<TD width=\"20\" > <button type=\"button\" onClick=\"getPage(this,parent,'/grid-gui?page=main&presentation=" + presentation + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + prevCont->mForecastTime + "&fileId=" + std::to_string(prevCont->mFileId) + "&messageIndex=" + std::to_string(prevCont->mMessageIndex) + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "');\">&lt;</button></TD>\n";
+      ostr1 << "<TD width=\"20\" > <button type=\"button\" onClick=\"getPage(this,parent,'/grid-gui?page=main&presentation=" + presentation + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + prevCont->mForecastTime + "&fileId=" + std::to_string(prevCont->mFileId) + "&messageIndex=" + std::to_string(prevCont->mMessageIndex) + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "');\">&lt;</button></TD>\n";
     else
       ostr1 << "<TD width=\"20\"><button type=\"button\">&lt;</button></TD></TD>\n";
 
     if (nextCont != nullptr)
-      ostr1 << "<TD width=\"20\"><button type=\"button\" onClick=\"getPage(this,parent,'/grid-gui?page=main&presentation=" + presentation + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + nextCont->mForecastTime + "&fileId=" + std::to_string(nextCont->mFileId) + "&messageIndex=" + std::to_string(nextCont->mMessageIndex) + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "');\">&gt;</button></TD>\n";
+      ostr1 << "<TD width=\"20\"><button type=\"button\" onClick=\"getPage(this,parent,'/grid-gui?page=main&presentation=" + presentation + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + nextCont->mForecastTime + "&fileId=" + std::to_string(nextCont->mFileId) + "&messageIndex=" + std::to_string(nextCont->mMessageIndex) + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "');\">&gt;</button></TD>\n";
     else
       ostr1 << "<TD width=\"20\"><button type=\"button\">&gt;</button></TD></TD>\n";
 
@@ -3329,7 +3791,7 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
 
     ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Presentation:</TD></TR>\n";
     ostr1 << "<TR height=\"30\"><TD>\n";
-    ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=None&locations=None&symbolMap=None" + "&presentation=' + this.options[this.selectedIndex].value)\">\n";
+    ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=None&locations=None&symbolMap=None" + "&presentation=' + this.options[this.selectedIndex].value)\">\n";
 
     uint a = 0;
     while (modes[a] != nullptr)
@@ -3349,6 +3811,60 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
 
 
 
+    if (presentation == "Image" ||  presentation == "Symbols")
+    {
+      // ### Projections:
+
+      std::set<T::GeometryId> projections;
+      Identification::gridDef.getGeometryIdList(projections);
+
+      T::GeometryId projectionId  = (T::GeometryId)toInt64(projectionIdStr.c_str());
+
+      ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Projection:</TD></TR>\n";
+      ostr1 << "<TR height=\"30\"><TD>\n";
+
+      if (projectionId == 0)
+        projectionId = geometryId;
+
+      if (projections.find(projectionId) == geometries.end())
+        projectionId = geometryId;
+
+      if (projections.size() > 0)
+      {
+        ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&symbolMap=" + symbolMap + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&locations=" + locations + "&geometryId=" + geometryIdStr + "&projectionId=' + this.options[this.selectedIndex].value)\">\n";
+
+        for (auto it=projections.begin(); it!=projections.end(); ++it)
+        {
+          std::string st = std::to_string(*it);
+
+          std::string gName;
+          uint cols = 0;
+          uint rows = 0;
+
+          Identification::gridDef.getGeometryNameById(*it,gName);
+
+          if (Identification::gridDef.getGridDimensionsByGeometryId(*it,cols,rows))
+            st = std::to_string(*it) + ":" + gName + " (" + std::to_string(cols) + " x " + std::to_string(rows) + ")";
+          else
+            st = std::to_string(*it) + ":" + gName;
+
+          if (projectionId == 0)
+          {
+            projectionId = *it;
+            projectionIdStr = std::to_string(projectionId);
+          }
+
+          if (projectionId == *it)
+            ostr1 << "<OPTION selected value=\"" <<  *it << "\">" <<  st << "</OPTION>\n";
+          else
+            ostr1 << "<OPTION value=\"" <<  *it << "\">" <<  st << "</OPTION>\n";
+        }
+        ostr1 << "</SELECT>\n";
+      }
+      ostr1 << "</TD></TR>\n";
+    }
+
+
     if (presentation == "Image" ||  presentation == "Map")
     {
       // ### Color maps:
@@ -3364,8 +3880,8 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
 
       ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Color map:</TD></TR>\n";
       ostr1 << "<TR height=\"30\"><TD>\n";
-      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&coordinateLines=" + coordinateLinesStr + "&colorMap=' + this.options[this.selectedIndex].value)\"";
-      ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&geometryId=" + geometryIdStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&coordinateLines=" + coordinateLinesStr + "&colorMap=')\"";
+      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&coordinateLines=" + coordinateLinesStr + "&colorMap=' + this.options[this.selectedIndex].value)\"";
+      ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&coordinateLines=" + coordinateLinesStr + "&colorMap=')\"";
       ostr1 << " >\n";
 
       if (colorMap.empty() ||  colorMap == "None")
@@ -3399,8 +3915,8 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
 
       ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Symbol group:</TD></TR>\n";
       ostr1 << "<TR height=\"30\"><TD>\n";
-      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&coordinateLines=" + coordinateLinesStr + "&locations=" + locations + "&symbolMap=' + this.options[this.selectedIndex].value)\"";
-      ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&geometryId=" + geometryIdStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&coordinateLines=" + coordinateLinesStr + "&locations=" + locations + "&symbolMap=')\"";
+      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&coordinateLines=" + coordinateLinesStr + "&locations=" + locations + "&symbolMap=' + this.options[this.selectedIndex].value)\"";
+      ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&coordinateLines=" + coordinateLinesStr + "&locations=" + locations + "&symbolMap=')\"";
       ostr1 << " >\n";
 
       if (symbolMap.empty() || symbolMap == "None")
@@ -3435,7 +3951,7 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
 
       ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Locations:</TD></TR>\n";
       ostr1 << "<TR height=\"30\"><TD>\n";
-      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&coordinateLines=" + coordinateLinesStr + "&symbolMap=" + symbolMap + "&locations=' + this.options[this.selectedIndex].value)\"";
+      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&coordinateLines=" + coordinateLinesStr + "&symbolMap=" + symbolMap + "&locations=' + this.options[this.selectedIndex].value)\"";
       ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&coordinateLines=" + coordinateLinesStr + "&locations=')\"";
       ostr1 << " >\n";
 
@@ -3470,7 +3986,7 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
 
         ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Hue, saturation and blur</TD></TR>\n";
         ostr1 << "<TR height=\"30\"><TD>\n";
-        ostr1 << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&hue=' + this.options[this.selectedIndex].value)\"";
+        ostr1 << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&hue=' + this.options[this.selectedIndex].value)\"";
         ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&hue=')\"";
         ostr1 << " >\n";
 
@@ -3487,7 +4003,7 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
 
 
         uint saturation = toInt64(saturationStr.c_str());
-        ostr1 << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&geometryId=" + geometryIdStr + "&generationId=" + generationIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&seaMask=" + seaMaskStr + "&landMask=" + landMaskStr + "&saturation=' + this.options[this.selectedIndex].value)\"";
+        ostr1 << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&generationId=" + generationIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&seaMask=" + seaMaskStr + "&landMask=" + landMaskStr + "&saturation=' + this.options[this.selectedIndex].value)\"";
         ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&saturation=')\"";
         ostr1 << " >\n";
 
@@ -3502,7 +4018,7 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
         ostr1 << "</SELECT>\n";
 
 
-        ostr1 << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&coordinateLines=" + coordinateLinesStr + "&blur=' + this.options[this.selectedIndex].value)\"";
+        ostr1 << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&coordinateLines=" + coordinateLinesStr + "&blur=' + this.options[this.selectedIndex].value)\"";
         ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&coordinateLines=" + coordinateLinesStr + "&blur=')\"";
         ostr1 << " >\n";
 
@@ -3524,13 +4040,13 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
 
       ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Coordinate lines:</TD></TR>\n";
       ostr1 << "<TR height=\"30\"><TD>\n";
-      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&coordinateLines=' + this.options[this.selectedIndex].value)\"";
+      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&coordinateLines=' + this.options[this.selectedIndex].value)\"";
 
       if (presentation == "Image")
-        ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=image&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&geometryId=" + geometryIdStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&coordinateLines=')\"";
+        ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=image&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&coordinateLines=')\"";
 
       if (presentation == "Map")
-        ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=map&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&geometryId=" + geometryIdStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&coordinateLines=')\"";
+        ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=map&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&coordinateLines=')\"";
 
       ostr1 << " >\n";
 
@@ -3551,10 +4067,10 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
 
       ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Land border:</TD></TR>\n";
       ostr1 << "<TR height=\"30\"><TD>\n";
-      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&landBorder=' + this.options[this.selectedIndex].value)\"";
+      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&landBorder=' + this.options[this.selectedIndex].value)\"";
 
       if (presentation == "Image" || presentation == "Map" || presentation == "Symbols")
-        ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&geometryId=" + geometryIdStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&landBorder=')\"";
+        ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&landBorder=')\"";
 
       ostr1 << " >\n";
 
@@ -3575,10 +4091,10 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
 
       ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Land and sea masks:</TD></TR>\n";
       ostr1 << "<TR height=\"30\"><TD>\n";
-      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&landMask=' + this.options[this.selectedIndex].value)\"";
+      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&landMask=' + this.options[this.selectedIndex].value)\"";
 
       if (presentation == "Image" || presentation == "Map" || presentation == "Symbols")
-        ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&geometryId=" + geometryIdStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&landMask=')\"";
+        ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&landMask=')\"";
 
       //if (presentation == "Image" || presentation == "Map" || presentation == "Symbols")
       //  ostr1 << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&landMask=' + this.options[this.selectedIndex].value)\"";
@@ -3609,10 +4125,10 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
       ostr1 << "</SELECT>\n";
 
 
-      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&seaMask=' + this.options[this.selectedIndex].value)\"";
+      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&seaMask=' + this.options[this.selectedIndex].value)\"";
 
       if (presentation == "Image" || presentation == "Map" || presentation == "Symbols")
-        ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&geometryId=" + geometryIdStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&seaMask=')\"";
+        ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&seaMask=')\"";
 
       ostr1 << " >\n";
 
@@ -3664,12 +4180,12 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
 
     if (presentation == "Image")
     {
-      ostr2 << "<TR><TD><IMG id=\"myimage\" style=\"background:#000000; max-width:1800; height:100%; max-height:1000;\" src=\"/grid-gui?page=" << presentation << "&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "&geometryId=" << geometryIdStr << "&hue=" << hueStr << "&saturation=" << saturationStr << "&blur=" << blurStr <<  "&coordinateLines=" << coordinateLinesStr << "&landBorder=" << landBorderStr << "&landMask=" << landMaskStr <<  "&seaMask=" << seaMaskStr << "&colorMap=" << colorMap <<  "&locations= \" onclick=\"getImageCoords(event,this," << fileIdStr << "," << messageIndexStr << ",'" << presentation << "');\"/></TD></TR>";
+      ostr2 << "<TR><TD><IMG id=\"myimage\" style=\"background:#000000; max-width:1800; height:100%; max-height:1000;\" src=\"/grid-gui?page=" << presentation << "&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "&geometryId=" << geometryIdStr << "&projectionId=" << projectionIdStr << "&hue=" << hueStr << "&saturation=" << saturationStr << "&blur=" << blurStr <<  "&coordinateLines=" << coordinateLinesStr << "&landBorder=" << landBorderStr << "&landMask=" << landMaskStr <<  "&seaMask=" << seaMaskStr << "&colorMap=" << colorMap <<  "&locations= \" onclick=\"getImageCoords(event,this," << fileIdStr << "," << messageIndexStr << ",'" << presentation << "');\"/></TD></TR>";
     }
     else
     if (presentation == "Symbols")
     {
-      ostr2 << "<TR><TD><IMG id=\"myimage\" style=\"background:#000000; max-width:1800; height:100%; max-height:100%;\" src=\"/grid-gui?page=" << presentation << "&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "&geometryId=" << geometryIdStr << "&hue=" << hueStr << "&saturation=" << saturationStr << "&blur=" << blurStr <<  "&coordinateLines=" << coordinateLinesStr << "&landBorder=" << landBorderStr << "&landMask=" << landMaskStr <<  "&seaMask=" << seaMaskStr << "&colorMap=" << colorMap << "&locations=" << locations << "&symbolMap=" << symbolMap << "\" onclick=\"getImageCoords(event,this," << fileIdStr << "," << messageIndexStr << ",'" << presentation << "');\"/></TD></TR>";
+      ostr2 << "<TR><TD><IMG id=\"myimage\" style=\"background:#000000; max-width:1800; height:100%; max-height:100%;\" src=\"/grid-gui?page=" << presentation << "&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "&geometryId=" << geometryIdStr << "&projectionId=" << projectionIdStr << "&hue=" << hueStr << "&saturation=" << saturationStr << "&blur=" << blurStr <<  "&coordinateLines=" << coordinateLinesStr << "&landBorder=" << landBorderStr << "&landMask=" << landMaskStr <<  "&seaMask=" << seaMaskStr << "&colorMap=" << colorMap << "&locations=" << locations << "&symbolMap=" << symbolMap << "\" onclick=\"getImageCoords(event,this," << fileIdStr << "," << messageIndexStr << ",'" << presentation << "');\"/></TD></TR>";
     }
     else
     if (presentation == "Map")

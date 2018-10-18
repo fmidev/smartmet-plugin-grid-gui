@@ -96,8 +96,13 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
                       const Spine::HTTP::Request& theRequest,
                       Spine::HTTP::Response& theResponse);
 
+
     void saveImage(const char *imageFile,
-                      T::GridData&  gridData,
+                      int width,
+                      int height,
+                      T::ParamValue_vec& values,
+                      T::Coordinate_vec& coordinates,
+                      T::Coordinate_vec& lineCoordinates,
                       unsigned char hue,
                       unsigned char saturation,
                       unsigned char blur,
@@ -107,6 +112,23 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
                       std::string seaMask,
                       std::string colorMapName,
                       T::GeometryId geometryId,
+                      std::string symbolMap,
+                      std::string locations,
+                      bool showSymbols);
+
+    void saveImage(const char *imageFile,
+                      uint fileId,
+                      uint messageIndex,
+                      unsigned char hue,
+                      unsigned char saturation,
+                      unsigned char blur,
+                      uint coordinateLines,
+                      uint landBorder,
+                      std::string landMask,
+                      std::string seaMask,
+                      std::string colorMapName,
+                      T::GeometryId geometryId,
+                      T::GeometryId projectionId,
                       std::string symbolMap,
                       std::string locations,
                       bool showSymbols);
