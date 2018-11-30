@@ -135,6 +135,28 @@ bool ColorMapFile::checkUpdates()
 
 
 
+void ColorMapFile::getValuesAndColors(std::vector<float>& values,std::vector<unsigned int>& colors)
+{
+  try
+  {
+    AutoThreadLock lock(&mThreadLock);
+
+    for (auto it = mColorMap.begin(); it != mColorMap.end(); ++it)
+    {
+      values.push_back(it->first);
+      colors.push_back(it->second);
+    }
+  }
+  catch (...)
+  {
+    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
+  }
+}
+
+
+
+
+
 uint ColorMapFile::getColor(double value)
 {
   try

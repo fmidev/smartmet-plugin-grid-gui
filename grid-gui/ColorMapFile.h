@@ -11,7 +11,7 @@ namespace SmartMet
 namespace T
 {
 
-typedef std::map<double,unsigned int> ColorMap;
+typedef std::map<float,unsigned int> ColorMap;
 
 
 class ColorMapFile
@@ -26,6 +26,7 @@ class ColorMapFile
     void            init(const std::string& filename);
     bool            checkUpdates();
     uint            getColor(double value);
+    void            getValuesAndColors(std::vector<float>& values,std::vector<unsigned int>& colors);
     std::string     getFilename();
     time_t          getLastModificationTime();
     string_vec      getNames();

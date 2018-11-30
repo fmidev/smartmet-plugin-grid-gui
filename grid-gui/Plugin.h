@@ -80,6 +80,10 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
                       const Spine::HTTP::Request& theRequest,
                       Spine::HTTP::Response& theResponse);
 
+    bool page_isolines(Spine::Reactor& theReactor,
+                      const Spine::HTTP::Request& theRequest,
+                      Spine::HTTP::Response& theResponse);
+
     bool page_locations(Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
                       Spine::HTTP::Response& theResponse);
@@ -107,6 +111,8 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
                       unsigned char saturation,
                       unsigned char blur,
                       uint coordinateLines,
+                      uint isolines,
+                      std::string isolineValues,
                       uint landBorder,
                       std::string landMask,
                       std::string seaMask,
@@ -123,6 +129,8 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
                       unsigned char saturation,
                       unsigned char blur,
                       uint coordinateLines,
+                      uint isolines,
+                      std::string isolineValues,
                       uint landBorder,
                       std::string landMask,
                       std::string seaMask,
@@ -161,7 +169,9 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
     void getForecastNumbers(T::ContentInfoList& contentInfoList,int levelId,int level,int forecastType,std::set<int>& forecastNumbers);
     void getGeometries(T::ContentInfoList& contentInfoList,int levelId,int level,int forecastType,int forecastNumber,std::set<int>& geometries);
     uint getColorValue(std::string& colorName);
+    T::ParamValue_vec getIsolineValues(std::string& isolineValues);
     void loadColorFile();
+    void loadIsolineFile();
     void loadImage(const char *fname,Spine::HTTP::Response &theResponse);
 
 
@@ -178,6 +188,7 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
     T::ColorMapFile_vec       itsColorMapFiles;
     T::LocationFile_vec       itsLocationFiles;
     T::SymbolMapFile_vec      itsSymbolMapFiles;
+    std::string               itsIsolineFile;
     std::string               itsColorFile;
     Colors                    itsColors;
     time_t                    itsColors_lastModified;
@@ -185,9 +196,11 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
     uint                      itsImageCache_maxImages;
     uint                      itsImageCache_minImages;
     bool                      itsAnimationEnabled;
+    std::string               itsImagesUnderConstruction[100];
+    uint                      itsImageCounter;
 
+    std::map<std::string,T::ParamValue_vec> itsIsolines;
     std::map<std::string,std::string> itsImages;
-
 };  // class Plugin
 
 }  // namespace GridGui
