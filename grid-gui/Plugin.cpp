@@ -7,6 +7,7 @@
 #include "Plugin.h"
 
 #include <grid-files/common/GeneralFunctions.h>
+#include <grid-files/common/ImagePaint.h>
 #include <grid-files/identification/GridDef.h>
 #include <spine/SmartMet.h>
 #include <macgyver/TimeFormatter.h>
@@ -562,7 +563,7 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
     double dd = maxValue - minValue;
     double step = dd / 200;
 
-    unsigned long *image = new unsigned long[width*height];
+    uint *image = new uint[width*height];
 
     //unsigned char hue = 30;
     //unsigned char saturation = 128;
@@ -776,11 +777,10 @@ void Plugin::saveImage(
 */
     }
 
-    uint flags = 0;
     if (geomId == geometryId)
     {
       T::GridData gridData;
-      int result = dataServer->getGridData(0,fileId,messageIndex,flags,gridData);
+      int result = dataServer->getGridData(0,fileId,messageIndex,gridData);
       if (result != 0)
         throw Spine::Exception(BCP,"Data fetching failed!");
 
@@ -799,7 +799,10 @@ void Plugin::saveImage(
           interpolationMethod = T::AreaInterpolationMethod::Nearest;
 
         //int result = dataServer->getGridValueVectorByCoordinateList(0,fileId,messageIndex,T::CoordinateTypeValue::LATLON_COORDINATES,coordinates,interpolationMethod,values);
-        int result = dataServer->getGridValueVectorByGeometryId(0,fileId,messageIndex,geomId,interpolationMethod,values);
+        T::AttributeList attributeList;
+        attributeList.addAttribute("grid.geometryId",std::to_string(geomId));
+        attributeList.addAttribute("grid.areaInterpolationMethod",std::to_string(interpolationMethod));
+        int result = dataServer->getGridValueVectorByGeometry(0,fileId,messageIndex,attributeList,values);
         if (result != 0)
           throw Spine::Exception(BCP,"Data fetching failed!");
 
@@ -866,8 +869,6 @@ void Plugin::saveImage(
     if (seaMask == "Simple"  &&  !showSymbols)
       showSeaMask = true;
 
-    //printf("*** COORDINATES %u\n",coordinates.size());
-
     uint size = width*height;
     std::size_t sz = values.size();
 
@@ -879,8 +880,6 @@ void Plugin::saveImage(
       printf("ERROR: There are not enough values (= %lu) for the grid (%u x %u)!\n",sz,width,height);
       return;
     }
-
-    //std::set<unsigned long long> cList;
 
     double maxValue = -1000000000;
     double minValue = 1000000000;
@@ -897,24 +896,7 @@ void Plugin::saveImage(
           maxValue = val;
       }
     }
-/*
-    T::Coordinate_vec coordinates;
-    if (geometryId != 0)
-      coordinates = Identification::gridDef.getGridLatLonCoordinatesByGeometryId(geometryId);
 
-    if (coordinates.size() == 0  &&  gridData.mGeometryId != 0)
-      coordinates = Identification::gridDef.getGridLatLonCoordinatesByGeometryId(gridData.mGeometryId);
-
-    T::Coordinate_vec lineCoordinates;
-    if (coordinateLines != 0xFFFFFFFF)
-    {
-      if (geometryId != 0)
-        lineCoordinates = Identification::gridDef.getGridLatLonCoordinateLinePointsByGeometryId(geometryId);
-
-      if (lineCoordinates.size() == 0  &&  gridData.mGeometryId != 0)
-        lineCoordinates = Identification::gridDef.getGridLatLonCoordinateLinePointsByGeometryId(gridData.mGeometryId);
-    }
-*/
     bool landSeaMask = true;
     if (coordinates.size() == 0)
       landSeaMask = false;
@@ -946,8 +928,8 @@ void Plugin::saveImage(
       getIsolines(values,nullptr,width,height,contourValues,T::AreaInterpolationMethod::Linear,3,3,contours);
     }
 
-    unsigned long *image = new unsigned long[size];
-    memset(image,0xFF,size*sizeof(unsigned long));
+    ImagePaint imagePaint(width,height,0x0,false,rotate);
+
     uint c = 0;
     int ss = 2;
 
@@ -955,232 +937,111 @@ void Plugin::saveImage(
     for (int x=0; x<width; x++)
       yLand[x] = false;
 
-    if (!rotate)
+    for (int y=0; y<height; y++)
     {
-      for (int y=0; y<height; y++)
+      bool prevLand = false;
+      for (int x=0; x<width; x++)
       {
-        bool prevLand = false;
-        for (int x=0; x<width; x++)
+        T::ParamValue val = values[c];
+        uint v = 200 - ((val - minValue) / step);
+        v = v / blur;
+        v = v * blur;
+        v = v + 55;
+        uint col = hsv_to_rgb(hue,saturation,C_UCHAR(v));
+
+        if (colorMapFile != nullptr)
+          col = colorMapFile->getColor(val);
+
+        if (!showValues || val == ParamValueMissing)
+          col = 0xE8E8E8;
+
+        bool land = false;
+        if (landSeaMask)
+          land = isLand(coordinates[c].x(),coordinates[c].y());
+
+        if (landColor != 0xFFFFFFFF)
         {
-          T::ParamValue val = values[c];
-          uint v = 200 - ((val - minValue) / step);
-          v = v / blur;
-          v = v * blur;
-          v = v + 55;
-          uint col = hsv_to_rgb(hue,saturation,C_UCHAR(v));
-
-          if (colorMapFile != nullptr)
-          {
-            col = colorMapFile->getColor(val);
-          }
-
-          if (!showValues || val == ParamValueMissing)
-            col = 0xE8E8E8;
-
-          //printf("COORDINATES : %d,%d => %f,%f\n",x,y,coordinates[c].x(),coordinates[c].y());
-          bool land = false;
-          if (landSeaMask)
-            land = isLand(coordinates[c].x(),coordinates[c].y());
-
-
-          if (landColor != 0xFFFFFFFF)
-          {
-            if (landSeaMask && land)
-              col = landColor;
-          }
-          else
-          {
-            if (showLandMask)
-            {
-              if ((x % ss) == 0)
-              {
-                if (landSeaMask && land)
-                {
-                  if (val == ParamValueMissing)
-                    col = 0xC8C8C8;
-                  else
-                    col = hsv_to_rgb(0,0,C_UCHAR(v));
-                }
-                else
-                {
-                  if (val == ParamValueMissing)
-                    col = 0xD8D8D8;
-                }
-              }
-            }
-          }
-
-          if (seaColor != 0xFFFFFFFF)
-          {
-            if (landSeaMask && !land)
-              col = seaColor;
-          }
-          else
-          {
-            if (showSeaMask)
-            {
-              if ((x % ss) == 0)
-              {
-                if (landSeaMask && !land)
-                {
-                  if (val == ParamValueMissing)
-                    col = 0xC8C8C8;
-                  else
-                    col = hsv_to_rgb(0,0,C_UCHAR(v));
-                }
-                else
-                {
-                  if (val == ParamValueMissing)
-                    col = 0xD8D8D8;
-                }
-              }
-            }
-          }
-
-          if (landBorder != 0xFFFFFFFF)
-          {
-            if (land & (!prevLand || !yLand[x]))
-              col = landBorder;
-
-            if (!land)
-            {
-              if (prevLand  &&  x > 0)
-                image[y*width + x-1] = landBorder;
-
-              if (yLand[x] &&  y > 0)
-                image[(y-1)*width + x] = landBorder;
-            }
-          }
-
-      //    if ((coordinates[c].x() % 10) == 0  ||  (coordinates[c].y() % 10) == 0)
-      //      col = 0xFF0000;
-
-          yLand[x] = land;
-          prevLand = land;
-          image[y*width + x] = col;
-          c++;
+          if (landSeaMask && land)
+            col = landColor;
         }
-      }
-
-      if (showIsolines)
-        paintWkb(image,width,height,false,false,1,0,0,contours,isolines);
-    }
-    else
-    {
-      for (int y=height-1; y>=0; y--)
-      {
-        bool prevLand = false;
-        for (int x=0; x<width; x++)
+        else
         {
-          T::ParamValue val = values[c];
-          uint v = 200 - ((val - minValue) / step);
-          v = v / blur;
-          v = v * blur;
-          v = v + 55;
-          uint col = hsv_to_rgb(hue,saturation,C_UCHAR(v));
-
-          if (colorMapFile != nullptr)
-            col = colorMapFile->getColor(val);
-
-          if (!showValues || val == ParamValueMissing)
-            col = 0xE8E8E8;
-
-          bool land = false;
-          if (landSeaMask)
-            land = isLand(coordinates[c].x(),coordinates[c].y());
-
-          if (landColor != 0xFFFFFFFF)
+          if (showLandMask)
           {
-            if (landSeaMask && land)
-              col = landColor;
-          }
-          else
-          {
-            if (showLandMask)
+            if ((x % ss) == 0)
             {
-              if ((x % ss) == 0)
+              if (landSeaMask && land)
               {
-                if (landSeaMask && land)
-                {
-                  if (val == ParamValueMissing)
-                    col = 0xC8C8C8;
-                  else
-                    col = hsv_to_rgb(0,0,C_UCHAR(v));
-                }
+                if (val == ParamValueMissing)
+                  col = 0xC8C8C8;
                 else
-                {
-                  if (val == ParamValueMissing)
-                    col = 0xD8D8D8;
-                }
+                  col = hsv_to_rgb(0,0,C_UCHAR(v));
+              }
+              else
+              {
+                if (val == ParamValueMissing)
+                  col = 0xD8D8D8;
               }
             }
           }
-
-          if (seaColor != 0xFFFFFFFF)
-          {
-            if (landSeaMask && !land)
-              col = seaColor;
-          }
-          else
-          {
-            if (showSeaMask)
-            {
-              if ((x % ss) == 0)
-              {
-                if (landSeaMask && !land)
-                {
-                  if (val == ParamValueMissing)
-                    col = 0xC8C8C8;
-                  else
-                    col = hsv_to_rgb(0,0,C_UCHAR(v));
-                }
-                else
-                {
-                  if (val == ParamValueMissing)
-                    col = 0xD8D8D8;
-                }
-              }
-            }
-          }
-
-          if (landBorder != 0xFFFFFFFF)
-          {
-            if (land & (!prevLand || !yLand[x]))
-              col = landBorder;
-
-            if (!land)
-            {
-              if (prevLand  &&  x > 0)
-                image[y*width + x-1] = landBorder;
-
-              if (yLand[x] &&  (y+1) < height)
-                image[(y+1)*width + x] = landBorder;
-            }
-          }
-
-          yLand[x] = land;
-          prevLand = land;
-
-          image[y*width + x] = col;
-          c++;
         }
+
+        if (seaColor != 0xFFFFFFFF)
+        {
+          if (landSeaMask && !land)
+            col = seaColor;
+        }
+        else
+        {
+          if (showSeaMask)
+          {
+            if ((x % ss) == 0)
+            {
+              if (landSeaMask && !land)
+              {
+                if (val == ParamValueMissing)
+                  col = 0xC8C8C8;
+                else
+                  col = hsv_to_rgb(0,0,C_UCHAR(v));
+              }
+              else
+              {
+                if (val == ParamValueMissing)
+                  col = 0xD8D8D8;
+              }
+            }
+          }
+        }
+
+        if (landBorder != 0xFFFFFFFF)
+        {
+          if (land & (!prevLand || !yLand[x]))
+            col = landBorder;
+
+          if (!land)
+          {
+            if (prevLand  &&  x > 0)
+              imagePaint.paintPixel(x-1,y,landBorder);
+
+            if (yLand[x] &&  y > 0)
+              imagePaint.paintPixel(x,y-1,landBorder);
+          }
+        }
+
+        yLand[x] = land;
+        prevLand = land;
+        imagePaint.paintPixel(x,y,col);
+        c++;
       }
-      if (showIsolines)
-        paintWkb(image,width,height,false,true,1,0,0,contours,isolines);
     }
+
+    if (showIsolines)
+      imagePaint.paintWkb(1,1,0,0,contours,isolines);
 
     if (coordinateLines != 0xFFFFFFFF  &&  lineCoordinates.size() > 0)
     {
-      if (!rotate)
-      {
-        for (auto it = lineCoordinates.begin(); it != lineCoordinates.end(); ++it)
-          image[C_INT(floor(it->y()))*width + C_INT(floor(it->x()))] = coordinateLines;
-      }
-      else
-      {
-        for (auto it = lineCoordinates.begin(); it != lineCoordinates.end(); ++it)
-          image[(height-C_INT(floor(it->y()))-1)*width + C_INT(floor(it->x()))] = coordinateLines;
-      }
+      for (auto it = lineCoordinates.begin(); it != lineCoordinates.end(); ++it)
+        imagePaint.paintPixel(C_INT(floor(it->x())),C_INT(floor(it->y())),coordinateLines);
     }
 
     if (showSymbols)
@@ -1201,42 +1062,21 @@ void Plugin::saveImage(
           {
             T::ParamValue val = values[C_INT(round(grid_j))*width + C_INT(round(grid_i))];
 
-            //if (rotate)
-            //  val = values[(height-round(grid_j)-1)*width + round(grid_i)];
-
             CImage img;
             if (symbolMapFile->getSymbol(val,img))
             {
               int xx = C_INT(round(grid_i)) - img.width/2;
               int yy = C_INT(round(grid_j));
               int cc = 0;
-
-              if (!rotate)
+              for (int y=0; y<img.height; y++)
               {
-                for (int y=0; y<img.height; y++)
+                for (int x=0; x<img.width; x++)
                 {
-                  for (int x=0; x<img.width; x++)
-                  {
-                    uint col = img.pixel[cc];
-                    if ((col & 0xFF000000) == 0)
-                      image[(yy-img.height/2+y)*width + xx + x] = col;
+                  uint col = img.pixel[cc];
+                  if ((col & 0xFF000000) == 0)
+                    imagePaint.paintPixel(xx+x,yy+img.height/2-y,col);
 
-                    cc++;
-                  }
-                }
-              }
-              else
-              {
-                for (int y=0; y<img.height; y++)
-                {
-                  for (int x=0; x<img.width; x++)
-                  {
-                    uint col = img.pixel[cc];
-                    if ((col & 0xFF000000) == 0)
-                      image[(height-yy-1-img.height/2+y)*width + xx + x] = col;
-
-                    cc++;
-                  }
+                  cc++;
                 }
               }
             }
@@ -1246,8 +1086,7 @@ void Plugin::saveImage(
     }
 
 
-    jpeg_save(imageFile,image,height,width,100);
-    delete[] image;
+    imagePaint.saveJpgImage(imageFile);
 
     checkImageCache();
   }
@@ -1695,8 +1534,8 @@ void Plugin::saveTimeSeries(const char *imageFile,std::vector<T::ParamValue>& va
     double step = diff / 200;
 
 
-    unsigned long *image = new unsigned long[size];
-    memset(image,0xFF,size*sizeof(unsigned long));
+    uint *image = new uint[size];
+    memset(image,0xFF,size*sizeof(uint));
 
     for (int x=0; x<len; x++)
     {
@@ -1754,7 +1593,6 @@ bool Plugin::page_info(Spine::Reactor &theReactor,
     auto contentServer = itsGridEngine->getContentServer_sptr();
     auto dataServer = itsGridEngine->getDataServer_sptr();
 
-    uint flags = 0;
     std::string fileIdStr = "";
     std::string messageIndexStr = "0";
 
@@ -1819,7 +1657,7 @@ bool Plugin::page_info(Spine::Reactor &theReactor,
     }
 
     T::AttributeList attributeList;
-    result = dataServer->getGridAttributeList(0,contentInfo.mFileId,contentInfo.mMessageIndex,flags,attributeList);
+    result = dataServer->getGridAttributeList(0,contentInfo.mFileId,contentInfo.mMessageIndex,attributeList);
     if (result != 0)
     {
       ostr << "<HTML><BODY>\n";
@@ -1962,7 +1800,7 @@ bool Plugin::page_locations(Spine::Reactor &theReactor,
       T::Location_vec locationList = locationFile->getLocations();
       T::GridValueList valueList;
 
-      if (dataServer->getGridValueListByPointList(0,toInt64(fileIdStr.c_str()),toInt64(messageIndexStr.c_str()),0,T::CoordinateTypeValue::LATLON_COORDINATES,coordinateList,T::AreaInterpolationMethod::Linear,valueList) == 0)
+      if (dataServer->getGridValueListByPointList(0,toInt64(fileIdStr.c_str()),toInt64(messageIndexStr.c_str()),T::CoordinateTypeValue::LATLON_COORDINATES,coordinateList,T::AreaInterpolationMethod::Linear,valueList) == 0)
       {
         for (auto it = locationList.begin(); it != locationList.end(); ++it)
         {
@@ -2035,9 +1873,8 @@ bool Plugin::page_table(Spine::Reactor &theReactor,
 
     std::ostringstream ostr;
 
-    uint flags = 0;
     T::GridData gridData;
-    int result = dataServer->getGridData(0,toInt64(fileIdStr.c_str()),toInt64(messageIndexStr.c_str()),flags,gridData);
+    int result = dataServer->getGridData(0,toInt64(fileIdStr.c_str()),toInt64(messageIndexStr.c_str()),gridData);
     if (result != 0)
     {
       ostr << "<HTML><BODY>\n";
@@ -2055,7 +1892,7 @@ bool Plugin::page_table(Spine::Reactor &theReactor,
     T::Coordinate_vec coordinates = Identification::gridDef.getGridCoordinatesByGeometryId(geometryId);
     /*
     T::GridCoordinates coordinates;
-    result = dataServer->getGridCoordinates(0,toInt64(fileIdStr.c_str()),toInt64(messageIndexStr.c_str()),flags,T::CoordinateTypeValue::ORIGINAL_COORDINATES,coordinates);
+    result = dataServer->getGridCoordinates(0,toInt64(fileIdStr.c_str()),toInt64(messageIndexStr.c_str()),T::CoordinateTypeValue::ORIGINAL_COORDINATES,coordinates);
     if (result != 0)
     {
       ostr << "<HTML><BODY>\n";
@@ -2196,10 +2033,8 @@ bool Plugin::page_coordinates(Spine::Reactor &theReactor,
 
     std::ostringstream ostr;
 
-    uint flags = 0;
-
     T::GridCoordinates coordinates;
-    int result = dataServer->getGridCoordinates(0,toInt64(fileIdStr.c_str()),toInt64(messageIndexStr.c_str()),flags,T::CoordinateTypeValue::LATLON_COORDINATES,coordinates);
+    int result = dataServer->getGridCoordinates(0,toInt64(fileIdStr.c_str()),toInt64(messageIndexStr.c_str()),T::CoordinateTypeValue::LATLON_COORDINATES,coordinates);
     if (result != 0)
     {
       ostr << "<HTML><BODY>\n";
@@ -2357,9 +2192,8 @@ bool Plugin::page_value(Spine::Reactor &theReactor,
     if (reverseXDirection)
       xx = dWidth - (xPos * dWidth);
 
-    uint flags = 0;
     T::ParamValue value;
-    dataServer->getGridValueByPoint(0,fileId,messageIndex,flags,T::CoordinateTypeValue::GRID_COORDINATES,xx,yy,T::AreaInterpolationMethod::Nearest,value);
+    dataServer->getGridValueByPoint(0,fileId,messageIndex,T::CoordinateTypeValue::GRID_COORDINATES,xx,yy,T::AreaInterpolationMethod::Nearest,value);
 
     if (value != ParamValueMissing)
       theResponse.setContent(std::to_string(value));
@@ -2453,7 +2287,6 @@ bool Plugin::page_timeseries(Spine::Reactor &theReactor,
     //std::ostringstream ostr;
     std::set<int> dayIdx;
 
-    uint flags = 0;
     uint c = 0;
     uint len = contentInfoList.getLength();
     for (uint t=0; t<len; t++)
@@ -2463,7 +2296,7 @@ bool Plugin::page_timeseries(Spine::Reactor &theReactor,
       if (info->mGeometryId == contentInfo.mGeometryId  &&  info->mForecastType == contentInfo.mForecastType  &&  info->mForecastNumber == contentInfo.mForecastNumber)
       {
         T::ParamValue value;
-        if (dataServer->getGridValueByPoint(0,info->mFileId,info->mMessageIndex,flags,T::CoordinateTypeValue::GRID_COORDINATES,xx,yy,T::AreaInterpolationMethod::Linear,value) == 0)
+        if (dataServer->getGridValueByPoint(0,info->mFileId,info->mMessageIndex,T::CoordinateTypeValue::GRID_COORDINATES,xx,yy,T::AreaInterpolationMethod::Linear,value) == 0)
         {
           if (value != ParamValueMissing)
           {
@@ -3175,12 +3008,11 @@ bool Plugin::page_map(Spine::Reactor &theReactor,
 
     uint columns = 1800;
     uint rows = 900;
-    uint flags = 0;
     uint coordinateLines = getColorValue(coordinateLinesStr);
 
     T::ParamValue_vec values;
 
-    int result = dataServer->getGridValueVectorByRectangle(0,toInt64(fileIdStr.c_str()),toInt64(messageIndexStr.c_str()),flags,T::CoordinateTypeValue::LATLON_COORDINATES,columns,rows,-180,90,360/C_DOUBLE(columns),-180/C_DOUBLE(rows),T::AreaInterpolationMethod::Nearest,values);
+    int result = dataServer->getGridValueVectorByRectangle(0,toInt64(fileIdStr.c_str()),toInt64(messageIndexStr.c_str()),T::CoordinateTypeValue::LATLON_COORDINATES,columns,rows,-180,90,360/C_DOUBLE(columns),-180/C_DOUBLE(rows),T::AreaInterpolationMethod::Nearest,values);
     if (result != 0)
     {
       std::ostringstream ostr;
