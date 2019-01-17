@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-plugin-%{DIRNAME}
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
-Version: 18.10.23
+Version: 19.1.17
 Release: 1%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
@@ -21,10 +21,10 @@ BuildRequires: smartmet-library-grid-content-devel
 BuildRequires: smartmet-engine-grid-devel
 BuildRequires: gdal-devel
 Requires: libconfig
-Requires: smartmet-library-macgyver >= 18.9.29
-Requires: smartmet-library-spine >= 18.9.29
-Requires: smartmet-server >= 18.9.29
-Requires: smartmet-engine-grid >= 18.10.15
+Requires: smartmet-library-macgyver >= 18.11.24
+Requires: smartmet-library-spine >= 18.12.13
+Requires: smartmet-server >= 18.12.14
+Requires: smartmet-engine-grid >= 19.1.17
 Requires: boost-date-time
 Requires: smartmet-engine-grid
 Provides: %{SPECNAME}
@@ -51,6 +51,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/plugins/%{DIRNAME}.so
 
 %changelog
+* Thu Jan 17 2019 Mika Heiskanen <mika.heiskanen@fmi.fi> - 19.1.17-1.fmi
+- Version update
+
 * Tue Oct 23 2018 Mika Heiskanen <mika.heiskanen@fmi.fi> - 18.10.23-1.fmi
 - Added projection conversions
 
