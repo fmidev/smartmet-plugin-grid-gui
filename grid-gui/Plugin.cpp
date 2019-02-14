@@ -311,6 +311,9 @@ void Plugin::loadIsolineFile()
 {
   try
   {
+    if (itsIsolineFile.empty())
+      return;
+
     FILE *file = fopen(itsIsolineFile.c_str(),"re");
     if (file == nullptr)
     {
@@ -1834,11 +1837,11 @@ bool Plugin::page_locations(Spine::Reactor &theReactor,
         for (auto it = locationList.begin(); it != locationList.end(); ++it)
         {
           ostr << "<TR><TD style=\"width:200;background:#F0F0F0;\">" << it->mName << "</TD>";
-          T::GridValue *rec = valueList.getGridValueByCoordinates(it->mX,it->mY);
-          if (rec != nullptr &&  rec->mValue != ParamValueMissing)
+          T::GridValue rec;
+          if (valueList.getGridValueByCoordinates(it->mX,it->mY,rec) &&  rec.mValue != ParamValueMissing)
           {
             char tmp[30];
-            sprintf(tmp,"%.3f",rec->mValue);
+            sprintf(tmp,"%.3f",rec.mValue);
             ostr << "<TD style=\"width:120; text-align:right;\">" << tmp << "</TD>";
           }
           else
@@ -2316,7 +2319,7 @@ bool Plugin::page_timeseries(Spine::Reactor &theReactor,
     T::ContentInfoList contentInfoList;
     contentServer->getContentListByParameterAndGenerationId(0,contentInfo.mGenerationId,T::ParamKeyTypeValue::FMI_NAME,contentInfo.mFmiParameterName,T::ParamLevelIdTypeValue::FMI,contentInfo.mFmiParameterLevelId,contentInfo.mParameterLevel,contentInfo.mParameterLevel,-2,-2,-2,"19000101T000000","23000101T000000",0,contentInfoList);
 
-    contentInfoList.sort(T::ContentInfo::ComparisonMethod::fmiId_generation_producer_level_time);
+    contentInfoList.sort(T::ContentInfo::ComparisonMethod::fmiId_producer_generation_level_time);
 
     std::vector <T::ParamValue> valueList;
 
@@ -3974,7 +3977,7 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
 
     if (len > 0)
     {
-      contentInfoList.sort(T::ContentInfo::ComparisonMethod::fmiName_generation_producer_level_time);
+      contentInfoList.sort(T::ContentInfo::ComparisonMethod::fmiName_producer_generation_level_time);
 
       ostr1 << "<SELECT id=\"timeselect\" onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" + presentation + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&locations=" + locations + "&symbolMap=" + symbolMap + "' + this.options[this.selectedIndex].value)\"";
 
