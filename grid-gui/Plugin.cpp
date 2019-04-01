@@ -982,7 +982,7 @@ void Plugin::saveImage(
           col = 0xE8E8E8;
 
         bool land = false;
-        if (landSeaMask)
+        if (landSeaMask && c < coordinates.size())
           land = isLand(coordinates[c].x(),coordinates[c].y());
 
         if (landColor != 0xFFFFFFFF)
