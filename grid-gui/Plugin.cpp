@@ -939,7 +939,7 @@ void Plugin::saveImage(
     if (blur == 0)
       blur = 1;
 
-    T::WkbData_vec contours;
+    T::ByteData_vec contours;
 
     if (showIsolines)
     {
