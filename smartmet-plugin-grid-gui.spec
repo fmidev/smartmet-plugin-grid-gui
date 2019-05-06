@@ -26,7 +26,6 @@ Requires: smartmet-library-spine >= 19.4.29
 Requires: smartmet-server >= 19.3.19
 Requires: smartmet-engine-grid >= 19.5.6
 Requires: boost-date-time
-Requires: smartmet-engine-grid
 Provides: %{SPECNAME}
 
 %description
