@@ -4032,7 +4032,7 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
     ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Time (UTC):</TD></TR>\n";
     ostr1 << "<TR height=\"30\"><TD><TABLE><TR><TD>\n";
 
-    ostr3 << "<TABLE><TR height=\"20\">\n";
+    ostr3 << "<TABLE><TR height=\"30\">\n";
 
     T::ContentInfo *prevCont = nullptr;
     T::ContentInfo *currentCont = nullptr;
@@ -4101,7 +4101,7 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
                     ostr3 << "<TD style=\"text-align:center; font-size:12;width:120;background:#F0F0F0;\" id=\"ftime\">" + startTime + "</TD>\n";
 
                   if (u > " ")
-                    ostr3 << "<TD style=\"width:5; background:#E0E0E0;\" onmouseout=\"this.style='width:5;background:#E0E0E0;'\" onmouseover=\"this.style='width:5;background:#FF0000;'; setText('ftime','" + g->mForecastTime + "');setImage(document.getElementById('myimage'),'" + u + url + "');\" > </TD>\n";
+                    ostr3 << "<TD style=\"width:5; background:#E0E0E0;\" onmouseout=\"this.style='width:5;background:#E0E0E0;'\" onmouseover=\"this.style='width:5;height:30;background:#FF0000;'; setText('ftime','" + g->mForecastTime + "');setImage(document.getElementById('myimage'),'" + u + url + "');\" > </TD>\n";
                   else
                     ostr3 << "<TD style=\"width:5; background:#E0E0E0;\"> </TD>\n";
 
@@ -4601,7 +4601,7 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
     ostr2 << "<TABLE width=\"100%\" height=\"100%\">\n";
 
     if (itsAnimationEnabled  &&  (presentation == "Image" || presentation == "Map" || presentation == "Symbols" ||  presentation == "Isolines"))
-      ostr2 << "<TR><TD style=\"height:25; width:100%; vertical-align:middle; text-align:left; font-size:12;\">" << ostr3.str() << "</TD></TR>\n";
+      ostr2 << "<TR><TD style=\"height:35; width:100%; vertical-align:middle; text-align:left; font-size:12;\">" << ostr3.str() << "</TD></TR>\n";
 
     if (presentation == "Image")
     {
