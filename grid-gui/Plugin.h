@@ -165,6 +165,7 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
     void getGenerations(T::GenerationInfoList& generationInfoList,std::set<std::string>& generations);
     void getLevelIds(T::ContentInfoList& contentInfoList,std::set<int>& levelIds);
     void getLevels(T::ContentInfoList& contentInfoList,int levelId,std::set<int>& levels);
+    std::string getFmiKey(std::string& producerName,T::ContentInfo& contentInfo);
     void getForecastTypes(T::ContentInfoList& contentInfoList,int levelId,int level,std::set<int>& forecastTypes);
     void getForecastNumbers(T::ContentInfoList& contentInfoList,int levelId,int level,int forecastType,std::set<int>& forecastNumbers);
     void getGeometries(T::ContentInfoList& contentInfoList,int levelId,int level,int forecastType,int forecastNumber,std::set<int>& geometries);

@@ -2563,17 +2563,23 @@ bool Plugin::page_image(Spine::Reactor &theReactor,
     bool found = false;
     bool ind = true;
 
-    while (ind)
+    time_t endTime = time(0) + 30;
+
+    while (ind  &&  time(0) < endTime)
     {
       auto it = itsImages.find(hash);
       if (it != itsImages.end())
       {
+        // ### The requested image has been generated earlier. We can use it.
+
         loadImage(it->second.c_str(),theResponse);
         return true;
       }
 
       if (!found)
       {
+        // ### Let's check if another thread is already generating the requested image
+
         for (uint t=0; t<100; t++)
         {
           if (itsImagesUnderConstruction[t] == hash)
@@ -2581,17 +2587,24 @@ bool Plugin::page_image(Spine::Reactor &theReactor,
             found = true;
           }
         }
+
         if (!found)
           ind = false;
       }
 
       if (found)
+      {
+        // ### Another thread is generating the requested image. Let's wait until it is ready and can be
+        // ### found from the itsImages list.
+
         time_usleep(0,10000);
+      }
     }
+
+    // ### It seems that we should generated the requested image by ourselves.
 
     itsImagesUnderConstruction[itsImageCounter % 100] = hash;
     itsImageCounter++;
-
 
     uint fileId = toInt64(fileIdStr.c_str());
     uint messageIndex = toInt64(messageIndexStr.c_str());
@@ -3301,6 +3314,49 @@ void Plugin::getGeometries(T::ContentInfoList& contentInfoList,int levelId,int l
 
 
 
+std::string Plugin::getFmiKey(std::string& producerName,T::ContentInfo& contentInfo)
+{
+  try
+  {
+    char buf[200];
+    char *p = buf;
+
+    p += sprintf(p,"%s:%s",contentInfo.mFmiParameterName.c_str(),producerName.c_str());
+
+    if (contentInfo.mGeometryId > 0)
+      p += sprintf(p,":%u",contentInfo.mGeometryId);
+    else
+      p += sprintf(p,":");
+
+    if (contentInfo.mFmiParameterLevelId > 0)
+      p += sprintf(p,":%u",contentInfo.mFmiParameterLevelId);
+    else
+      p += sprintf(p,":");
+
+    p += sprintf(p,":%d",contentInfo.mParameterLevel);
+
+    if (contentInfo.mForecastType >= 0)
+    {
+      if (contentInfo.mForecastNumber >= 0)
+        p += sprintf(p,":%d:%d",contentInfo.mForecastType,contentInfo.mForecastNumber);
+      else
+        p += sprintf(p,":%d",contentInfo.mForecastType);
+    }
+
+    return std::string(buf);
+  }
+  catch (...)
+  {
+    SmartMet::Spine::Exception exception(BCP, "Operation failed!", nullptr);
+    exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
+    throw exception;
+  }
+}
+
+
+
+
+
 void Plugin::getGenerations(T::GenerationInfoList& generationInfoList,std::set<std::string>& generations)
 {
   try
@@ -3361,6 +3417,8 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
     std::string presentation = "Image";
     std::string symbolMap = "None";
     std::string locations = "None";
+    std::string producerName = "";
+    std::string fmiKey = "";
 
     boost::optional<std::string> v;
     v = theRequest.getParameter("producerId");
@@ -3581,9 +3639,14 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
         }
 
         if (pid == p->mProducerId)
+        {
+          producerName = p->mName;
           ostr1 << "<OPTION selected value=\"" <<  p->mProducerId << "\">" <<  p->mName << "</OPTION>\n";
+        }
         else
+        {
           ostr1 << "<OPTION value=\"" <<  p->mProducerId << "\">" <<  p->mName << "</OPTION>\n";
+        }
       }
       ostr1 << "</SELECT>\n";
     }
@@ -4048,6 +4111,7 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
                 if (startTime == g->mForecastTime)
                 {
                   currentCont = g;
+                  fmiKey = getFmiKey(producerName,*g);
                   ostr1 << "<OPTION selected value=\"" <<  url << "\">" <<  g->mForecastTime << "</OPTION>\n";
                   fileIdStr = std::to_string(g->mFileId);
                   messageIndexStr = std::to_string(g->mMessageIndex);
@@ -4512,6 +4576,11 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
       ostr1 << "</SELECT>\n";
       ostr1 << "</TD></TR>\n";
 
+
+      // ## FMI key:
+
+      ostr1 << "<TR height=\"15\" style=\"font-size:12; width:250px;\"><TD>FMI Key:</TD></TR>\n";
+      ostr1 << "<TR height=\"30\"><TD><INPUT type=\"text\" value=\"" << fmiKey << "\"></TD></TR>\n";
 
       // ### Units:
 
