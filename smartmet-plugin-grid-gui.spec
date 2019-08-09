@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-plugin-%{DIRNAME}
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
-Version: 19.5.6
+Version: 19.8.9
 Release: 1%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
@@ -21,10 +21,10 @@ BuildRequires: smartmet-library-grid-content-devel
 BuildRequires: smartmet-engine-grid-devel
 BuildRequires: gdal-devel
 Requires: libconfig
-Requires: smartmet-library-macgyver >= 19.4.23
-Requires: smartmet-library-spine >= 19.4.29
-Requires: smartmet-server >= 19.3.19
-Requires: smartmet-engine-grid >= 19.5.6
+Requires: smartmet-library-macgyver >= 19.8.2
+Requires: smartmet-library-spine >= 19.8.7
+Requires: smartmet-server >= 19.8.9
+Requires: smartmet-engine-grid >= 19.8.9
 Requires: boost-date-time
 Provides: %{SPECNAME}
 
@@ -50,6 +50,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/plugins/%{DIRNAME}.so
 
 %changelog
+* Fri Aug  9 2019 Mika Heiskanen <mika.heiskanen@fmi.fi> - 19.8.9-1.fmi
+- Increasing the height of the animation bar
+
 * Mon May  6 2019 Mika Heiskanen <mika.heiskanen@fmi.fi> - 19.5.6-1.fmi
 - Support for downloading GRIB files
 
