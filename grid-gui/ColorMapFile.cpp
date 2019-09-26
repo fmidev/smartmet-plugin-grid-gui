@@ -168,9 +168,14 @@ uint ColorMapFile::getColor(double value)
     if (it != mColorMap.end())
       return it->second;
 
-    it = mColorMap.upper_bound(value);
+    it = mColorMap.lower_bound(value);
     if (it != mColorMap.end())
+    {
+      if (it->first > value  && it != mColorMap.begin())
+        it--;
+
       return it->second;
+    }
 
     if (value > mColorMap.rbegin()->first)
       return mColorMap.rbegin()->second;
@@ -305,7 +310,7 @@ void ColorMapFile::loadFile()
           if (*p == '"')
             ind = !ind;
 
-          if ((*p == ';'  || *p == '\n') && !ind)
+          if ((*p == ';' || *p == ','  || *p == '\n') && !ind)
           {
             *p = '\0';
             p++;
@@ -329,7 +334,12 @@ void ColorMapFile::loadFile()
             else
             {
               double val = toDouble(field[0]);
-              uint color = strtoul(field[1],nullptr,16);
+              uint color = 0;
+              if (c > 3)
+                color = (atoll(field[1]) << 16) + (atoll(field[2]) << 8) + atoll(field[3]);
+              else
+                color = strtoul(field[1],nullptr,16);
+
               mColorMap.insert(std::pair<double,unsigned int>(val,color));
             }
           }

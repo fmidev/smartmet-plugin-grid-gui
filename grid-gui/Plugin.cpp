@@ -44,6 +44,7 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
         "smartmet.plugin.grid-gui.symbolMapFiles",
         "smartmet.plugin.grid-gui.locationFiles",
         "smartmet.plugin.grid-gui.colorFile",
+        //"smartmet.plugin.grid-gui.daliFile",
         "smartmet.plugin.grid-gui.isolineFile",
         "smartmet.plugin.grid-gui.animationEnabled",
         "smartmet.plugin.grid-gui.imageCache.directory",
@@ -90,6 +91,7 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
     itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.symbolMapFiles",itsSymbolMapFileNames);
     itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.locationFiles",itsLocationFileNames);
     itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.colorFile",itsColorFile);
+    itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.daliFile",itsDaliFile);
     itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.isolineFile",itsIsolineFile);
     itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.animationEnabled",itsAnimationEnabled);
     itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.imageCache.directory",itsImageCache_dir);
@@ -125,6 +127,9 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
 
     loadColorFile();
     loadIsolineFile();
+
+    if (itsDaliFile > " ")
+      loadDaliFile();
 
 
     // Removing files from the image cache.
@@ -294,6 +299,85 @@ void Plugin::loadColorFile()
     fclose(file);
 
     itsColors_lastModified = getFileModificationTime(itsColorFile.c_str());
+  }
+  catch (...)
+  {
+    SmartMet::Spine::Exception exception(BCP, "Operation failed!", nullptr);
+    exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
+    throw exception;
+  }
+}
+
+
+
+
+
+void Plugin::loadDaliFile()
+{
+  try
+  {
+    FILE *file = fopen(itsDaliFile.c_str(),"re");
+    if (file == nullptr)
+    {
+      Spine::Exception exception(BCP,"Cannot open file!");
+      exception.addParameter("Filename",itsDaliFile);
+      throw exception;
+    }
+
+    itsDaliProducts.clear();
+
+    char st[1000];
+
+    while (!feof(file))
+    {
+      if (fgets(st,1000,file) != nullptr  &&  st[0] != '#')
+      {
+        bool ind = false;
+        char *field[100];
+        uint c = 1;
+        field[0] = st;
+        char *p = st;
+        while (*p != '\0'  &&  c < 100)
+        {
+          if (*p == '"')
+            ind = !ind;
+
+          if ((*p == ';'  || *p == '\n') && !ind)
+          {
+            *p = '\0';
+            p++;
+            field[c] = p;
+            c++;
+          }
+          else
+          {
+            p++;
+          }
+        }
+
+        if (c > 5)
+        {
+          string_vec plist;
+
+          splitString(field[0],',',plist);
+          for (auto it=plist.begin(); it!=plist.end();++it)
+          {
+            string_vec vec;
+            vec.push_back(*it);
+            vec.push_back(field[1]);
+            vec.push_back(field[2]);
+            vec.push_back(field[3]);
+            vec.push_back(field[4]);
+            vec.push_back(field[5]);
+
+            itsDaliProducts.push_back(vec);
+          }
+        }
+      }
+    }
+    fclose(file);
+
+    itsDaliFile_lastModified = getFileModificationTime(itsDaliFile.c_str());
   }
   catch (...)
   {
@@ -619,7 +703,7 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
 
         bool land = isLand(xc,yc);
 
-        if (landColor != 0xFFFFFFFF)
+        if (landColor != 0xFFFFFFFF  &&  (colorMapFile != nullptr && (col & 0xFF000000)))
         {
           if (land)
             col = landColor;
@@ -646,7 +730,7 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
           }
         }
 
-        if (seaColor != 0xFFFFFFFF)
+        if (seaColor != 0xFFFFFFFF  &&  (colorMapFile != nullptr && (col & 0xFF000000)))
         {
           if (!land)
             col = seaColor;
@@ -985,7 +1069,7 @@ void Plugin::saveImage(
         if (landSeaMask && c < coordinates.size())
           land = isLand(coordinates[c].x(),coordinates[c].y());
 
-        if (landColor != 0xFFFFFFFF)
+        if (landColor != 0xFFFFFFFF  &&  (colorMapFile != nullptr && (col & 0xFF000000)))
         {
           if (landSeaMask && land)
             col = landColor;
@@ -1012,7 +1096,7 @@ void Plugin::saveImage(
           }
         }
 
-        if (seaColor != 0xFFFFFFFF)
+        if (seaColor != 0xFFFFFFFF  &&  (colorMapFile != nullptr && (col & 0xFF000000)))
         {
           if (landSeaMask && !land)
             col = seaColor;
@@ -1614,7 +1698,7 @@ void Plugin::saveTimeSeries(const char *imageFile,std::vector<T::ParamValue>& va
 
 
 
-bool Plugin::page_info(Spine::Reactor &theReactor,
+int Plugin::page_info(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse)
 {
@@ -1635,7 +1719,7 @@ bool Plugin::page_info(Spine::Reactor &theReactor,
       messageIndexStr = *v;
 
     if (fileIdStr.empty())
-      return true;
+      return HTTP::Status::ok;
 
 
     std::ostringstream ostr;
@@ -1648,7 +1732,7 @@ bool Plugin::page_info(Spine::Reactor &theReactor,
       ostr << "ERROR: getContentInfo : " << result << "\n";
       ostr << "</BODY></HTML>\n";
       theResponse.setContent(std::string(ostr.str()));
-      return true;
+      return HTTP::Status::ok;
     }
 
     //contentInfo.print(std::cout,0,0);
@@ -1661,7 +1745,7 @@ bool Plugin::page_info(Spine::Reactor &theReactor,
       ostr << "ERROR: getFileInfoById : " << result << "\n";
       ostr << "</BODY></HTML>\n";
       theResponse.setContent(std::string(ostr.str()));
-      return true;
+      return HTTP::Status::ok;
     }
 
     T::GenerationInfo generationInfo;
@@ -1672,7 +1756,7 @@ bool Plugin::page_info(Spine::Reactor &theReactor,
       ostr << "ERROR: getGenerationInfoById : " << result << "\n";
       ostr << "</BODY></HTML>\n";
       theResponse.setContent(std::string(ostr.str()));
-      return true;
+      return HTTP::Status::ok;
     }
 
     T::ProducerInfo producerInfo;
@@ -1683,7 +1767,7 @@ bool Plugin::page_info(Spine::Reactor &theReactor,
       ostr << "ERROR: getProducerInfoById : " << result << "\n";
       ostr << "</BODY></HTML>\n";
       theResponse.setContent(std::string(ostr.str()));
-      return true;
+      return HTTP::Status::ok;
     }
 
     T::AttributeList attributeList;
@@ -1694,7 +1778,7 @@ bool Plugin::page_info(Spine::Reactor &theReactor,
       ostr << "ERROR: getGridAttributeList : " << result << "\n";
       ostr << "</BODY></HTML>\n";
       theResponse.setContent(std::string(ostr.str()));
-      return true;
+      return HTTP::Status::ok;
     }
 
 
@@ -1776,7 +1860,7 @@ bool Plugin::page_info(Spine::Reactor &theReactor,
 
 
     theResponse.setContent(std::string(ostr.str()));
-    return true;
+    return HTTP::Status::ok;
   }
   catch (...)
   {
@@ -1790,7 +1874,7 @@ bool Plugin::page_info(Spine::Reactor &theReactor,
 
 
 
-bool Plugin::page_locations(Spine::Reactor &theReactor,
+int Plugin::page_locations(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse)
 {
@@ -1816,7 +1900,7 @@ bool Plugin::page_locations(Spine::Reactor &theReactor,
 
 
     if (fileIdStr.empty())
-      return true;
+      return HTTP::Status::ok;
 
     std::ostringstream ostr;
 
@@ -1858,7 +1942,7 @@ bool Plugin::page_locations(Spine::Reactor &theReactor,
 
     theResponse.setContent(std::string(ostr.str()));
 
-    return true;
+    return HTTP::Status::ok;
   }
   catch (...)
   {
@@ -1872,7 +1956,7 @@ bool Plugin::page_locations(Spine::Reactor &theReactor,
 
 
 
-bool Plugin::page_table(Spine::Reactor &theReactor,
+int Plugin::page_table(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse)
 {
@@ -1903,7 +1987,7 @@ bool Plugin::page_table(Spine::Reactor &theReactor,
       geometryIdStr = *v;
 
     if (fileIdStr.empty())
-      return true;
+      return HTTP::Status::ok;
 
     std::ostringstream ostr;
 
@@ -1915,7 +1999,7 @@ bool Plugin::page_table(Spine::Reactor &theReactor,
       ostr << "DataServer request 'getGridData()' failed : " << result << "\n";
       ostr << "</BODY></HTML>\n";
       theResponse.setContent(std::string(ostr.str()));
-      return true;
+      return HTTP::Status::ok;
     }
 
     T::GeometryId geometryId = gridData.mGeometryId;
@@ -1933,7 +2017,7 @@ bool Plugin::page_table(Spine::Reactor &theReactor,
       ostr << "DataServer request 'getGridCoordinates()' failed : " << result << "\n";
       ostr << "</BODY></HTML>\n";
       theResponse.setContent(std::string(ostr.str()));
-      return true;
+      return HTTP::Status::ok;
     }
     */
 
@@ -1950,7 +2034,7 @@ bool Plugin::page_table(Spine::Reactor &theReactor,
       ostr << "Cannot get the grid coordinates\n";
       ostr << "</BODY></HTML>\n";
       theResponse.setContent(std::string(ostr.str()));
-      return true;
+      return HTTP::Status::ok;
     }
 
     if (presentation == "Table(sample)")
@@ -2025,7 +2109,7 @@ bool Plugin::page_table(Spine::Reactor &theReactor,
 
     theResponse.setContent(std::string(ostr.str()));
 
-    return true;
+    return HTTP::Status::ok;
   }
   catch (...)
   {
@@ -2039,7 +2123,7 @@ bool Plugin::page_table(Spine::Reactor &theReactor,
 
 
 
-bool Plugin::page_coordinates(Spine::Reactor &theReactor,
+int Plugin::page_coordinates(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse)
 {
@@ -2065,7 +2149,7 @@ bool Plugin::page_coordinates(Spine::Reactor &theReactor,
       messageIndexStr = *v;
 
     if (fileIdStr.empty())
-      return true;
+      return HTTP::Status::ok;
 
     std::ostringstream ostr;
 
@@ -2077,7 +2161,7 @@ bool Plugin::page_coordinates(Spine::Reactor &theReactor,
       ostr << "DataServer request 'getGridCoordinates()' failed : " << result << "\n";
       ostr << "</BODY></HTML>\n";
       theResponse.setContent(std::string(ostr.str()));
-      return true;
+      return HTTP::Status::ok;
     }
 
 
@@ -2138,7 +2222,7 @@ bool Plugin::page_coordinates(Spine::Reactor &theReactor,
 
     theResponse.setContent(std::string(ostr.str()));
 
-    return true;
+    return HTTP::Status::ok;
   }
   catch (...)
   {
@@ -2152,7 +2236,7 @@ bool Plugin::page_coordinates(Spine::Reactor &theReactor,
 
 
 
-bool Plugin::page_value(Spine::Reactor &theReactor,
+int Plugin::page_value(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse)
 {
@@ -2183,21 +2267,21 @@ bool Plugin::page_value(Spine::Reactor &theReactor,
       yPos = toDouble(v->c_str());
 
     if (fileId == 0)
-      return true;
+      return HTTP::Status::ok;
 
 
     T::ContentInfo contentInfo;
     if (contentServer->getContentInfo(0,fileId,messageIndex,contentInfo) != 0)
-      return true;
+      return HTTP::Status::ok;
 
     if (contentInfo.mGeometryId == 0)
-      return true;
+      return HTTP::Status::ok;
 
     uint cols = 0;
     uint rows = 0;
 
     if (!Identification::gridDef.getGridDimensionsByGeometryId(contentInfo.mGeometryId,cols,rows))
-      return true;
+      return HTTP::Status::ok;
 
     uint height = rows;
     uint width = cols;
@@ -2209,7 +2293,7 @@ bool Plugin::page_value(Spine::Reactor &theReactor,
     bool reverseYDirection = false;
 
     if (!Identification::gridDef.getGridDirectionsByGeometryId(contentInfo.mGeometryId,reverseXDirection,reverseYDirection))
-      return true;
+      return HTTP::Status::ok;
 /*
     T::Coordinate_vec coordinates;
     coordinates = Identification::gridDef.getGridLatLonCoordinatesByGeometryId(contentInfo.mGeometryId);
@@ -2238,7 +2322,7 @@ bool Plugin::page_value(Spine::Reactor &theReactor,
     else
       theResponse.setContent(std::string("Not available"));
 
-    return true;
+    return HTTP::Status::ok;
   }
   catch (...)
   {
@@ -2252,7 +2336,7 @@ bool Plugin::page_value(Spine::Reactor &theReactor,
 
 
 
-bool Plugin::page_timeseries(Spine::Reactor &theReactor,
+int Plugin::page_timeseries(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse)
 {
@@ -2288,21 +2372,21 @@ bool Plugin::page_timeseries(Spine::Reactor &theReactor,
       yPos = toDouble(v->c_str());
 
     if (fileId == 0)
-      return true;
+      return HTTP::Status::ok;
 
 
     T::ContentInfo contentInfo;
     if (contentServer->getContentInfo(0,fileId,messageIndex,contentInfo) != 0)
-      return true;
+      return HTTP::Status::ok;
 
     if (contentInfo.mGeometryId == 0)
-      return true;
+      return HTTP::Status::ok;
 
     uint cols = 0;
     uint rows = 0;
 
     if (!Identification::gridDef.getGridDimensionsByGeometryId(contentInfo.mGeometryId,cols,rows))
-      return true;
+      return HTTP::Status::ok;
 
     uint height = rows;
     uint width = cols;
@@ -2388,7 +2472,7 @@ bool Plugin::page_timeseries(Spine::Reactor &theReactor,
         theResponse.setHeader("Content-Type","image/jpg");
         theResponse.setContent(sContent);
       }
-      return true;
+      return HTTP::Status::ok;
     }
     else
     {
@@ -2397,10 +2481,10 @@ bool Plugin::page_timeseries(Spine::Reactor &theReactor,
       ostr << "Image does not exist!\n";
       ostr << "</BODY></HTML>\n";
       theResponse.setContent(std::string(ostr.str()));
-      return true;
+      return HTTP::Status::ok;
     }
 
-    return true;
+    return HTTP::Status::ok;
   }
   catch (...)
   {
@@ -2469,7 +2553,7 @@ void Plugin::loadImage(const char *fname,Spine::HTTP::Response &theResponse)
 
 
 
-bool Plugin::page_image(Spine::Reactor &theReactor,
+int Plugin::page_image(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse)
 {
@@ -2560,6 +2644,15 @@ bool Plugin::page_image(Spine::Reactor &theReactor,
       blurStr + ":" + coordinateLinesStr + ":" + landBorderStr + ":" + projectionIdStr + ":" +
       landMaskStr + ":" + seaMaskStr + ":" + colorMapFileName + ":" + colorMapModificationTime;
 
+    std::size_t seed = 0;
+    boost::hash_combine(seed, hash);
+    std::string seedStr = std::to_string(seed);
+    theResponse.setHeader("ETag",seedStr);
+
+    auto etag = theRequest.getHeader("If-None-Match");
+    if (etag  && *etag == seedStr)
+      return HTTP::Status::not_modified;
+
     bool found = false;
     bool ind = true;
 
@@ -2573,7 +2666,7 @@ bool Plugin::page_image(Spine::Reactor &theReactor,
         // ### The requested image has been generated earlier. We can use it.
 
         loadImage(it->second.c_str(),theResponse);
-        return true;
+        return HTTP::Status::ok;
       }
 
       if (!found)
@@ -2625,7 +2718,7 @@ bool Plugin::page_image(Spine::Reactor &theReactor,
       itsImages.insert(std::pair<std::string,std::string>(hash,fname));
     }
 
-    return true;
+    return HTTP::Status::ok;
   }
   catch (...)
   {
@@ -2639,7 +2732,7 @@ bool Plugin::page_image(Spine::Reactor &theReactor,
 
 
 
-bool Plugin::page_isolines(Spine::Reactor &theReactor,
+int Plugin::page_isolines(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse)
 {
@@ -2704,15 +2797,21 @@ bool Plugin::page_isolines(Spine::Reactor &theReactor,
     if (v)
       seaMaskStr = *v;
 
-
-
     if (projectionIdStr.empty())
       projectionIdStr = geometryIdStr;
-
 
     std::string hash = "Isolines:" + fileIdStr + ":" + messageIndexStr + ":" +
       coordinateLinesStr + ":" + landBorderStr + ":" + projectionIdStr + ":" +
       landMaskStr + ":" + seaMaskStr + ":" + isolinesStr + ":" + isolineValuesStr;
+
+    std::size_t seed = 0;
+    boost::hash_combine(seed, hash);
+    std::string seedStr = std::to_string(seed);
+    theResponse.setHeader("ETag",seedStr);
+
+    auto etag = theRequest.getHeader("If-None-Match");
+    if (etag  && *etag == seedStr)
+      return HTTP::Status::not_modified;
 
     bool found = false;
     bool ind = true;
@@ -2723,7 +2822,7 @@ bool Plugin::page_isolines(Spine::Reactor &theReactor,
       if (it != itsImages.end())
       {
         loadImage(it->second.c_str(),theResponse);
-        return true;
+        return HTTP::Status::ok;
       }
 
       if (!found)
@@ -2766,7 +2865,7 @@ bool Plugin::page_isolines(Spine::Reactor &theReactor,
       itsImages.insert(std::pair<std::string,std::string>(hash,fname));
     }
 
-    return true;
+    return HTTP::Status::ok;
   }
   catch (...)
   {
@@ -2780,7 +2879,7 @@ bool Plugin::page_isolines(Spine::Reactor &theReactor,
 
 
 
-bool Plugin::page_symbols(Spine::Reactor &theReactor,
+int Plugin::page_symbols(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse)
 {
@@ -2893,6 +2992,14 @@ bool Plugin::page_symbols(Spine::Reactor &theReactor,
       landMaskStr + ":" + seaMaskStr + ":" + locationFileName + ":" + locationFileModificationTime + ":" +
       symbolMapFileName + ":" + symbolMapModificationTime;
 
+    std::size_t seed = 0;
+    boost::hash_combine(seed, hash);
+    std::string seedStr = std::to_string(seed);
+    theResponse.setHeader("ETag",seedStr);
+
+    auto etag = theRequest.getHeader("If-None-Match");
+    if (etag  && *etag == seedStr)
+      return HTTP::Status::not_modified;
 
     bool found = false;
     bool ind = true;
@@ -2903,7 +3010,7 @@ bool Plugin::page_symbols(Spine::Reactor &theReactor,
       if (it != itsImages.end())
       {
         loadImage(it->second.c_str(),theResponse);
-        return true;
+        return HTTP::Status::ok;
       }
 
       if (!found)
@@ -2945,7 +3052,7 @@ bool Plugin::page_symbols(Spine::Reactor &theReactor,
       itsImages.insert(std::pair<std::string,std::string>(hash,fname));
     }
 
-    return true;
+    return HTTP::Status::ok;
   }
   catch (...)
   {
@@ -2959,7 +3066,7 @@ bool Plugin::page_symbols(Spine::Reactor &theReactor,
 
 
 
-bool Plugin::page_map(Spine::Reactor &theReactor,
+int Plugin::page_map(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse)
 {
@@ -3036,6 +3143,15 @@ bool Plugin::page_map(Spine::Reactor &theReactor,
       blurStr + ":" + coordinateLinesStr + ":" + landBorderStr + ":" +
       landMaskStr + ":" + seaMaskStr + ":" + colorMapFileName + ":" + colorMapModificationTime;
 
+    std::size_t seed = 0;
+    boost::hash_combine(seed, hash);
+    std::string seedStr = std::to_string(seed);
+    theResponse.setHeader("ETag",seedStr);
+
+    auto etag = theRequest.getHeader("If-None-Match");
+    if (etag  && *etag == seedStr)
+      return HTTP::Status::not_modified;
+
     bool found = false;
     bool ind = true;
 
@@ -3045,7 +3161,7 @@ bool Plugin::page_map(Spine::Reactor &theReactor,
       if (it != itsImages.end())
       {
         loadImage(it->second.c_str(),theResponse);
-        return true;
+        return HTTP::Status::ok;
       }
 
       if (!found)
@@ -3083,7 +3199,7 @@ bool Plugin::page_map(Spine::Reactor &theReactor,
       ostr << "DataServer request 'getGridValuesByArea()' failed : " << result << "\n";
       ostr << "</BODY></HTML>\n";
       theResponse.setContent(std::string(ostr.str()));
-      return true;
+      return HTTP::Status::ok;
     }
 
     uint landBorder = getColorValue(landBorderStr);
@@ -3099,7 +3215,7 @@ bool Plugin::page_map(Spine::Reactor &theReactor,
       itsImages.insert(std::pair<std::string,std::string>(hash,fname));
     }
 
-    return true;
+    return HTTP::Status::ok;
   }
   catch (...)
   {
@@ -3383,7 +3499,7 @@ void Plugin::getGenerations(T::GenerationInfoList& generationInfoList,std::set<s
 
 
 
-bool Plugin::page_main(Spine::Reactor &theReactor,
+int Plugin::page_main(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse)
 {
@@ -3419,6 +3535,8 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
     std::string locations = "None";
     std::string producerName = "";
     std::string fmiKey = "";
+    std::string daliIdStr = "";
+    uint daliId = 0;
 
     boost::optional<std::string> v;
     v = theRequest.getParameter("producerId");
@@ -3521,12 +3639,22 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
     if (v)
       symbolMap = *v;
 
+    v = theRequest.getParameter("daliId");
+    if (v)
+    {
+      daliIdStr = *v;
+      daliId = toUInt32(daliIdStr);
+    }
 
     if (getFileModificationTime(itsColorFile.c_str()) != itsColors_lastModified)
     {
       loadColorFile();
     }
 
+    if (getFileModificationTime(itsDaliFile.c_str()) != itsDaliFile_lastModified)
+    {
+      loadDaliFile();
+    }
 
     std::ostringstream output;
     std::ostringstream ostr1;
@@ -3612,7 +3740,40 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
     output << "</SCRIPT>\n";
 
 
+
+    string_vec daliNames;
+    std::map<uint,std::string> daliUrls;
+    std::vector<uint> daliIds;
+
+    for (auto it = itsDaliProducts.begin(); it != itsDaliProducts.end(); ++it)
+    {
+      if ((*it)[0] ==  parameterIdStr)
+      {
+        if ((*it)[1] == parameterLevelIdStr  ||  (*it)[1] == "")
+        {
+          if ((*it)[2] == parameterLevelStr  ||  (*it)[2] == "")
+          {
+            uint id = toUInt32((*it)[3]);
+            if (daliId == 0)
+              daliId = id;
+            daliIds.push_back(id);
+            daliNames.push_back((*it)[4]);
+            daliUrls.insert(std::pair<uint,std::string>(id,(*it)[5]));
+          }
+        }
+      }
+    }
+
+    std::string daliUrl;
+
+    if (presentation == "Dali"  &&  daliIds.size() == 0)
+    {
+      presentation = "Image";
+      daliId = 0;
+    }
+
     ostr1 << "<TABLE width=\"100%\" height=\"100%\">\n";
+
 
     // ### Producers:
 
@@ -3664,6 +3825,7 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
 
     std::set<std::string> generations;
     getGenerations(generationInfoList,generations);
+    std::string originTime;
 
 
     ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Generation:</TD></TR>\n";
@@ -3689,7 +3851,10 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
           }
 
           if (gid == g->mGenerationId)
+          {
+            originTime = g->mAnalysisTime;
             ostr1 << "<OPTION selected value=\"" <<  g->mGenerationId << "\">" <<  g->mName << "</OPTION>\n";
+          }
           else
             ostr1 << "<OPTION value=\"" <<  g->mGenerationId << "\">" <<  g->mName << "</OPTION>\n";
         }
@@ -4047,8 +4212,19 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
       std::string u;
       if (presentation == "Image" ||  presentation == "Map"  ||  presentation == "Symbols"  ||  presentation == "Isolines")
       {
-        ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&geometryId=" << geometryIdStr << "&projectionId=" << projectionIdStr << "&locations=" << locations << "&symbolMap=" << symbolMap << "')\"";
-        u = "/grid-gui?page=" + presentation + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&locations=" + locations + "&symbolMap=" + symbolMap;
+        ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&geometryId=" << geometryIdStr << "&projectionId=" << projectionIdStr << "&locations=" << locations << "&symbolMap=" << symbolMap << "&daliId=" << daliId << "')\"";
+        u = "/grid-gui?page=" + presentation + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&locations=" + locations + "&symbolMap=" + symbolMap  + "&daliId=" + std::to_string(daliId);
+      }
+
+      if (presentation == "Dali"  &&  daliId > 0)
+      {
+        auto dUrl = daliUrls.find(daliId);
+        if (dUrl != daliUrls.end())
+        {
+          u = dUrl->second + "&producer="+producerName+"&origintime=" + originTime + "&geometryId=" + std::to_string(geometryId)+ "&levelId=" + std::to_string(levelId)+ "&level=" + std::to_string(level)   + "&forecastType=" + std::to_string(forecastType) + "&forecastNumber=" + std::to_string(forecastNumber)+"&type=png";
+          u = stringReplaceAll(u,"$(PARAMETER)",parameterIdStr);
+          daliUrl = u;
+        }
       }
 
       ostr1 << " >\n";
@@ -4087,7 +4263,11 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
             {
               if (forecastNumber == g->mForecastNumber)
               {
-                std::string url = "&start=" + g->mForecastTime + "&fileId=" + std::to_string(g->mFileId) + "&messageIndex=" + std::to_string(g->mMessageIndex) + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap;
+                std::string url = "&start=" + g->mForecastTime + "&fileId=" + std::to_string(g->mFileId) + "&messageIndex=" + std::to_string(g->mMessageIndex) + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&daliId=" + std::to_string(daliId);
+                std::string uu = url;
+
+                if (presentation == "Dali")
+                  uu = "&time=" + g->mForecastTime;
 
                 if (currentCont != nullptr  &&  nextCont == nullptr)
                   nextCont = g;
@@ -4095,15 +4275,20 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
                 if (startTime.empty())
                   startTime = g->mForecastTime;
 
+
+                std::string bg = "#E0E0E0";
+                if (startTime == g->mForecastTime)
+                  bg = "#0000FF";
+
                 if (tCount < 100  ||  (g->mForecastTime >= startTime  &&  cc < 100))
                 {
                   if (cc == 0)
-                    ostr3 << "<TD style=\"text-align:center; font-size:12;width:120;background:#F0F0F0;\" id=\"ftime\">" + startTime + "</TD>\n";
+                    ostr3 << "<TD style=\"text-align:center; font-size:12;width:120;background:#E0E0E0;\" id=\"ftime\">" + startTime + "</TD>\n";
 
                   if (u > " ")
-                    ostr3 << "<TD style=\"width:5; background:#E0E0E0;\" onmouseout=\"this.style='width:5;background:#E0E0E0;'\" onmouseover=\"this.style='width:5;height:30;background:#FF0000;'; setText('ftime','" + g->mForecastTime + "');setImage(document.getElementById('myimage'),'" + u + url + "');\" > </TD>\n";
+                    ostr3 << "<TD style=\"width:5; background:"+bg+";\" onmouseout=\"this.style='width:5;background:"+bg+";'\" onmouseover=\"this.style='width:5;height:30;background:#FF0000;'; setText('ftime','" + g->mForecastTime + "');setImage(document.getElementById('myimage'),'" + u + uu + "');\" > </TD>\n";
                   else
-                    ostr3 << "<TD style=\"width:5; background:#E0E0E0;\"> </TD>\n";
+                    ostr3 << "<TD style=\"width:5; background:"+bg+";\"> </TD>\n";
 
                   cc++;
                 }
@@ -4135,12 +4320,12 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
     ostr1 << "</TD>\n";
 
     if (prevCont != nullptr)
-      ostr1 << "<TD width=\"20\" > <button type=\"button\" onClick=\"getPage(this,parent,'/grid-gui?page=main&presentation=" + presentation + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + prevCont->mForecastTime + "&fileId=" + std::to_string(prevCont->mFileId) + "&messageIndex=" + std::to_string(prevCont->mMessageIndex) + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "');\">&lt;</button></TD>\n";
+      ostr1 << "<TD width=\"20\" > <button type=\"button\" onClick=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&producerId=" << producerIdStr << "&generationId=" << generationIdStr << "&geometryId=" << geometryIdStr << "&projectionId=" << projectionIdStr << "&parameterId=" << parameterIdStr << "&levelId=" << parameterLevelIdStr << "&level=" << parameterLevelStr << "&start=" << prevCont->mForecastTime << "&fileId=" << prevCont->mFileId << "&messageIndex=" << prevCont->mMessageIndex << "&forecastType=" << forecastTypeStr << "&forecastNumber=" << forecastNumberStr << "&hue=" << hueStr << "&saturation=" << saturationStr << "&blur=" << blurStr << "&coordinateLines=" << coordinateLinesStr << "&isolines=" << isolinesStr  << "&isolineValues=" << isolineValuesStr << "&landBorder=" << landBorderStr << "&landMask=" << landMaskStr << "&seaMask=" << seaMaskStr << "&colorMap=" << colorMap << "&locations=" << locations << "&symbolMap=" << symbolMap << "&daliId=" << daliId << "');\">&lt;</button></TD>\n";
     else
       ostr1 << "<TD width=\"20\"><button type=\"button\">&lt;</button></TD></TD>\n";
 
     if (nextCont != nullptr)
-      ostr1 << "<TD width=\"20\"><button type=\"button\" onClick=\"getPage(this,parent,'/grid-gui?page=main&presentation=" + presentation + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + nextCont->mForecastTime + "&fileId=" + std::to_string(nextCont->mFileId) + "&messageIndex=" + std::to_string(nextCont->mMessageIndex) + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "');\">&gt;</button></TD>\n";
+      ostr1 << "<TD width=\"20\"><button type=\"button\" onClick=\"getPage(this,parent,'/grid-gui?page=main&presentation=" + presentation + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + nextCont->mForecastTime + "&fileId=" + std::to_string(nextCont->mFileId) + "&messageIndex=" + std::to_string(nextCont->mMessageIndex) + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&daliId=" + std::to_string(daliId) + "');\">&gt;</button></TD>\n";
     else
       ostr1 << "<TD width=\"20\"><button type=\"button\">&gt;</button></TD></TD>\n";
 
@@ -4169,6 +4354,15 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
 
       a++;
     }
+
+    if (daliIds.size() > 0)
+    {
+      if (presentation == "Dali")
+        ostr1 << "<OPTION selected value=\"Dali\">Dali</OPTION>\n";
+      else
+        ostr1 << "<OPTION value=\"Dali\">Dali</OPTION>\n";
+    }
+
     ostr1 << "</SELECT>\n";
     ostr1 << "</TD></TR>\n";
 
@@ -4298,6 +4492,32 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
       ostr1 << "</TD></TR>\n";
 
     }
+
+    if (presentation == "Dali")
+    {
+      ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Products:</TD></TR>\n";
+      ostr1 << "<TR height=\"30\"><TD>\n";
+      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&symbolMap=" + symbolMap + "&daliId=' + this.options[this.selectedIndex].value)\"";
+      ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&daliId=')\"";
+      ostr1 << " >\n";
+
+      uint dlen = daliIds.size();
+      for (uint t=0; t<dlen; t++)
+      {
+        if (daliId == 0)
+          daliId = daliIds[t];
+
+        if (daliIds[t] == daliId)
+        {
+          ostr1 << "<OPTION selected value=\"" << daliIds[t] << "\">" <<  daliNames[t] << "</OPTION>\n";
+        }
+        else
+          ostr1 << "<OPTION value=\"" <<  daliIds[t] << "\">" <<  daliNames[t] << "</OPTION>\n";
+      }
+      ostr1 << "</SELECT>\n";
+      ostr1 << "</TD></TR>\n";
+    }
+
 
     if (presentation == "Symbols" ||  presentation == "Locations")
     {
@@ -4600,7 +4820,7 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
 
     ostr2 << "<TABLE width=\"100%\" height=\"100%\">\n";
 
-    if (itsAnimationEnabled  &&  (presentation == "Image" || presentation == "Map" || presentation == "Symbols" ||  presentation == "Isolines"))
+    if (itsAnimationEnabled  &&  (presentation == "Image" || presentation == "Map" || presentation == "Symbols" ||  presentation == "Isolines"  ||  presentation == "Dali"))
       ostr2 << "<TR><TD style=\"height:35; width:100%; vertical-align:middle; text-align:left; font-size:12;\">" << ostr3.str() << "</TD></TR>\n";
 
     if (presentation == "Image")
@@ -4650,14 +4870,15 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
       ostr2 << "<p>Your browser does not support iframes.</p>\n";
       ostr2 << "</IFRAME></TD></TR>";
     }
+    else
+    if (presentation == "Dali")
+    {
+      ostr2 << "<TR><TD><IMG id=\"myimage\" style=\"background:#000000; max-width:1800; height:100%; max-height:1000;\" src=\"" + daliUrl << "&time=" << startTime << "\" /></TD></TR>";
+    }
 
-
-    //Identification::FmiParameterDef pDef;
-    //if (Identification::gridDef.getFmiParameterDefByName(parameterIdStr,pDef))
     ostr2 << "<TR><TD style=\"height:25; vertical-align:middle; text-align:left; font-size:12;\">" << paramDescription << "</TD></TR>\n";
 
     ostr2 << "</TABLE>\n";
-
 
 
     output << "<TABLE width=\"100%\" height=\"100%\">\n";
@@ -4666,10 +4887,6 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
     output << "<TD  bgcolor=\"#C0C0C0\" width=\"180\">\n";
     output << ostr1.str();
     output << "</TD>\n";
-
-//    output << "<TD  bgcolor=\"#A0A0A0\" width=\"20\">\n";
-//    output << ostr3.str();
-//    output << "</TD>\n";
 
     output << "<TD>\n";
     output << ostr2.str();
@@ -4680,7 +4897,7 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
     output << "</BODY></HTML>\n";
 
     theResponse.setContent(std::string(output.str()));
-    return true;
+    return HTTP::Status::ok;
   }
   catch (...)
   {
@@ -4694,51 +4911,95 @@ bool Plugin::page_main(Spine::Reactor &theReactor,
 
 
 
-bool Plugin::request(Spine::Reactor &theReactor,
+int Plugin::request(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse)
 {
   try
   {
+    int result = HTTP::Status::ok;
+    int expires_seconds = 1;
+
     std::string page = "main";
     boost::optional<std::string> v = theRequest.getParameter("page");
     if (v)
       page = *v;
 
     if (strcasecmp(page.c_str(),"main") == 0)
-      return page_main(theReactor,theRequest,theResponse);
-
+    {
+      result = page_main(theReactor,theRequest,theResponse);
+    }
+    else
     if (strcasecmp(page.c_str(),"image") == 0)
-      return page_image(theReactor,theRequest,theResponse);
-
+    {
+      result = page_image(theReactor,theRequest,theResponse);
+      expires_seconds = 600;
+    }
+    else
     if (strcasecmp(page.c_str(),"symbols") == 0)
-      return page_symbols(theReactor,theRequest,theResponse);
-
+    {
+      result = page_symbols(theReactor,theRequest,theResponse);
+      expires_seconds = 600;
+    }
+    else
     if (strcasecmp(page.c_str(),"isolines") == 0)
-      return page_isolines(theReactor,theRequest,theResponse);
-
+    {
+      result = page_isolines(theReactor,theRequest,theResponse);
+      expires_seconds = 600;
+    }
+    else
     if (strcasecmp(page.c_str(),"map") == 0)
-      return page_map(theReactor,theRequest,theResponse);
-
+    {
+      result = page_map(theReactor,theRequest,theResponse);
+      expires_seconds = 600;
+    }
+    else
     if (strcasecmp(page.c_str(),"info") == 0)
-      return page_info(theReactor,theRequest,theResponse);
-
+    {
+      result = page_info(theReactor,theRequest,theResponse);
+    }
+    else
     if (strcasecmp(page.c_str(),"locations") == 0)
-      return page_locations(theReactor,theRequest,theResponse);
-
+    {
+      result = page_locations(theReactor,theRequest,theResponse);
+    }
+    else
     if (strcasecmp(page.c_str(),"table") == 0)
-      return page_table(theReactor,theRequest,theResponse);
-
+    {
+      result = page_table(theReactor,theRequest,theResponse);
+      expires_seconds = 600;
+    }
+    else
     if (strcasecmp(page.c_str(),"coordinates") == 0)
-      return page_coordinates(theReactor,theRequest,theResponse);
-
+    {
+      result = page_coordinates(theReactor,theRequest,theResponse);
+      expires_seconds = 600;
+    }
+    else
     if (strcasecmp(page.c_str(),"value") == 0)
-      return page_value(theReactor,theRequest,theResponse);
-
+    {
+      result = page_value(theReactor,theRequest,theResponse);
+    }
+    else
     if (strcasecmp(page.c_str(),"timeseries") == 0)
-      return page_timeseries(theReactor,theRequest,theResponse);
+    {
+      result = page_timeseries(theReactor,theRequest,theResponse);
+    }
 
-    return true;
+    boost::posix_time::ptime t_now = boost::posix_time::second_clock::universal_time();
+    boost::posix_time::ptime t_expires = t_now + boost::posix_time::seconds(expires_seconds);
+    boost::shared_ptr<Fmi::TimeFormatter> tformat(Fmi::TimeFormatter::create("http"));
+    std::string cachecontrol = "public, max-age=" + boost::lexical_cast<std::string>(expires_seconds);
+    std::string expiration = tformat->format(t_expires);
+    std::string modification = tformat->format(t_now);
+
+    theResponse.setHeader("Cache-Control", cachecontrol.c_str());
+    theResponse.setHeader("Expires", expiration.c_str());
+
+    if (result == HTTP::Status::ok)
+      theResponse.setHeader("Last-Modified", modification.c_str());
+
+    return result;
   }
   catch (...)
   {
@@ -4770,34 +5031,14 @@ void Plugin::requestHandler(Spine::Reactor &theReactor,
       //for (auto it = headers.begin(); it != headers.end(); ++it)
       //  std::cout << it->first << " = " << it->second << "\n";
 
-      // We return JSON, hence we should enable CORS
       theResponse.setHeader("Access-Control-Allow-Origin", "*");
 
-      const int expires_seconds = 1;
-      boost::posix_time::ptime t_now = boost::posix_time::second_clock::universal_time();
-      boost::posix_time::ptime t_expires = t_now + boost::posix_time::seconds(expires_seconds);
-      boost::shared_ptr<Fmi::TimeFormatter> tformat(Fmi::TimeFormatter::create("http"));
-      std::string cachecontrol = "public, max-age=" + boost::lexical_cast<std::string>(expires_seconds);
-      std::string expiration = tformat->format(t_expires);
-      std::string modification = tformat->format(t_now);
+      //std::cout << theRequest.toString() << "\n";
 
+      int status = request(theReactor, theRequest, theResponse);
+      theResponse.setStatus(status);
 
-      bool response = request(theReactor, theRequest, theResponse);
-
-      if (response)
-      {
-        theResponse.setStatus(HTTP::Status::ok);
-      }
-      else
-      {
-        theResponse.setStatus(HTTP::Status::not_implemented);
-      }
-
-      // Adding response headers
-
-      theResponse.setHeader("Cache-Control", cachecontrol.c_str());
-      theResponse.setHeader("Expires", expiration.c_str());
-      theResponse.setHeader("Last-Modified", modification.c_str());
+      // std::cout << theResponse.headersToString() << "\n";
     }
     catch (...)
     {

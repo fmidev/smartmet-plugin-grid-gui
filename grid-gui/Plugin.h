@@ -52,51 +52,51 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
 
     bool isLand(double lon,double lat);
 
-    bool request(Spine::Reactor& theReactor,
+    int request(Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
                       Spine::HTTP::Response& theResponse);
 
-    bool page_info(Spine::Reactor& theReactor,
+    int page_info(Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
                       Spine::HTTP::Response& theResponse);
 
-    bool page_value(Spine::Reactor& theReactor,
+    int page_value(Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
                       Spine::HTTP::Response& theResponse);
 
-    bool page_timeseries(Spine::Reactor& theReactor,
+    int page_timeseries(Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
                       Spine::HTTP::Response& theResponse);
 
-    bool page_table(Spine::Reactor& theReactor,
+    int page_table(Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
                       Spine::HTTP::Response& theResponse);
 
-    bool page_coordinates(Spine::Reactor& theReactor,
+    int page_coordinates(Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
                       Spine::HTTP::Response& theResponse);
 
-    bool page_image(Spine::Reactor& theReactor,
+    int page_image(Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
                       Spine::HTTP::Response& theResponse);
 
-    bool page_isolines(Spine::Reactor& theReactor,
+    int page_isolines(Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
                       Spine::HTTP::Response& theResponse);
 
-    bool page_locations(Spine::Reactor& theReactor,
+    int page_locations(Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
                       Spine::HTTP::Response& theResponse);
 
-    bool page_symbols(Spine::Reactor& theReactor,
+    int page_symbols(Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
                       Spine::HTTP::Response& theResponse);
 
-    bool page_map(Spine::Reactor& theReactor,
+    int page_map(Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
                       Spine::HTTP::Response& theResponse);
 
-    bool page_main(Spine::Reactor& theReactor,
+    int page_main(Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
                       Spine::HTTP::Response& theResponse);
 
@@ -172,6 +172,7 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
     uint getColorValue(std::string& colorName);
     T::ParamValue_vec getIsolineValues(std::string& isolineValues);
     void loadColorFile();
+    void loadDaliFile();
     void loadIsolineFile();
     void loadImage(const char *fname,Spine::HTTP::Response &theResponse);
 
@@ -181,6 +182,7 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
     Spine::Reactor*           itsReactor;
     ConfigurationFile         itsConfigurationFile;
     std::string               itsGridConfigFile;
+    std::string               itsDaliFile;
     std::string               itsLandSeaMaskFile;
     CImage                    itsLandSeaMask;
     string_vec                itsColorMapFileNames;
@@ -193,6 +195,7 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
     std::string               itsColorFile;
     Colors                    itsColors;
     time_t                    itsColors_lastModified;
+    time_t                    itsDaliFile_lastModified;
     std::string               itsImageCache_dir;
     uint                      itsImageCache_maxImages;
     uint                      itsImageCache_minImages;
@@ -201,7 +204,8 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
     uint                      itsImageCounter;
 
     std::map<std::string,T::ParamValue_vec> itsIsolines;
-    std::map<std::string,std::string> itsImages;
+    std::map<std::string,std::string>       itsImages;
+    std::vector<string_vec>                 itsDaliProducts;
 };  // class Plugin
 
 }  // namespace GridGui
