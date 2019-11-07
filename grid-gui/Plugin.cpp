@@ -446,7 +446,7 @@ void Plugin::loadIsolineFile()
 
             for (uint t=1; t<c; t++)
             {
-              float val = atof(field[t]);
+              float val = toDouble(field[t]);
               values.push_back(val);
             }
 
@@ -866,7 +866,10 @@ void Plugin::saveImage(
 
     T::Coordinate_vec coordinates;
     if (geomId != 0)
+    {
       coordinates = Identification::gridDef.getGridLatLonCoordinatesByGeometryId(geomId);
+
+    }
 /*
     if (coordinates.size() == 0  &&  gridData.mGeometryId != 0)
     {
@@ -874,6 +877,12 @@ void Plugin::saveImage(
       geometryId = gridData.mGeometryId;
     }
 */
+/*
+    T::GridCoordinates coordinatesx;
+    int result = dataServer->getGridCoordinates(0,fileId,messageIndex,T::CoordinateTypeValue::LATLON_COORDINATES,coordinatesx);
+    coordinates = coordinatesx.mCoordinateList;
+*/
+
     T::Coordinate_vec lineCoordinates;
     if (coordinateLines != 0xFFFFFFFF)
     {
