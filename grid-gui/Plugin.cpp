@@ -919,11 +919,14 @@ void Plugin::saveImage(
         T::AttributeList attributeList;
         attributeList.addAttribute("grid.geometryId",std::to_string(geomId));
         attributeList.addAttribute("grid.areaInterpolationMethod",std::to_string(interpolationMethod));
-        int result = dataServer->getGridValueVectorByGeometry(0,fileId,messageIndex,attributeList,values);
-        if (result != 0)
-          throw Spine::Exception(BCP,"Data fetching failed!");
+        if (fileId > 0)
+        {
+         int result = dataServer->getGridValueVectorByGeometry(0,fileId,messageIndex,attributeList,values);
+         if (result != 0)
+           throw Spine::Exception(BCP,"Data fetching failed!");
 
-        saveImage(imageFile,cols,rows,values,coordinates,lineCoordinates,hue,saturation,blur,coordinateLines,isolines,isolineValues,landBorder,landMask,seaMask,colorMapName,geomId,symbolMap,locations,showSymbols);
+         saveImage(imageFile,cols,rows,values,coordinates,lineCoordinates,hue,saturation,blur,coordinateLines,isolines,isolineValues,landBorder,landMask,seaMask,colorMapName,geomId,symbolMap,locations,showSymbols);
+        }
       }
     }
   }
