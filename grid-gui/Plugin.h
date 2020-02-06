@@ -60,6 +60,14 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
                       const Spine::HTTP::Request& theRequest,
                       Spine::HTTP::Response& theResponse);
 
+    int page_message(Spine::Reactor& theReactor,
+                      const Spine::HTTP::Request& theRequest,
+                      Spine::HTTP::Response& theResponse);
+
+    int page_download(Spine::Reactor& theReactor,
+                      const Spine::HTTP::Request& theRequest,
+                      Spine::HTTP::Response& theResponse);
+
     int page_value(Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
                       Spine::HTTP::Response& theResponse);

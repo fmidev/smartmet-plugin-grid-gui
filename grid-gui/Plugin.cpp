@@ -1888,6 +1888,225 @@ int Plugin::page_info(Spine::Reactor &theReactor,
 
 
 
+int Plugin::page_message(Spine::Reactor &theReactor,
+                            const HTTP::Request &theRequest,
+                            HTTP::Response &theResponse)
+{
+  try
+  {
+    auto dataServer = itsGridEngine->getDataServer_sptr();
+
+    std::string fileIdStr = "";
+    std::string messageIndexStr = "0";
+
+    boost::optional<std::string> v = theRequest.getParameter("fileId");
+    if (v)
+      fileIdStr = *v;
+
+    v = theRequest.getParameter("messageIndex");
+    if (v)
+      messageIndexStr = *v;
+
+    if (fileIdStr.empty())
+      return HTTP::Status::ok;
+
+
+    std::ostringstream ostr;
+
+    std::vector<uchar> messageBytes;
+    std::vector<uint> messageSections;
+    int result = dataServer->getGridMessageBytes(0,toInt64(fileIdStr.c_str()),toInt64(messageIndexStr.c_str()),messageBytes,messageSections);
+    if (result != 0)
+    {
+      ostr << "<HTML><BODY>\n";
+      ostr << "ERROR: getGridMessageBytes : " << result << "\n";
+      ostr << "</BODY></HTML>\n";
+      theResponse.setContent(std::string(ostr.str()));
+      return HTTP::Status::ok;
+    }
+
+    uint size = messageBytes.size();
+    uint ssize = messageSections.size();
+
+    uint rows = size / 16;
+    if ((size % 16) != 0)
+      rows++;
+
+    if (rows > 1000)
+      rows = 1000;
+
+    char tmp[2000];
+    char tmp2[2000];
+    char *p = tmp;
+
+    ostr << "<HTML><BODY>\n";
+    ostr << "<TABLE border=\"1\" style=\"font-family:Arial; font-size:14; color:#000000; background:#FFFFFF;\">\n";
+    ostr << "<TR bgColor=\"#A0A0A0\"><TD width=\"50\">Address</TD>";
+
+
+    for (uint c=0; c<16; c++)
+      p += sprintf(p,"<TD width=\"20\" align=\"center\">%02X</TD>",c);
+
+    p += sprintf(p,"<TD width=\"20\"></TD>");
+
+    for (uint c=0; c<16; c++)
+      p += sprintf(p,"<TD width=\"20\" align=\"center\">%02X</TD>",c);
+
+    ostr << tmp;
+    ostr << "</TR>";
+
+    std::string color;
+
+    uint cnt = 0;
+    uint scnt = 0;
+    for (uint r=0; r<rows; r++)
+    {
+      uint a = r*16;
+      char *p = tmp;
+      char *p2 = tmp2;
+      p2 += sprintf(p2,"<TD bgColor=\"#C0C0C0\"></TD>");
+
+      p += sprintf(p,"<TR><TD bgColor=\"#C0C0C0\" width=\"50\">%08X</TD>",a);
+      for (uint c=0; c<16; c++)
+      {
+        if (scnt < ssize  &&  cnt == messageSections[scnt])
+        {
+          if ((scnt % 2) == 1)
+            color = " bgColor=\"E0E0E0\"";
+          else
+            color = "";
+
+          scnt++;
+        }
+
+        if (cnt < size)
+        {
+          p += sprintf(p,"<TD width=\"20\"%s>%02X</TD>",color.c_str(),messageBytes[cnt]);
+
+          if (isalnum(messageBytes[cnt]))
+            p2 += sprintf(p2,"<TD%s>%c</TD>",color.c_str(),messageBytes[cnt]);
+          else
+            p2 += sprintf(p2,"<TD%s>.</TD>",color.c_str());
+        }
+        else
+        {
+          p += sprintf(p,"<TD width=\"20\"%s></TD>",color.c_str());
+          p2 += sprintf(p2,"<TD%s>.</TD>",color.c_str());
+        }
+
+        cnt++;
+      }
+      p += sprintf(p,"%s</TR>\n",tmp2);
+      ostr << tmp;
+    }
+
+    ostr << "</TABLE>\n";
+
+    ostr << "</BODY></HTML>\n";
+
+    theResponse.setContent(std::string(ostr.str()));
+    return HTTP::Status::ok;
+  }
+  catch (...)
+  {
+    SmartMet::Spine::Exception exception(BCP, "Operation failed!", nullptr);
+    exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
+    throw exception;
+  }
+}
+
+
+
+
+
+int Plugin::page_download(Spine::Reactor &theReactor,
+                            const HTTP::Request &theRequest,
+                            HTTP::Response &theResponse)
+{
+  try
+  {
+    auto dataServer = itsGridEngine->getDataServer_sptr();
+
+    std::string fileIdStr = "";
+    std::string messageIndexStr = "0";
+
+    boost::optional<std::string> v = theRequest.getParameter("fileId");
+    if (v)
+      fileIdStr = *v;
+
+    v = theRequest.getParameter("messageIndex");
+    if (v)
+      messageIndexStr = *v;
+
+    if (fileIdStr.empty())
+      return HTTP::Status::ok;
+
+
+    std::ostringstream ostr;
+
+    std::vector<uchar> messageBytes;
+    std::vector<uint> messageSections;
+    int result = dataServer->getGridMessageBytes(0,toInt64(fileIdStr.c_str()),toInt64(messageIndexStr.c_str()),messageBytes,messageSections);
+    if (result != 0)
+    {
+      ostr << "<HTML><BODY>\n";
+      ostr << "ERROR: getGridMessageBytes : " << result << "\n";
+      ostr << "</BODY></HTML>\n";
+      theResponse.setContent(std::string(ostr.str()));
+      return HTTP::Status::ok;
+    }
+
+    uint sz = messageBytes.size();
+    if (sz > 0)
+    {
+      std::vector<char> *content = new std::vector<char>();
+      content->reserve(sz);
+
+      boost::shared_ptr<std::vector<char>> sContent;
+      sContent.reset(content);
+
+      for (uint t=0; t<sz; t++)
+      {
+        uchar ch = messageBytes[t];
+        char *c = (char*)&ch;
+
+        content->push_back(*c);
+      }
+
+      content->push_back('7');
+      content->push_back('7');
+      content->push_back('7');
+      content->push_back('7');
+
+      //theResponse.setHeader("Content-Type","image/jpg");
+
+      char val[1000];
+      sprintf(val,"attachment; filename=message_%s_%s.grib",fileIdStr.c_str(),messageIndexStr.c_str());
+      theResponse.setHeader("Content-Disposition",val);
+      theResponse.setContent(sContent);
+    }
+    else
+    {
+      std::ostringstream ostr;
+      ostr << "<HTML><BODY>\n";
+      ostr << "Message does not exist!\n";
+      ostr << "</BODY></HTML>\n";
+      theResponse.setContent(std::string(ostr.str()));
+    }
+    return HTTP::Status::ok;
+  }
+  catch (...)
+  {
+    SmartMet::Spine::Exception exception(BCP, "Operation failed!", nullptr);
+    exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
+    throw exception;
+  }
+}
+
+
+
+
+
 int Plugin::page_locations(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse)
@@ -4349,7 +4568,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
     // ### Presentation:
 
-    const char *modes[] = {"Image","Map","Symbols","Isolines","Locations","Info","Table(sample)","Coordinates(sample)",nullptr};
+    const char *modes[] = {"Image","Map","Symbols","Isolines","Locations","Info","Table(sample)","Coordinates(sample)","Message",nullptr};
 
     ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Presentation:</TD></TR>\n";
     ostr1 << "<TR height=\"30\"><TD>\n";
@@ -4826,11 +5045,14 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
       ostr1 << "<TR height=\"15\" style=\"font-size:12; width:250px;\"><TD>Value:</TD></TR>\n";
       ostr1 << "<TR height=\"30\"><TD><INPUT type=\"text\" id=\"gridValue\"></TD></TR>\n";
+
     }
 
     ostr1 << "<TR height=\"50%\"><TD></TD></TR>\n";
-    ostr1 << "</TABLE>\n";
 
+    // ## Download
+    ostr1 << "<TR height=\"30\" style=\"font-size:16; font-weight:bold; width:250px; color:#000000; background:#D0D0D0; vertical-align:middle; text-align:center; \"><TD><a href=\"grid-gui?page=download&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "\">Download</a></TD></TR>\n";
+    ostr1 << "</TABLE>\n";
 
     ostr2 << "<TABLE width=\"100%\" height=\"100%\">\n";
 
@@ -4874,6 +5096,13 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     if (presentation == "Info")
     {
       ostr2 << "<TR><TD><IFRAME width=\"100%\" height=\"100%\" src=\"grid-gui?page=info&presentation=" + presentation + "&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "\">";
+      ostr2 << "<p>Your browser does not support iframes.</p>\n";
+      ostr2 << "</IFRAME></TD></TR>";
+    }
+    else
+    if (presentation == "Message")
+    {
+      ostr2 << "<TR><TD><IFRAME width=\"100%\" height=\"100%\" src=\"grid-gui?page=message&presentation=" + presentation + "&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "\">";
       ostr2 << "<p>Your browser does not support iframes.</p>\n";
       ostr2 << "</IFRAME></TD></TR>";
     }
@@ -4971,6 +5200,16 @@ int Plugin::request(Spine::Reactor &theReactor,
     if (strcasecmp(page.c_str(),"info") == 0)
     {
       result = page_info(theReactor,theRequest,theResponse);
+    }
+    else
+    if (strcasecmp(page.c_str(),"message") == 0)
+    {
+      result = page_message(theReactor,theRequest,theResponse);
+    }
+    else
+    if (strcasecmp(page.c_str(),"download") == 0)
+    {
+      result = page_download(theReactor,theRequest,theResponse);
     }
     else
     if (strcasecmp(page.c_str(),"locations") == 0)
