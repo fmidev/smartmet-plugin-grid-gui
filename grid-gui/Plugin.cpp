@@ -2240,7 +2240,7 @@ int Plugin::page_table(Spine::Reactor &theReactor,
       geometryId = toInt64(geometryIdStr.c_str());
 
 
-    T::Coordinate_vec coordinates = Identification::gridDef.getGridCoordinatesByGeometryId(geometryId);
+    T::Coordinate_vec coordinates = Identification::gridDef.getGridOriginalCoordinatesByGeometryId(geometryId);
     /*
     T::GridCoordinates coordinates;
     result = dataServer->getGridCoordinates(0,toInt64(fileIdStr.c_str()),toInt64(messageIndexStr.c_str()),T::CoordinateTypeValue::ORIGINAL_COORDINATES,coordinates);
