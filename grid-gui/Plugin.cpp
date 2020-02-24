@@ -4050,7 +4050,10 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     // ### Generations:
 
     T::GenerationInfoList generationInfoList;
-    contentServer->getGenerationInfoListByProducerId(0,pid,generationInfoList);
+    T::GenerationInfoList generationInfoList2;
+    contentServer->getGenerationInfoListByProducerId(0,pid,generationInfoList2);
+    generationInfoList2.getGenerationInfoListByProducerIdAndStatus(pid,generationInfoList,T::GenerationInfo::Status::Ready);
+
     uint gid = toInt64(generationIdStr.c_str());
 
     if (generationInfoList.getGenerationInfoById(gid) == nullptr)
