@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-plugin-%{DIRNAME}
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
-Version: 20.2.19
+Version: 20.2.25
 Release: 1%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
@@ -16,15 +16,15 @@ BuildRequires: make
 BuildRequires: boost-devel
 BuildRequires: libconfig-devel
 BuildRequires: smartmet-library-spine-devel
-BuildRequires: smartmet-library-grid-files-devel >= 20.2.19
-BuildRequires: smartmet-library-grid-content-devel >= 20.2.19
-BuildRequires: smartmet-engine-grid-devel >= 20.2.19
+BuildRequires: smartmet-library-grid-files-devel >= 20.2.25
+BuildRequires: smartmet-library-grid-content-devel >= 20.2.25
+BuildRequires: smartmet-engine-grid-devel >= 20.2.25
 BuildRequires: gdal-devel
 Requires: libconfig
-Requires: smartmet-library-macgyver >= 19.9.26
-Requires: smartmet-library-spine >= 19.11.20
-Requires: smartmet-server >= 19.10.1
-Requires: smartmet-engine-grid >= 20.2.19
+Requires: smartmet-library-macgyver >= 20.2.5
+Requires: smartmet-library-spine >= 20.2.13
+Requires: smartmet-server >= 20.2.13
+Requires: smartmet-engine-grid >= 20.2.25
 Requires: boost-date-time
 Provides: %{SPECNAME}
 
@@ -50,6 +50,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/plugins/%{DIRNAME}.so
 
 %changelog
+* Tue Feb 25 2020 Mika Heiskanen <mika.heiskanen@fmi.fi> - 20.2.25-1.fmi
+- Hiding generations whose status is not ready
+
 * Wed Feb 19 2020 Mika Heiskanen <mika.heiskanen@fmi.fi> - 20.2.19-1.fmi
 - Added native message view and download
 - Minor fixes
