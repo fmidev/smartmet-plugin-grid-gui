@@ -899,7 +899,11 @@ void Plugin::saveImage(
       T::GridData gridData;
       int result = dataServer->getGridData(0,fileId,messageIndex,gridData);
       if (result != 0)
-        throw Spine::Exception(BCP,"Data fetching failed!");
+      {
+        Spine::Exception exception(BCP,"Data fetching failed!");
+        exception.addParameter("Result",DataServer::getResultString(result));
+        throw exception;
+      }
 
       saveImage(imageFile,gridData.mColumns,gridData.mRows,gridData.mValues,coordinates,lineCoordinates,hue,saturation,blur,coordinateLines,isolines,isolineValues,landBorder,landMask,seaMask,colorMapName,geometryId,symbolMap,locations,showSymbols);
     }
@@ -4433,7 +4437,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Time (UTC):</TD></TR>\n";
     ostr1 << "<TR height=\"30\"><TD><TABLE><TR><TD>\n";
 
-    ostr3 << "<TABLE><TR height=\"30\">\n";
+    ostr3 << "<TABLE style=\"border-width:0;border-spacing:0;height:30;\"><TR>\n";
 
     T::ContentInfo *prevCont = nullptr;
     T::ContentInfo *currentCont = nullptr;
@@ -4486,6 +4490,9 @@ int Plugin::page_main(Spine::Reactor &theReactor,
       }
 
 
+      std::string pTime = startTime;
+
+      uint daySwitch = 0;
       uint cc = 0;
       for (uint a=0; a<len; a++)
       {
@@ -4509,23 +4516,35 @@ int Plugin::page_main(Spine::Reactor &theReactor,
                   nextCont = g;
 
                 if (startTime.empty())
+                {
                   startTime = g->mForecastTime;
-
+                  prevTime = startTime;
+                }
 
                 std::string bg = "#E0E0E0";
+
+                if (g->mForecastTime.substr(0,8) != pTime.substr(0,8))
+                  daySwitch++;
+
+                if ((daySwitch % 2) == 1)
+                  bg = "#D0D0D0";
+
                 if (startTime == g->mForecastTime)
                   bg = "#0000FF";
 
-                if (tCount < 100  ||  (g->mForecastTime >= startTime  &&  cc < 100))
+                if (tCount < 124  ||  (g->mForecastTime >= startTime  &&  cc < 124))
                 {
                   if (cc == 0)
-                    ostr3 << "<TD style=\"text-align:center; font-size:12;width:120;background:#E0E0E0;\" id=\"ftime\">" + startTime + "</TD>\n";
+                    ostr3 << "<TD style=\"text-align:center; font-size:12;width:120;background:#F0F0F0;\" id=\"ftime\">" + startTime + "</TD><TD style=\"width:1;\"> </TD>\n";
+
+                  //ostr3 << "<TD style=\"width:1;\"> </TD>\n";
 
                   if (u > " ")
                     ostr3 << "<TD style=\"width:5; background:"+bg+";\" onmouseout=\"this.style='width:5;background:"+bg+";'\" onmouseover=\"this.style='width:5;height:30;background:#FF0000;'; setText('ftime','" + g->mForecastTime + "');setImage(document.getElementById('myimage'),'" + u + uu + "');\" > </TD>\n";
                   else
                     ostr3 << "<TD style=\"width:5; background:"+bg+";\"> </TD>\n";
 
+                  prevTime = g->mForecastTime;
                   cc++;
                 }
 
@@ -4545,7 +4564,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
                 if (currentCont == nullptr)
                   prevCont = g;
 
-                prevTime = g->mForecastTime;
+                pTime = g->mForecastTime;
               }
             }
           }
@@ -4567,7 +4586,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
     ostr1 << "</TR></TABLE></TD></TR>\n";
 
-    ostr3 << "</TR></TABLE>\n";
+    ostr3 << "<TD></TD></TR></TABLE>\n";
 
     // ### Presentation:
 
