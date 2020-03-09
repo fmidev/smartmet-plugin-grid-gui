@@ -805,6 +805,8 @@ void Plugin::checkImageCache()
 {
   try
   {
+    AutoThreadLock lock(&itsThreadLock);
+
     uint cnt = itsImages.size();
 
     if (cnt > itsImageCache_maxImages)
@@ -2897,13 +2899,16 @@ int Plugin::page_image(Spine::Reactor &theReactor,
 
     while (ind  &&  time(0) < endTime)
     {
-      auto it = itsImages.find(hash);
-      if (it != itsImages.end())
       {
-        // ### The requested image has been generated earlier. We can use it.
+        AutoThreadLock lock(&itsThreadLock);
+        auto it = itsImages.find(hash);
+        if (it != itsImages.end())
+        {
+          // ### The requested image has been generated earlier. We can use it.
 
-        loadImage(it->second.c_str(),theResponse);
-        return HTTP::Status::ok;
+          loadImage(it->second.c_str(),theResponse);
+          return HTTP::Status::ok;
+        }
       }
 
       if (!found)
@@ -2950,6 +2955,7 @@ int Plugin::page_image(Spine::Reactor &theReactor,
 
     loadImage(fname,theResponse);
 
+    AutoThreadLock lock(&itsThreadLock);
     if (itsImages.find(hash) == itsImages.end())
     {
       itsImages.insert(std::pair<std::string,std::string>(hash,fname));
@@ -3055,11 +3061,14 @@ int Plugin::page_isolines(Spine::Reactor &theReactor,
 
     while (ind)
     {
-      auto it = itsImages.find(hash);
-      if (it != itsImages.end())
       {
-        loadImage(it->second.c_str(),theResponse);
-        return HTTP::Status::ok;
+        AutoThreadLock lock(&itsThreadLock);
+        auto it = itsImages.find(hash);
+        if (it != itsImages.end())
+        {
+          loadImage(it->second.c_str(),theResponse);
+          return HTTP::Status::ok;
+        }
       }
 
       if (!found)
@@ -3097,6 +3106,7 @@ int Plugin::page_isolines(Spine::Reactor &theReactor,
 
     loadImage(fname,theResponse);
 
+    AutoThreadLock lock(&itsThreadLock);
     if (itsImages.find(hash) == itsImages.end())
     {
       itsImages.insert(std::pair<std::string,std::string>(hash,fname));
@@ -3243,11 +3253,14 @@ int Plugin::page_symbols(Spine::Reactor &theReactor,
 
     while (ind)
     {
-      auto it = itsImages.find(hash);
-      if (it != itsImages.end())
       {
-        loadImage(it->second.c_str(),theResponse);
-        return HTTP::Status::ok;
+        AutoThreadLock lock(&itsThreadLock);
+        auto it = itsImages.find(hash);
+        if (it != itsImages.end())
+        {
+          loadImage(it->second.c_str(),theResponse);
+          return HTTP::Status::ok;
+        }
       }
 
       if (!found)
@@ -3284,6 +3297,7 @@ int Plugin::page_symbols(Spine::Reactor &theReactor,
 
     loadImage(fname,theResponse);
 
+    AutoThreadLock lock(&itsThreadLock);
     if (itsImages.find(hash) == itsImages.end())
     {
       itsImages.insert(std::pair<std::string,std::string>(hash,fname));
@@ -3394,11 +3408,14 @@ int Plugin::page_map(Spine::Reactor &theReactor,
 
     while (ind)
     {
-      auto it = itsImages.find(hash);
-      if (it != itsImages.end())
       {
-        loadImage(it->second.c_str(),theResponse);
-        return HTTP::Status::ok;
+        AutoThreadLock lock(&itsThreadLock);
+        auto it = itsImages.find(hash);
+        if (it != itsImages.end())
+        {
+          loadImage(it->second.c_str(),theResponse);
+          return HTTP::Status::ok;
+        }
       }
 
       if (!found)
@@ -3447,6 +3464,7 @@ int Plugin::page_map(Spine::Reactor &theReactor,
 
     loadImage(fname,theResponse);
 
+    AutoThreadLock lock(&itsThreadLock);
     if (itsImages.find(hash) == itsImages.end())
     {
       itsImages.insert(std::pair<std::string,std::string>(hash,fname));

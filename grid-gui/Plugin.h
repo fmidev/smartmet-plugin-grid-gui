@@ -210,6 +210,7 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
     bool                      itsAnimationEnabled;
     std::string               itsImagesUnderConstruction[100];
     uint                      itsImageCounter;
+    ThreadLock                itsThreadLock;
 
     std::map<std::string,T::ParamValue_vec> itsIsolines;
     std::map<std::string,std::string>       itsImages;
