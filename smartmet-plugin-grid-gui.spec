@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-plugin-%{DIRNAME}
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
-Version: 20.3.5
+Version: 20.3.10
 Release: 1%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
@@ -16,15 +16,15 @@ BuildRequires: make
 BuildRequires: boost-devel
 BuildRequires: libconfig-devel
 BuildRequires: smartmet-library-spine-devel
-BuildRequires: smartmet-library-grid-files-devel >= 20.3.5
-BuildRequires: smartmet-library-grid-content-devel >= 20.3.5
-BuildRequires: smartmet-engine-grid-devel >= 20.3.5
+BuildRequires: smartmet-library-grid-files-devel >= 20.3.10
+BuildRequires: smartmet-library-grid-content-devel >= 20.3.10
+BuildRequires: smartmet-engine-grid-devel >= 20.3.11
 BuildRequires: gdal-devel
 Requires: libconfig
 Requires: smartmet-library-macgyver >= 20.3.5
-Requires: smartmet-library-spine >= 20.3.5
+Requires: smartmet-library-spine >= 20.3.9
 Requires: smartmet-server >= 20.2.13
-Requires: smartmet-engine-grid >= 20.3.5
+Requires: smartmet-engine-grid >= 20.3.11
 Requires: boost-date-time
 Provides: %{SPECNAME}
 
@@ -50,6 +50,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/plugins/%{DIRNAME}.so
 
 %changelog
+* Wed Mar 11 2020 Mika Heiskanen <mika.heiskanen@fmi.fi> - 20.3.10-1.fmi
+- Added thread protection for image caching
+
 * Thu Mar  5 2020 Mika Heiskanen <mika.heiskanen@fmi.fi> - 20.3.5-1.fmi
 - Minor improvements in HTML table output
 
