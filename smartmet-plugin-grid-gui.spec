@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-plugin-%{DIRNAME}
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
-Version: 20.4.3
+Version: 20.4.18
 Release: 1%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
@@ -13,19 +13,19 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 BuildRequires: rpm-build
 BuildRequires: gcc-c++
 BuildRequires: make
-BuildRequires: boost-devel
+BuildRequires: boost169-devel
 BuildRequires: libconfig-devel
 BuildRequires: smartmet-library-spine-devel
-BuildRequires: smartmet-library-grid-files-devel >= 20.4.3
-BuildRequires: smartmet-library-grid-content-devel >= 20.4.3
-BuildRequires: smartmet-engine-grid-devel >= 20.4.3
+BuildRequires: smartmet-library-grid-files-devel >= 20.4.18
+BuildRequires: smartmet-library-grid-content-devel >= 20.4.18
+BuildRequires: smartmet-engine-grid-devel >= 20.4.18
 BuildRequires: gdal-devel
 Requires: libconfig
-Requires: smartmet-library-macgyver >= 20.3.5
-Requires: smartmet-library-spine >= 20.3.9
-Requires: smartmet-server >= 20.2.13
-Requires: smartmet-engine-grid >= 20.4.3
-Requires: boost-date-time
+Requires: smartmet-library-macgyver >= 20.4.18
+Requires: smartmet-library-spine >= 20.4.18
+Requires: smartmet-server >= 20.4.18
+Requires: smartmet-engine-grid >= 20.4.18
+Requires: boost169-date-time
 Provides: %{SPECNAME}
 
 %description
@@ -50,6 +50,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/plugins/%{DIRNAME}.so
 
 %changelog
+* Sat Apr 18 2020 Mika Heiskanen <mika.heiskanen@fmi.fi> - 20.4.18-1.fmi
+- Upgraded to Boost 1.69
+
 * Fri Apr  3 2020 Mika Heiskanen <mika.heiskanen@fmi.fi> - 20.4.3-1.fmi
 - Repackaged due to library API changes
 

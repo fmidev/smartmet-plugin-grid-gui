@@ -28,6 +28,13 @@ objdir = obj
 
 DEFINES = -DUNIX -D_REENTRANT
 
+# Boost 1.69
+
+ifneq "$(wildcard /usr/include/boost169)" ""
+  INCLUDES += -I/usr/include/boost169
+  LIBS += -L/usr/lib64/boost169
+endif
+
 ifeq ($(CXX), clang++)
 
  FLAGS = \
@@ -38,7 +45,7 @@ ifeq ($(CXX), clang++)
 	-Wno-padded \
 	-Wno-missing-prototypes
 
- INCLUDES = \
+ INCLUDES += \
 	-isystem $(includedir) \
 	-isystem $(includedir)/smartmet
 
@@ -52,14 +59,11 @@ else
 	-Winline \
 	-Wno-multichar \
 	-Wno-pmf-conversions \
-	-Wpointer-arith \
-	-Wredundant-decls \
-
-#	-Woverloaded-virtual
+	-Wpointer-arith
 
  FLAGS_RELEASE = -Wuninitialized
 
- INCLUDES = \
+ INCLUDES += \
 	-I$(includedir) \
 	-I$(includedir)/smartmet \
 
@@ -76,7 +80,7 @@ else
   override CFLAGS += $(CFLAGS_RELEASE)
 endif
 
-LIBS = -L$(libdir) \
+LIBS += -L$(libdir) \
 	-lsmartmet-spine \
 	-lsmartmet-macgyver \
 	-lboost_date_time
