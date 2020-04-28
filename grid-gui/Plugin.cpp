@@ -3692,7 +3692,13 @@ std::string Plugin::getFmiKey(std::string& producerName,T::ContentInfo& contentI
     char buf[200];
     char *p = buf;
 
-    p += sprintf(p,"%s:%s",contentInfo.mFmiParameterName.c_str(),producerName.c_str());
+    if (contentInfo.mFmiParameterName > " ")
+      p += sprintf(p,"%s",contentInfo.mFmiParameterName.c_str());
+    else
+    if (contentInfo.mGribParameterId > " ")
+      p += sprintf(p,"GRIB-%s",contentInfo.mGribParameterId.c_str());
+
+    p += sprintf(p,":%s",producerName.c_str());
 
     if (contentInfo.mGeometryId > 0)
       p += sprintf(p,":%u",contentInfo.mGeometryId);
