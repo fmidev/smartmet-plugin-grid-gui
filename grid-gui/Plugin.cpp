@@ -1750,6 +1750,7 @@ int Plugin::page_info(Spine::Reactor &theReactor,
       ostr << "ERROR: getContentInfo : " << result << "\n";
       ostr << "</BODY></HTML>\n";
       theResponse.setContent(std::string(ostr.str()));
+      theResponse.setHeader("Content-Type", "text/html; charset=UTF-8");
       return HTTP::Status::ok;
     }
 
@@ -1763,6 +1764,7 @@ int Plugin::page_info(Spine::Reactor &theReactor,
       ostr << "ERROR: getFileInfoById : " << result << "\n";
       ostr << "</BODY></HTML>\n";
       theResponse.setContent(std::string(ostr.str()));
+      theResponse.setHeader("Content-Type", "text/html; charset=UTF-8");
       return HTTP::Status::ok;
     }
 
@@ -1774,6 +1776,7 @@ int Plugin::page_info(Spine::Reactor &theReactor,
       ostr << "ERROR: getGenerationInfoById : " << result << "\n";
       ostr << "</BODY></HTML>\n";
       theResponse.setContent(std::string(ostr.str()));
+      theResponse.setHeader("Content-Type", "text/html; charset=UTF-8");
       return HTTP::Status::ok;
     }
 
@@ -1785,6 +1788,7 @@ int Plugin::page_info(Spine::Reactor &theReactor,
       ostr << "ERROR: getProducerInfoById : " << result << "\n";
       ostr << "</BODY></HTML>\n";
       theResponse.setContent(std::string(ostr.str()));
+      theResponse.setHeader("Content-Type", "text/html; charset=UTF-8");
       return HTTP::Status::ok;
     }
 
@@ -1796,6 +1800,7 @@ int Plugin::page_info(Spine::Reactor &theReactor,
       ostr << "ERROR: getGridAttributeList : " << result << "\n";
       ostr << "</BODY></HTML>\n";
       theResponse.setContent(std::string(ostr.str()));
+      theResponse.setHeader("Content-Type", "text/html; charset=UTF-8");
       return HTTP::Status::ok;
     }
 
@@ -1880,6 +1885,7 @@ int Plugin::page_info(Spine::Reactor &theReactor,
 
 
     theResponse.setContent(std::string(ostr.str()));
+    theResponse.setHeader("Content-Type", "text/html; charset=UTF-8");
     return HTTP::Status::ok;
   }
   catch (...)
@@ -1928,6 +1934,7 @@ int Plugin::page_message(Spine::Reactor &theReactor,
       ostr << "ERROR: getGridMessageBytes : " << result << "\n";
       ostr << "</BODY></HTML>\n";
       theResponse.setContent(std::string(ostr.str()));
+      theResponse.setHeader("Content-Type", "text/html; charset=UTF-8");
       return HTTP::Status::ok;
     }
 
@@ -2011,6 +2018,7 @@ int Plugin::page_message(Spine::Reactor &theReactor,
     ostr << "</BODY></HTML>\n";
 
     theResponse.setContent(std::string(ostr.str()));
+    theResponse.setHeader("Content-Type", "text/html; charset=UTF-8");
     return HTTP::Status::ok;
   }
   catch (...)
@@ -2059,6 +2067,7 @@ int Plugin::page_download(Spine::Reactor &theReactor,
       ostr << "ERROR: getGridMessageBytes : " << result << "\n";
       ostr << "</BODY></HTML>\n";
       theResponse.setContent(std::string(ostr.str()));
+      theResponse.setHeader("Content-Type", "text/html; charset=UTF-8");
       return HTTP::Status::ok;
     }
 
@@ -2097,6 +2106,7 @@ int Plugin::page_download(Spine::Reactor &theReactor,
       ostr << "<HTML><BODY>\n";
       ostr << "Message does not exist!\n";
       ostr << "</BODY></HTML>\n";
+      theResponse.setHeader("Content-Type", "text/html; charset=UTF-8");
       theResponse.setContent(std::string(ostr.str()));
     }
     return HTTP::Status::ok;
@@ -2180,6 +2190,7 @@ int Plugin::page_locations(Spine::Reactor &theReactor,
     ostr << "</BODY></HTML>\n";
 
     theResponse.setContent(std::string(ostr.str()));
+    theResponse.setHeader("Content-Type", "text/html; charset=UTF-8");
 
     return HTTP::Status::ok;
   }
@@ -2238,6 +2249,7 @@ int Plugin::page_table(Spine::Reactor &theReactor,
       ostr << "DataServer request 'getGridData()' failed : " << result << "\n";
       ostr << "</BODY></HTML>\n";
       theResponse.setContent(std::string(ostr.str()));
+      theResponse.setHeader("Content-Type", "text/html; charset=UTF-8");
       return HTTP::Status::ok;
     }
 
@@ -2273,6 +2285,7 @@ int Plugin::page_table(Spine::Reactor &theReactor,
       ostr << "Cannot get the grid coordinates\n";
       ostr << "</BODY></HTML>\n";
       theResponse.setContent(std::string(ostr.str()));
+      theResponse.setHeader("Content-Type", "text/html; charset=UTF-8");
       return HTTP::Status::ok;
     }
 
@@ -2347,6 +2360,7 @@ int Plugin::page_table(Spine::Reactor &theReactor,
     ostr << "</BODY></HTML>\n";
 
     theResponse.setContent(std::string(ostr.str()));
+    theResponse.setHeader("Content-Type", "text/html; charset=UTF-8");
 
     return HTTP::Status::ok;
   }
@@ -2400,6 +2414,7 @@ int Plugin::page_coordinates(Spine::Reactor &theReactor,
       ostr << "DataServer request 'getGridCoordinates()' failed : " << result << "\n";
       ostr << "</BODY></HTML>\n";
       theResponse.setContent(std::string(ostr.str()));
+      theResponse.setHeader("Content-Type", "text/html; charset=UTF-8");
       return HTTP::Status::ok;
     }
 
@@ -2460,6 +2475,7 @@ int Plugin::page_coordinates(Spine::Reactor &theReactor,
     ostr << "</BODY></HTML>\n";
 
     theResponse.setContent(std::string(ostr.str()));
+    theResponse.setHeader("Content-Type", "text/html; charset=UTF-8");
 
     return HTTP::Status::ok;
   }
@@ -2560,6 +2576,8 @@ int Plugin::page_value(Spine::Reactor &theReactor,
       theResponse.setContent(std::to_string(value));
     else
       theResponse.setContent(std::string("Not available"));
+
+    theResponse.setHeader("Content-Type", "text/html; charset=UTF-8");
 
     return HTTP::Status::ok;
   }
@@ -2720,6 +2738,7 @@ int Plugin::page_timeseries(Spine::Reactor &theReactor,
       ostr << "Image does not exist!\n";
       ostr << "</BODY></HTML>\n";
       theResponse.setContent(std::string(ostr.str()));
+      theResponse.setHeader("Content-Type", "text/html; charset=UTF-8");
       return HTTP::Status::ok;
     }
 
@@ -2778,6 +2797,7 @@ void Plugin::loadImage(const char *fname,Spine::HTTP::Response &theResponse)
       ostr << "Image does not exist!\n";
       ostr << "</BODY></HTML>\n";
       theResponse.setContent(std::string(ostr.str()));
+      theResponse.setHeader("Content-Type", "text/html; charset=UTF-8");
     }
   }
   catch (...)
@@ -3453,6 +3473,7 @@ int Plugin::page_map(Spine::Reactor &theReactor,
       ostr << "DataServer request 'getGridValuesByArea()' failed : " << result << "\n";
       ostr << "</BODY></HTML>\n";
       theResponse.setContent(std::string(ostr.str()));
+      theResponse.setHeader("Content-Type", "text/html; charset=UTF-8");
       return HTTP::Status::ok;
     }
 
@@ -5186,6 +5207,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     output << "</BODY></HTML>\n";
 
     theResponse.setContent(std::string(output.str()));
+    theResponse.setHeader("Content-Type", "text/html; charset=UTF-8");
     return HTTP::Status::ok;
   }
   catch (...)
