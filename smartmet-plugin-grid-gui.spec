@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-plugin-%{DIRNAME}
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
-Version: 20.4.30
+Version: 20.5.5
 Release: 1%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
@@ -18,13 +18,13 @@ BuildRequires: libconfig-devel
 BuildRequires: smartmet-library-spine-devel
 BuildRequires: smartmet-library-grid-files-devel >= 20.4.30
 BuildRequires: smartmet-library-grid-content-devel >= 20.4.30
-BuildRequires: smartmet-engine-grid-devel >= 20.4.18
+BuildRequires: smartmet-engine-grid-devel >= 20.4.30
 BuildRequires: gdal-devel
 Requires: libconfig
 Requires: smartmet-library-macgyver >= 20.4.18
 Requires: smartmet-library-spine >= 20.4.18
 Requires: smartmet-server >= 20.4.18
-Requires: smartmet-engine-grid >= 20.4.18
+Requires: smartmet-engine-grid >= 20.4.30
 Requires: boost169-date-time
 Provides: %{SPECNAME}
 
@@ -50,6 +50,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/plugins/%{DIRNAME}.so
 
 %changelog
+* Tue May  5 2020 Mika Heiskanen <mika.heiskanen@fmi.fi> - 20.5.5-1.fmi
+- Added content type headers
+
 * Thu Apr 30 2020 Mika Heiskanen <mika.heiskanen@fmi.fi> - 20.4.30-1.fmi
 - Added grib-id into FMI key when FMI parameter name is missing
 
