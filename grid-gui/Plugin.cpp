@@ -4350,7 +4350,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
     short forecastType = (short)toInt64(forecastTypeStr.c_str());
 
-    ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Forecast type and number</TD></TR>\n";
+    ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Forecast type</TD></TR>\n";
     ostr1 << "<TR height=\"30\"><TD>\n";
 
     std::set<int> forecastTypes;
@@ -4374,18 +4374,30 @@ int Plugin::page_main(Spine::Reactor &theReactor,
           forecastType = *it;
         }
 
-        if (forecastType == *it)
-          ostr1 << "<OPTION selected value=\"" <<  *it << "\">" <<  *it << "</OPTION>\n";
+        std::string lStr = std::to_string(*it);
+        Identification::ForecastTypeDef typeDef;
+        if (Identification::gridDef.getFmiForecastTypeDef(*it,typeDef))
+          lStr = std::to_string(*it) + " : " + typeDef.mName;
         else
-          ostr1 << "<OPTION value=\"" <<  *it << "\">" << *it << "</OPTION>\n";
+          lStr = std::to_string(*it) + " : ";
+
+        if (forecastType == *it)
+          ostr1 << "<OPTION selected value=\"" <<  *it << "\">" <<  lStr << "</OPTION>\n";
+        else
+          ostr1 << "<OPTION value=\"" <<  *it << "\">" << lStr << "</OPTION>\n";
       }
       ostr1 << "</SELECT>\n";
     }
+    ostr1 << "</TD></TR>\n";
 
 
     // ### Forecast number:
 
     short forecastNumber = (short)toInt64(forecastNumberStr.c_str());
+
+    ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Forecast number</TD></TR>\n";
+    ostr1 << "<TR height=\"30\"><TD>\n";
+
     std::set<int> forecastNumbers;
     getForecastNumbers(contentInfoList,levelId,level,forecastType,forecastNumbers);
 
