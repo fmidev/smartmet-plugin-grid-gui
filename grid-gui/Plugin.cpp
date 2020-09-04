@@ -866,7 +866,7 @@ void Plugin::saveImage(
     if (projectionId > 0  &&  projectionId != geometryId)
       geomId = projectionId;
 
-    T::Coordinate_vec coordinates;
+    T::Coordinate_svec coordinates;
     if (geomId != 0)
     {
       coordinates = Identification::gridDef.getGridLatLonCoordinatesByGeometryId(geomId);
@@ -885,7 +885,7 @@ void Plugin::saveImage(
     coordinates = coordinatesx.mCoordinateList;
 */
 
-    T::Coordinate_vec lineCoordinates;
+    T::Coordinate_svec lineCoordinates;
     if (coordinateLines != 0xFFFFFFFF)
     {
       if (geomId != 0)
@@ -907,7 +907,7 @@ void Plugin::saveImage(
         throw exception;
       }
 
-      saveImage(imageFile,gridData.mColumns,gridData.mRows,gridData.mValues,coordinates,lineCoordinates,hue,saturation,blur,coordinateLines,isolines,isolineValues,landBorder,landMask,seaMask,colorMapName,geometryId,symbolMap,locations,showSymbols);
+      saveImage(imageFile,gridData.mColumns,gridData.mRows,gridData.mValues,*coordinates,*lineCoordinates,hue,saturation,blur,coordinateLines,isolines,isolineValues,landBorder,landMask,seaMask,colorMapName,geometryId,symbolMap,locations,showSymbols);
     }
     else
     {
@@ -931,7 +931,7 @@ void Plugin::saveImage(
          if (result != 0)
            throw Spine::Exception(BCP,"Data fetching failed!");
 
-         saveImage(imageFile,cols,rows,values,coordinates,lineCoordinates,hue,saturation,blur,coordinateLines,isolines,isolineValues,landBorder,landMask,seaMask,colorMapName,geomId,symbolMap,locations,showSymbols);
+         saveImage(imageFile,cols,rows,values,*coordinates,*lineCoordinates,hue,saturation,blur,coordinateLines,isolines,isolineValues,landBorder,landMask,seaMask,colorMapName,geomId,symbolMap,locations,showSymbols);
         }
       }
     }
@@ -2258,7 +2258,7 @@ int Plugin::page_table(Spine::Reactor &theReactor,
       geometryId = toInt64(geometryIdStr.c_str());
 
 
-    T::Coordinate_vec coordinates = Identification::gridDef.getGridOriginalCoordinatesByGeometryId(geometryId);
+    T::Coordinate_svec coordinates = Identification::gridDef.getGridOriginalCoordinatesByGeometryId(geometryId);
     /*
     T::GridCoordinates coordinates;
     result = dataServer->getGridCoordinates(0,toInt64(fileIdStr.c_str()),toInt64(messageIndexStr.c_str()),T::CoordinateTypeValue::ORIGINAL_COORDINATES,coordinates);
@@ -2279,7 +2279,7 @@ int Plugin::page_table(Spine::Reactor &theReactor,
     uint width = gridData.mColumns;
 
     uint sz = width * height;
-    if (coordinates.size() != sz)
+    if (coordinates->size() != sz)
     {
       ostr << "<HTML><BODY>\n";
       ostr << "Cannot get the grid coordinates\n";
@@ -2317,7 +2317,7 @@ int Plugin::page_table(Spine::Reactor &theReactor,
     ostr << "<TR bgColor=\"#D0D0D0\"><TD></TD><TD></TD>";
     for (uint x=0; x<width; x++)
     {
-      sprintf(tmp,"%.3f",coordinates[x].x());
+      sprintf(tmp,"%.3f",(*coordinates)[x].x());
       ostr << "<TD>" << tmp << "</TD>";
     }
     ostr << "</TR>\n";
@@ -2331,7 +2331,7 @@ int Plugin::page_table(Spine::Reactor &theReactor,
 
       // ### Row index and Y coordinate:
 
-      sprintf(tmp,"%.3f",coordinates[c].y());
+      sprintf(tmp,"%.3f",(*coordinates)[c].y());
       ostr << "<TR><TD bgColor=\"#E0E0E0\">" << y << "</TD><TD bgColor=\"#D0D0D0\">" << tmp << "</TD>";
 
       // ### Columns:
