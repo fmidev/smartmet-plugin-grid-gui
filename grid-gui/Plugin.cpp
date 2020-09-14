@@ -4126,7 +4126,8 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
       for (auto it = generations.rbegin(); it != generations.rend(); ++it)
       {
-        T::GenerationInfo *g = generationInfoList.getGenerationInfoByName(*it);
+        std::string name = *it;
+        T::GenerationInfo *g = generationInfoList.getGenerationInfoByName(name);
         if (g != nullptr)
         {
           if (gid == 0)
