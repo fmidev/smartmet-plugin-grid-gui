@@ -1848,11 +1848,11 @@ int Plugin::page_info(Spine::Reactor &theReactor,
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Level</TD><TD>" << contentInfo.mParameterLevel << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">FMI identifier</TD><TD>" << contentInfo.mFmiParameterId << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">FMI name</TD><TD>" << contentInfo.mFmiParameterName << "</TD></TR>\n";
-    ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">FMI level identifier</TD><TD>" << contentInfo.mFmiParameterLevelId << "</TD></TR>\n";
+    ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">FMI level identifier</TD><TD>" << toString(contentInfo.mFmiParameterLevelId) << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">FMI units</TD><TD>" << contentInfo.mFmiParameterUnits << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">GRIB identifier</TD><TD>" << contentInfo.mGribParameterId << "</TD></TR>\n";
-    ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">GRIB1 level identifier</TD><TD>" << contentInfo.mGrib1ParameterLevelId << "</TD></TR>\n";
-    ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">GRIB2 level identifier</TD><TD>" << contentInfo.mGrib2ParameterLevelId << "</TD></TR>\n";
+    ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">GRIB1 level identifier</TD><TD>" << toString(contentInfo.mGrib1ParameterLevelId) << "</TD></TR>\n";
+    ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">GRIB2 level identifier</TD><TD>" << toString(contentInfo.mGrib2ParameterLevelId) << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">GRIB units</TD><TD>" << contentInfo.mGribParameterUnits << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Newbase identifier</TD><TD>" << contentInfo.mNewbaseParameterId << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Newbase name</TD><TD>" << contentInfo.mNewbaseParameterName << "</TD></TR>\n";
@@ -4126,7 +4126,8 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
       for (auto it = generations.rbegin(); it != generations.rend(); ++it)
       {
-        T::GenerationInfo *g = generationInfoList.getGenerationInfoByName(*it);
+        std::string name = *it;
+        T::GenerationInfo *g = generationInfoList.getGenerationInfoByName(name);
         if (g != nullptr)
         {
           if (gid == 0)
