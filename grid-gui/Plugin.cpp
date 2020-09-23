@@ -11,6 +11,7 @@
 #include <grid-files/identification/GridDef.h>
 #include <spine/SmartMet.h>
 #include <macgyver/TimeFormatter.h>
+#include <macgyver/FastMath.h>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 
 namespace SmartMet
@@ -62,12 +63,12 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
     itsImageCounter = 0;
 
     if (theReactor->getRequiredAPIVersion() != SMARTMET_API_VERSION)
-      throw Spine::Exception(BCP, "GridGui plugin and Server API version mismatch");
+      throw Fmi::Exception(BCP, "GridGui plugin and Server API version mismatch");
 
     // Register the handler
     if (!theReactor->addContentHandler(
             this, "/grid-gui", boost::bind(&Plugin::callRequestHandler, this, _1, _2, _3)))
-      throw Spine::Exception(BCP, "Failed to register GridGui request handler");
+      throw Fmi::Exception(BCP, "Failed to register GridGui request handler");
 
 
     itsConfigurationFile.readFile(theConfig);
@@ -77,7 +78,7 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
     {
       if (!itsConfigurationFile.findAttribute(configAttribute[t]))
       {
-        Spine::Exception exception(BCP, "Missing configuration attribute!");
+        Fmi::Exception exception(BCP, "Missing configuration attribute!");
         exception.addParameter("File",theConfig);
         exception.addParameter("Attribute",configAttribute[t]);
         throw exception;
@@ -150,7 +151,7 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
   }
   catch (...)
   {
-    SmartMet::Spine::Exception exception(BCP, "Constructor failed!", nullptr);
+    Fmi::Exception exception(BCP, "Constructor failed!", nullptr);
     exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
     throw exception;
   }
@@ -178,7 +179,7 @@ void Plugin::init()
   {
     auto engine = itsReactor->getSingleton("grid", nullptr);
     if (!engine)
-      throw Spine::Exception(BCP, "The 'grid-engine' unavailable!");
+      throw Fmi::Exception(BCP, "The 'grid-engine' unavailable!");
 
     itsGridEngine = reinterpret_cast<Engine::Grid::Engine*>(engine);
 
@@ -186,7 +187,7 @@ void Plugin::init()
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Operation failed!", nullptr);
+    throw Fmi::Exception(BCP, "Operation failed!", nullptr);
   }
 }
 
@@ -208,7 +209,7 @@ void Plugin::shutdown()
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Operation failed!", nullptr);
+    throw Fmi::Exception(BCP, "Operation failed!", nullptr);
   }
 }
 
@@ -231,7 +232,7 @@ T::ColorMapFile* Plugin::getColorMapFile(std::string colorMapName)
   }
   catch (...)
   {
-    SmartMet::Spine::Exception exception(BCP, "Operation failed!", nullptr);
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
     exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
     throw exception;
   }
@@ -248,7 +249,7 @@ void Plugin::loadColorFile()
     FILE *file = fopen(itsColorFile.c_str(),"re");
     if (file == nullptr)
     {
-      Spine::Exception exception(BCP,"Cannot open file!");
+      Fmi::Exception exception(BCP,"Cannot open file!");
       exception.addParameter("Filename",itsColorFile);
       throw exception;
     }
@@ -302,7 +303,7 @@ void Plugin::loadColorFile()
   }
   catch (...)
   {
-    SmartMet::Spine::Exception exception(BCP, "Operation failed!", nullptr);
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
     exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
     throw exception;
   }
@@ -319,7 +320,7 @@ void Plugin::loadDaliFile()
     FILE *file = fopen(itsDaliFile.c_str(),"re");
     if (file == nullptr)
     {
-      Spine::Exception exception(BCP,"Cannot open file!");
+      Fmi::Exception exception(BCP,"Cannot open file!");
       exception.addParameter("Filename",itsDaliFile);
       throw exception;
     }
@@ -381,7 +382,7 @@ void Plugin::loadDaliFile()
   }
   catch (...)
   {
-    SmartMet::Spine::Exception exception(BCP, "Operation failed!", nullptr);
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
     exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
     throw exception;
   }
@@ -401,7 +402,7 @@ void Plugin::loadIsolineFile()
     FILE *file = fopen(itsIsolineFile.c_str(),"re");
     if (file == nullptr)
     {
-      Spine::Exception exception(BCP,"Cannot open file!");
+      Fmi::Exception exception(BCP,"Cannot open file!");
       exception.addParameter("Filename",itsIsolineFile);
       throw exception;
     }
@@ -461,7 +462,7 @@ void Plugin::loadIsolineFile()
   }
   catch (...)
   {
-    SmartMet::Spine::Exception exception(BCP, "Operation failed!", nullptr);
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
     exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
     throw exception;
   }
@@ -485,7 +486,7 @@ uint Plugin::getColorValue(std::string& colorName)
   }
   catch (...)
   {
-    SmartMet::Spine::Exception exception(BCP, "Operation failed!", nullptr);
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
     exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
     throw exception;
  }
@@ -508,7 +509,7 @@ T::ParamValue_vec Plugin::getIsolineValues(std::string& isolineValues)
   }
   catch (...)
   {
-    SmartMet::Spine::Exception exception(BCP, "Operation failed!", nullptr);
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
     exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
     throw exception;
   }
@@ -533,7 +534,7 @@ T::SymbolMapFile* Plugin::getSymbolMapFile(std::string symbolMap)
   }
   catch (...)
   {
-    SmartMet::Spine::Exception exception(BCP, "Operation failed!", nullptr);
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
     exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
     throw exception;
   }
@@ -558,7 +559,7 @@ T::LocationFile* Plugin::getLocationFile(std::string name)
   }
   catch (...)
   {
-    SmartMet::Spine::Exception exception(BCP, "Operation failed!", nullptr);
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
     exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
     throw exception;
   }
@@ -595,7 +596,7 @@ bool Plugin::isLand(double lon,double lat)
   }
   catch (...)
   {
-    SmartMet::Spine::Exception exception(BCP, "Operation failed!", nullptr);
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
     exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
     throw exception;
   }
@@ -791,7 +792,7 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
   }
   catch (...)
   {
-    SmartMet::Spine::Exception exception(BCP, "Operation failed!", nullptr);
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
     exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
     throw exception;
   }
@@ -828,7 +829,7 @@ void Plugin::checkImageCache()
   }
   catch (...)
   {
-    SmartMet::Spine::Exception exception(BCP, "Operation failed!", nullptr);
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
     exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
     throw exception;
   }
@@ -902,7 +903,7 @@ void Plugin::saveImage(
       int result = dataServer->getGridData(0,fileId,messageIndex,gridData);
       if (result != 0)
       {
-        Spine::Exception exception(BCP,"Data fetching failed!");
+        Fmi::Exception exception(BCP,"Data fetching failed!");
         exception.addParameter("Result",DataServer::getResultString(result));
         throw exception;
       }
@@ -929,7 +930,7 @@ void Plugin::saveImage(
         {
          int result = dataServer->getGridValueVectorByGeometry(0,fileId,messageIndex,attributeList,values);
          if (result != 0)
-           throw Spine::Exception(BCP,"Data fetching failed!");
+           throw Fmi::Exception(BCP,"Data fetching failed!");
 
          saveImage(imageFile,cols,rows,values,*coordinates,*lineCoordinates,hue,saturation,blur,coordinateLines,isolines,isolineValues,landBorder,landMask,seaMask,colorMapName,geomId,symbolMap,locations,showSymbols);
         }
@@ -938,7 +939,7 @@ void Plugin::saveImage(
   }
   catch (...)
   {
-    SmartMet::Spine::Exception exception(BCP, "Operation failed!", nullptr);
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
     exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
     throw exception;
   }
@@ -1169,7 +1170,7 @@ void Plugin::saveImage(
     if (coordinateLines != 0xFFFFFFFF  &&  lineCoordinates.size() > 0)
     {
       for (auto it = lineCoordinates.begin(); it != lineCoordinates.end(); ++it)
-        imagePaint.paintPixel(C_INT(floor(it->x())),C_INT(floor(it->y())),coordinateLines);
+        imagePaint.paintPixel(C_INT(Fmi::floor(it->x())),C_INT(Fmi::floor(it->y())),coordinateLines);
     }
 
     if (showSymbols)
@@ -1220,7 +1221,7 @@ void Plugin::saveImage(
   }
   catch (...)
   {
-    SmartMet::Spine::Exception exception(BCP, "Operation failed!", nullptr);
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
     exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
     throw exception;
   }
@@ -1540,12 +1541,12 @@ void Plugin::saveImage(const char *imageFile,T::GridData&  gridData,unsigned cha
       if (!rotate)
       {
         for (auto it = lineCoordinates.begin(); it != lineCoordinates.end(); ++it)
-          image[C_INT(floor(it->y()))*width + C_INT(floor(it->x()))] = coordinateLines;
+          image[C_INT(Fmi::floor(it->y()))*width + C_INT(Fmi::floor(it->x()))] = coordinateLines;
       }
       else
       {
         for (auto it = lineCoordinates.begin(); it != lineCoordinates.end(); ++it)
-          image[(height-C_INT(floor(it->y()))-1)*width + C_INT(floor(it->x()))] = coordinateLines;
+          image[(height-C_INT(Fmi::floor(it->y()))-1)*width + C_INT(Fmi::floor(it->x()))] = coordinateLines;
       }
     }
 
@@ -1619,7 +1620,7 @@ void Plugin::saveImage(const char *imageFile,T::GridData&  gridData,unsigned cha
   }
   catch (...)
   {
-    throw Spine::Exception(BCP,"Operation failed!",nullptr);
+    throw Fmi::Exception(BCP,"Operation failed!",nullptr);
   }
 }
 
@@ -1706,7 +1707,7 @@ void Plugin::saveTimeSeries(const char *imageFile,std::vector<T::ParamValue>& va
   }
   catch (...)
   {
-    SmartMet::Spine::Exception exception(BCP, "Operation failed!", nullptr);
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
     exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
     throw exception;
   }
@@ -1890,7 +1891,7 @@ int Plugin::page_info(Spine::Reactor &theReactor,
   }
   catch (...)
   {
-    SmartMet::Spine::Exception exception(BCP, "Operation failed!", nullptr);
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
     exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
     throw exception;
   }
@@ -2023,7 +2024,7 @@ int Plugin::page_message(Spine::Reactor &theReactor,
   }
   catch (...)
   {
-    SmartMet::Spine::Exception exception(BCP, "Operation failed!", nullptr);
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
     exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
     throw exception;
   }
@@ -2113,7 +2114,7 @@ int Plugin::page_download(Spine::Reactor &theReactor,
   }
   catch (...)
   {
-    SmartMet::Spine::Exception exception(BCP, "Operation failed!", nullptr);
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
     exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
     throw exception;
   }
@@ -2196,7 +2197,7 @@ int Plugin::page_locations(Spine::Reactor &theReactor,
   }
   catch (...)
   {
-    SmartMet::Spine::Exception exception(BCP, "Operation failed!", nullptr);
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
     exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
     throw exception;
   }
@@ -2366,7 +2367,7 @@ int Plugin::page_table(Spine::Reactor &theReactor,
   }
   catch (...)
   {
-    SmartMet::Spine::Exception exception(BCP, "Operation failed!", nullptr);
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
     exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
     throw exception;
   }
@@ -2481,7 +2482,7 @@ int Plugin::page_coordinates(Spine::Reactor &theReactor,
   }
   catch (...)
   {
-    SmartMet::Spine::Exception exception(BCP, "Operation failed!", nullptr);
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
     exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
     throw exception;
   }
@@ -2583,7 +2584,7 @@ int Plugin::page_value(Spine::Reactor &theReactor,
   }
   catch (...)
   {
-    SmartMet::Spine::Exception exception(BCP, "Operation failed!", nullptr);
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
     exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
     throw exception;
   }
@@ -2746,7 +2747,7 @@ int Plugin::page_timeseries(Spine::Reactor &theReactor,
   }
   catch (...)
   {
-    SmartMet::Spine::Exception exception(BCP, "Operation failed!", nullptr);
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
     exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
     throw exception;
   }
@@ -2802,7 +2803,7 @@ void Plugin::loadImage(const char *fname,Spine::HTTP::Response &theResponse)
   }
   catch (...)
   {
-    SmartMet::Spine::Exception exception(BCP, "Operation failed!", nullptr);
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
     exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
     throw exception;
   }
@@ -2985,7 +2986,7 @@ int Plugin::page_image(Spine::Reactor &theReactor,
   }
   catch (...)
   {
-    SmartMet::Spine::Exception exception(BCP, "Operation failed!", nullptr);
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
     exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
     throw exception;
   }
@@ -3136,7 +3137,7 @@ int Plugin::page_isolines(Spine::Reactor &theReactor,
   }
   catch (...)
   {
-    SmartMet::Spine::Exception exception(BCP, "Operation failed!", nullptr);
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
     exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
     throw exception;
   }
@@ -3327,7 +3328,7 @@ int Plugin::page_symbols(Spine::Reactor &theReactor,
   }
   catch (...)
   {
-    SmartMet::Spine::Exception exception(BCP, "Operation failed!", nullptr);
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
     exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
     throw exception;
   }
@@ -3495,7 +3496,7 @@ int Plugin::page_map(Spine::Reactor &theReactor,
   }
   catch (...)
   {
-    SmartMet::Spine::Exception exception(BCP, "Operation failed!", nullptr);
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
     exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
     throw exception;
   }
@@ -3542,7 +3543,7 @@ void Plugin::getLevelIds(T::ContentInfoList& contentInfoList,std::set<int>& leve
   }
   catch (...)
   {
-    SmartMet::Spine::Exception exception(BCP, "Operation failed!", nullptr);
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
     exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
     throw exception;
   }
@@ -3576,7 +3577,7 @@ void Plugin::getLevels(T::ContentInfoList& contentInfoList,int levelId,std::set<
   }
   catch (...)
   {
-    SmartMet::Spine::Exception exception(BCP, "Operation failed!", nullptr);
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
     exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
     throw exception;
   }
@@ -3613,7 +3614,7 @@ void Plugin::getForecastTypes(T::ContentInfoList& contentInfoList,int levelId,in
   }
   catch (...)
   {
-    SmartMet::Spine::Exception exception(BCP, "Operation failed!", nullptr);
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
     exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
     throw exception;
   }
@@ -3653,7 +3654,7 @@ void Plugin::getForecastNumbers(T::ContentInfoList& contentInfoList,int levelId,
   }
   catch (...)
   {
-    SmartMet::Spine::Exception exception(BCP, "Operation failed!", nullptr);
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
     exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
     throw exception;
   }
@@ -3696,7 +3697,7 @@ void Plugin::getGeometries(T::ContentInfoList& contentInfoList,int levelId,int l
   }
   catch (...)
   {
-    SmartMet::Spine::Exception exception(BCP, "Operation failed!", nullptr);
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
     exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
     throw exception;
   }
@@ -3745,7 +3746,7 @@ std::string Plugin::getFmiKey(std::string& producerName,T::ContentInfo& contentI
   }
   catch (...)
   {
-    SmartMet::Spine::Exception exception(BCP, "Operation failed!", nullptr);
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
     exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
     throw exception;
   }
@@ -3771,7 +3772,7 @@ void Plugin::getGenerations(T::GenerationInfoList& generationInfoList,std::set<s
   }
   catch (...)
   {
-    SmartMet::Spine::Exception exception(BCP, "Operation failed!", nullptr);
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
     exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
     throw exception;
   }
@@ -5225,7 +5226,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
   }
   catch (...)
   {
-    SmartMet::Spine::Exception exception(BCP, "Operation failed!", nullptr);
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
     exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
     throw exception;
   }
@@ -5337,7 +5338,7 @@ int Plugin::request(Spine::Reactor &theReactor,
   }
   catch (...)
   {
-    SmartMet::Spine::Exception exception(BCP, "Operation failed!", nullptr);
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
     exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
     throw exception;
   }
@@ -5378,7 +5379,7 @@ void Plugin::requestHandler(Spine::Reactor &theReactor,
     {
       // Catching all exceptions
 
-      Spine::Exception exception(BCP, "Request processing exception!", nullptr);
+      Fmi::Exception exception(BCP, "Request processing exception!", nullptr);
       exception.addParameter("URI", theRequest.getURI());
       exception.printError();
 
@@ -5395,7 +5396,7 @@ void Plugin::requestHandler(Spine::Reactor &theReactor,
   }
   catch (...)
   {
-    SmartMet::Spine::Exception exception(BCP, "Operation failed!", nullptr);
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
     exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
     throw exception;
   }

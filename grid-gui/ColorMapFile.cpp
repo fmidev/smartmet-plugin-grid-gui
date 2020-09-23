@@ -18,7 +18,7 @@ ColorMapFile::ColorMapFile()
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
+    throw Fmi::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
@@ -35,7 +35,7 @@ ColorMapFile::ColorMapFile(const std::string& filename)
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
+    throw Fmi::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
@@ -54,7 +54,7 @@ ColorMapFile::ColorMapFile(const ColorMapFile& colorMapFile)
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
+    throw Fmi::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
@@ -69,7 +69,7 @@ ColorMapFile::~ColorMapFile()
   }
   catch (...)
   {
-    SmartMet::Spine::Exception exception(BCP,"Destructor failed",nullptr);
+    Fmi::Exception exception(BCP,"Destructor failed",nullptr);
     exception.printError();
   }
 }
@@ -86,7 +86,7 @@ void ColorMapFile::init()
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
+    throw Fmi::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
@@ -103,7 +103,7 @@ void ColorMapFile::init(const std::string& filename)
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
+    throw Fmi::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
@@ -128,7 +128,7 @@ bool ColorMapFile::checkUpdates()
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
+    throw Fmi::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
@@ -150,7 +150,7 @@ void ColorMapFile::getValuesAndColors(std::vector<float>& values,std::vector<uns
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
+    throw Fmi::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
@@ -187,7 +187,7 @@ uint ColorMapFile::getColor(double value)
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
+    throw Fmi::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
@@ -203,7 +203,7 @@ time_t ColorMapFile::getLastModificationTime()
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
+    throw Fmi::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
@@ -219,7 +219,7 @@ std::string ColorMapFile::getFilename()
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
+    throw Fmi::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
@@ -235,7 +235,7 @@ string_vec ColorMapFile::getNames()
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
+    throw Fmi::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
@@ -256,7 +256,7 @@ bool ColorMapFile::hasName(const char *name)
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
+    throw Fmi::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
@@ -271,7 +271,7 @@ void ColorMapFile::print(std::ostream& stream,uint level,uint optionFlags)
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
+    throw Fmi::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
@@ -286,7 +286,7 @@ void ColorMapFile::loadFile()
     FILE *file = fopen(mFilename.c_str(),"re");
     if (file == nullptr)
     {
-      SmartMet::Spine::Exception exception(BCP,"Cannot open file!");
+      Fmi::Exception exception(BCP,"Cannot open file!");
       exception.addParameter("Filename",mFilename);
       throw exception;
     }
@@ -352,7 +352,7 @@ void ColorMapFile::loadFile()
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
+    throw Fmi::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 

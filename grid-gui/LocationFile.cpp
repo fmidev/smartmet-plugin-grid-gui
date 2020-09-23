@@ -18,7 +18,7 @@ LocationFile::LocationFile()
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
+    throw Fmi::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
@@ -35,7 +35,7 @@ LocationFile::LocationFile(const std::string& filename)
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
+    throw Fmi::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
@@ -54,7 +54,7 @@ LocationFile::LocationFile(const LocationFile& locationFile)
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
+    throw Fmi::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
@@ -69,7 +69,7 @@ LocationFile::~LocationFile()
   }
   catch (...)
   {
-    SmartMet::Spine::Exception exception(BCP,"Destructor failed",nullptr);
+    Fmi::Exception exception(BCP,"Destructor failed",nullptr);
     exception.printError();
   }
 }
@@ -86,7 +86,7 @@ void LocationFile::init()
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
+    throw Fmi::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
@@ -103,7 +103,7 @@ void LocationFile::init(const std::string& filename)
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
+    throw Fmi::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
@@ -128,7 +128,7 @@ bool LocationFile::checkUpdates()
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
+    throw Fmi::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
@@ -144,7 +144,7 @@ time_t LocationFile::getLastModificationTime()
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
+    throw Fmi::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
@@ -160,7 +160,7 @@ std::string LocationFile::getFilename()
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
+    throw Fmi::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
@@ -182,7 +182,7 @@ T::Coordinate_vec LocationFile::getCoordinates()
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
+    throw Fmi::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
@@ -198,7 +198,7 @@ T::Location_vec& LocationFile::getLocations()
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
+    throw Fmi::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
@@ -214,7 +214,7 @@ string_vec LocationFile::getNames()
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
+    throw Fmi::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
@@ -235,7 +235,7 @@ bool LocationFile::hasName(const char *name)
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
+    throw Fmi::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
@@ -250,7 +250,7 @@ void LocationFile::print(std::ostream& stream,uint level,uint optionFlags)
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
+    throw Fmi::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
@@ -265,7 +265,7 @@ void LocationFile::loadFile()
     FILE *file = fopen(mFilename.c_str(),"re");
     if (file == nullptr)
     {
-      SmartMet::Spine::Exception exception(BCP,"Cannot open file!");
+      Fmi::Exception exception(BCP,"Cannot open file!");
       exception.addParameter("Filename",mFilename);
       throw exception;
     }
@@ -326,7 +326,7 @@ void LocationFile::loadFile()
   }
   catch (...)
   {
-    throw Spine::Exception(BCP, "Constructor failed!", nullptr);
+    throw Fmi::Exception(BCP, "Constructor failed!", nullptr);
   }
 }
 
