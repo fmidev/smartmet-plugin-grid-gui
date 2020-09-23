@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-plugin-%{DIRNAME}
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
-Version: 20.9.15
+Version: 20.9.18
 Release: 1%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
@@ -16,15 +16,15 @@ BuildRequires: make
 BuildRequires: boost169-devel
 BuildRequires: libconfig-devel
 BuildRequires: smartmet-library-spine-devel
-BuildRequires: smartmet-library-grid-files-devel >= 20.9.15
-BuildRequires: smartmet-library-grid-content-devel >= 20.9.15
-BuildRequires: smartmet-engine-grid-devel >= 20.9.14
+BuildRequires: smartmet-library-grid-files-devel >= 20.9.18
+BuildRequires: smartmet-library-grid-content-devel >= 20.9.18
+BuildRequires: smartmet-engine-grid-devel >= 20.9.18
 BuildRequires: gdal-devel
 Requires: libconfig
-Requires: smartmet-library-macgyver >= 20.9.3
+Requires: smartmet-library-macgyver >= 20.9.15
 Requires: smartmet-library-spine >= 20.9.14
 Requires: smartmet-server >= 20.9.14
-Requires: smartmet-engine-grid >= 20.9.14
+Requires: smartmet-engine-grid >= 20.9.18
 Requires: boost169-date-time
 Provides: %{SPECNAME}
 
@@ -50,6 +50,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/plugins/%{DIRNAME}.so
 
 %changelog
+* Fri Sep 18 2020 Mika Heiskanen <mika.heiskanen@fmi.fi> - 20.9.18-1.fmi
+- Small updates to parameter handling
+
 * Tue Sep 15 2020 Mika Heiskanen <mika.heiskanen@fmi.fi> - 20.9.15-1.fmi
 - Minor updates
 
