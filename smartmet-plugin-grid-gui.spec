@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-plugin-%{DIRNAME}
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
-Version: 20.9.23
+Version: 20.10.1
 Release: 1%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
@@ -16,15 +16,15 @@ BuildRequires: make
 BuildRequires: boost169-devel
 BuildRequires: libconfig-devel
 BuildRequires: smartmet-library-spine-devel
-BuildRequires: smartmet-library-grid-files-devel >= 20.9.23
-BuildRequires: smartmet-library-grid-content-devel >= 20.9.23
-BuildRequires: smartmet-engine-grid-devel >= 20.9.23
+BuildRequires: smartmet-library-grid-files-devel >= 20.10.1
+BuildRequires: smartmet-library-grid-content-devel >= 20.10.1
+BuildRequires: smartmet-engine-grid-devel >= 20.10.1
 BuildRequires: gdal-devel
 Requires: libconfig
-Requires: smartmet-library-macgyver >= 20.9.18
+Requires: smartmet-library-macgyver >= 20.9.29
 Requires: smartmet-library-spine >= 20.9.23
 Requires: smartmet-server >= 20.9.23
-Requires: smartmet-engine-grid >= 20.9.23
+Requires: smartmet-engine-grid >= 20.10.1
 Requires: boost169-date-time
 Provides: %{SPECNAME}
 
@@ -50,6 +50,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/plugins/%{DIRNAME}.so
 
 %changelog
+* Thu Oct  1 2020 Mika Heiskanen <mika.heiskanen@fmi.fi> - 20.10.1-1.fmi
+- Repackaged due to library ABI changes
+
 * Wed Sep 23 2020 Mika Heiskanen <mika.heiskanen@fmi.fi> - 20.9.23-1.fmi
 - Use Fmi::Exception instead of Spine::Exception
 
