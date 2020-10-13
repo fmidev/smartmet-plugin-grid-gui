@@ -867,12 +867,19 @@ void Plugin::saveImage(
     if (projectionId > 0  &&  projectionId != geometryId)
       geomId = projectionId;
 
-    T::Coordinate_svec coordinates;
+    T::Coordinate_vec emptyCoordinates;
+    T::Coordinate_vec *coordinates = &emptyCoordinates;
+    T::Coordinate_vec *lineCoordinates = &emptyCoordinates;
+
+    T::Coordinate_svec coordinatesPtr;
     if (geomId != 0)
     {
-      coordinates = Identification::gridDef.getGridLatLonCoordinatesByGeometryId(geomId);
-
+      coordinatesPtr = Identification::gridDef.getGridLatLonCoordinatesByGeometryId(geomId);
+      if (coordinatesPtr)
+        coordinates = coordinatesPtr.get();
     }
+
+
 /*
     if (coordinates.size() == 0  &&  gridData.mGeometryId != 0)
     {
@@ -886,11 +893,15 @@ void Plugin::saveImage(
     coordinates = coordinatesx.mCoordinateList;
 */
 
-    T::Coordinate_svec lineCoordinates;
+    T::Coordinate_svec lineCoordinatesPtr;
     if (coordinateLines != 0xFFFFFFFF)
     {
       if (geomId != 0)
-        lineCoordinates = Identification::gridDef.getGridLatLonCoordinateLinePointsByGeometryId(geomId);
+      {
+        lineCoordinatesPtr = Identification::gridDef.getGridLatLonCoordinateLinePointsByGeometryId(geomId);
+        if (lineCoordinatesPtr)
+          lineCoordinates = lineCoordinatesPtr.get();
+      }
 /*
       if (lineCoordinates.size() == 0  &&  gridData.mGeometryId != 0)
         lineCoordinates = Identification::gridDef.getGridLatLonCoordinateLinePointsByGeometryId(gridData.mGeometryId);
