@@ -447,7 +447,7 @@ void Plugin::loadIsolineFile()
 
             for (uint t=1; t<c; t++)
             {
-              float val = toDouble(field[t]);
+              float val = toFloat(field[t]);
               values.push_back(val);
             }
 
@@ -1685,7 +1685,7 @@ void Plugin::saveTimeSeries(const char *imageFile,std::vector<T::ParamValue>& va
       int yp = C_INT(dd*(valueList[x]-minValue)) + 1;
       //uint col = 0x404040;
 
-      uint v = 200 - ((valueList[x]-minValue) / step);
+      uint v = 200 - C_UINT((valueList[x]-minValue) / step);
       v = v + 55;
       uint col = hsv_to_rgb(0,0,C_UCHAR(v));
 
@@ -1755,7 +1755,7 @@ int Plugin::page_info(Spine::Reactor &theReactor,
     std::ostringstream ostr;
 
     T::ContentInfo contentInfo;
-    int result = contentServer->getContentInfo(0,toInt64(fileIdStr.c_str()),toInt64(messageIndexStr.c_str()),contentInfo);
+    int result = contentServer->getContentInfo(0,toUInt32(fileIdStr),toUInt32(messageIndexStr),contentInfo);
     if (result != 0)
     {
       ostr << "<HTML><BODY>\n";
@@ -1939,7 +1939,7 @@ int Plugin::page_message(Spine::Reactor &theReactor,
 
     std::vector<uchar> messageBytes;
     std::vector<uint> messageSections;
-    int result = dataServer->getGridMessageBytes(0,toInt64(fileIdStr.c_str()),toInt64(messageIndexStr.c_str()),messageBytes,messageSections);
+    int result = dataServer->getGridMessageBytes(0,toUInt32(fileIdStr),toUInt32(messageIndexStr),messageBytes,messageSections);
     if (result != 0)
     {
       ostr << "<HTML><BODY>\n";
@@ -2072,7 +2072,7 @@ int Plugin::page_download(Spine::Reactor &theReactor,
 
     std::vector<uchar> messageBytes;
     std::vector<uint> messageSections;
-    int result = dataServer->getGridMessageBytes(0,toInt64(fileIdStr.c_str()),toInt64(messageIndexStr.c_str()),messageBytes,messageSections);
+    int result = dataServer->getGridMessageBytes(0,toUInt32(fileIdStr),toUInt32(messageIndexStr),messageBytes,messageSections);
     if (result != 0)
     {
       ostr << "<HTML><BODY>\n";
@@ -2177,7 +2177,7 @@ int Plugin::page_locations(Spine::Reactor &theReactor,
       T::Location_vec locationList = locationFile->getLocations();
       T::GridValueList valueList;
 
-      if (dataServer->getGridValueListByPointList(0,toInt64(fileIdStr.c_str()),toInt64(messageIndexStr.c_str()),T::CoordinateTypeValue::LATLON_COORDINATES,coordinateList,T::AreaInterpolationMethod::Linear,valueList) == 0)
+      if (dataServer->getGridValueListByPointList(0,toUInt32(fileIdStr),toUInt32(messageIndexStr),T::CoordinateTypeValue::LATLON_COORDINATES,coordinateList,T::AreaInterpolationMethod::Linear,valueList) == 0)
       {
         for (auto it = locationList.begin(); it != locationList.end(); ++it)
         {
@@ -2254,7 +2254,7 @@ int Plugin::page_table(Spine::Reactor &theReactor,
     std::ostringstream ostr;
 
     T::GridData gridData;
-    int result = dataServer->getGridData(0,toInt64(fileIdStr.c_str()),toInt64(messageIndexStr.c_str()),gridData);
+    int result = dataServer->getGridData(0,toUInt32(fileIdStr),toUInt32(messageIndexStr),gridData);
     if (result != 0)
     {
       ostr << "<HTML><BODY>\n";
@@ -2267,7 +2267,7 @@ int Plugin::page_table(Spine::Reactor &theReactor,
 
     T::GeometryId geometryId = gridData.mGeometryId;
     if (geometryId == 0)
-      geometryId = toInt64(geometryIdStr.c_str());
+      geometryId = toInt32(geometryIdStr);
 
 
     T::Coordinate_svec coordinates = Identification::gridDef.getGridOriginalCoordinatesByGeometryId(geometryId);
@@ -2419,7 +2419,7 @@ int Plugin::page_coordinates(Spine::Reactor &theReactor,
     std::ostringstream ostr;
 
     T::GridCoordinates coordinates;
-    int result = dataServer->getGridCoordinates(0,toInt64(fileIdStr.c_str()),toInt64(messageIndexStr.c_str()),T::CoordinateTypeValue::LATLON_COORDINATES,coordinates);
+    int result = dataServer->getGridCoordinates(0,toUInt32(fileIdStr),toUInt32(messageIndexStr),T::CoordinateTypeValue::LATLON_COORDINATES,coordinates);
     if (result != 0)
     {
       ostr << "<HTML><BODY>\n";
@@ -2519,11 +2519,11 @@ int Plugin::page_value(Spine::Reactor &theReactor,
 
     boost::optional<std::string> v = theRequest.getParameter("fileId");
     if (v)
-      fileId = toInt64(v->c_str());
+      fileId = toUInt32(v->c_str());
 
     v = theRequest.getParameter("messageIndex");
     if (v)
-      messageIndex = toInt64(v->c_str());
+      messageIndex = toUInt32(v->c_str());
 
     v = theRequest.getParameter("x");
     if (v)
@@ -2581,7 +2581,7 @@ int Plugin::page_value(Spine::Reactor &theReactor,
     if (reverseXDirection)
       xx = dWidth - (xPos * dWidth);
 
-    T::ParamValue value;
+    T::ParamValue value = 0;
     dataServer->getGridValueByPoint(0,fileId,messageIndex,T::CoordinateTypeValue::GRID_COORDINATES,xx,yy,T::AreaInterpolationMethod::Nearest,value);
 
     if (value != ParamValueMissing)
@@ -2626,11 +2626,11 @@ int Plugin::page_timeseries(Spine::Reactor &theReactor,
 
     v = theRequest.getParameter("fileId");
     if (v)
-      fileId = toInt64(v->c_str());
+      fileId = toUInt32(v->c_str());
 
     v = theRequest.getParameter("messageIndex");
     if (v)
-      messageIndex = toInt64(v->c_str());
+      messageIndex = toUInt32(v->c_str());
 
     v = theRequest.getParameter("x");
     if (v)
@@ -2688,7 +2688,7 @@ int Plugin::page_timeseries(Spine::Reactor &theReactor,
 
       if (info->mGeometryId == contentInfo.mGeometryId  &&  info->mForecastType == contentInfo.mForecastType  &&  info->mForecastNumber == contentInfo.mForecastNumber)
       {
-        T::ParamValue value;
+        T::ParamValue value = 0;
         if (dataServer->getGridValueByPoint(0,info->mFileId,info->mMessageIndex,T::CoordinateTypeValue::GRID_COORDINATES,xx,yy,T::AreaInterpolationMethod::Linear,value) == 0)
         {
           if (value != ParamValueMissing)
@@ -2973,17 +2973,17 @@ int Plugin::page_image(Spine::Reactor &theReactor,
     itsImagesUnderConstruction[itsImageCounter % 100] = hash;
     itsImageCounter++;
 
-    uint fileId = toInt64(fileIdStr.c_str());
-    uint messageIndex = toInt64(messageIndexStr.c_str());
-    uint geometryId = toInt64(geometryIdStr.c_str());
-    uint projectionId = toInt64(projectionIdStr.c_str());
+    uint fileId = toUInt32(fileIdStr);
+    uint messageIndex = toUInt32(messageIndexStr);
+    int geometryId = toInt32(geometryIdStr);
+    uint projectionId = toUInt32(projectionIdStr);
     uint landBorder = getColorValue(landBorderStr);
     uint coordinateLines = getColorValue(coordinateLinesStr);
 
     char fname[200];
     sprintf(fname,"%s/grid-gui-image_%llu.jpg",itsImageCache_dir.c_str(),getTime());
 
-    saveImage(fname,fileId,messageIndex,toUInt8(hueStr.c_str()),toUInt8(saturationStr.c_str()),toUInt8(blurStr.c_str()),coordinateLines,0xFFFFFFFF,"",landBorder,landMaskStr,seaMaskStr,colorMap,geometryId,projectionId,"","",false);
+    saveImage(fname,fileId,messageIndex,toUInt8(hueStr),toUInt8(saturationStr),toUInt8(blurStr),coordinateLines,0xFFFFFFFF,"",landBorder,landMaskStr,seaMaskStr,colorMap,geometryId,projectionId,"","",false);
 
     loadImage(fname,theResponse);
 
@@ -3123,10 +3123,10 @@ int Plugin::page_isolines(Spine::Reactor &theReactor,
     itsImagesUnderConstruction[itsImageCounter % 100] = hash;
     itsImageCounter++;
 
-    uint fileId = toInt64(fileIdStr.c_str());
-    uint messageIndex = toInt64(messageIndexStr.c_str());
-    uint geometryId = toInt64(geometryIdStr.c_str());
-    uint projectionId = toInt64(projectionIdStr.c_str());
+    uint fileId = toUInt32(fileIdStr);
+    uint messageIndex = toUInt32(messageIndexStr);
+    int geometryId = toInt32(geometryIdStr);
+    uint projectionId = toUInt32(projectionIdStr);
     uint landBorder = getColorValue(landBorderStr);
     uint coordinateLines = getColorValue(coordinateLinesStr);
     uint isolines = getColorValue(isolinesStr);
@@ -3316,16 +3316,16 @@ int Plugin::page_symbols(Spine::Reactor &theReactor,
     itsImageCounter++;
 
 
-    uint fileId = toInt64(fileIdStr.c_str());
-    uint messageIndex = toInt64(messageIndexStr.c_str());
-    uint geometryId = toInt64(geometryIdStr.c_str());
-    uint projectionId = toInt64(projectionIdStr.c_str());
+    uint fileId = toUInt32(fileIdStr);
+    uint messageIndex = toUInt32(messageIndexStr);
+    int geometryId = toInt32(geometryIdStr);
+    uint projectionId = toUInt32(projectionIdStr);
     uint landBorder = getColorValue(landBorderStr);
     uint coordinateLines = getColorValue(coordinateLinesStr);
 
     char fname[200];
     sprintf(fname,"/%s/grid-gui-image_%llu.jpg",itsImageCache_dir.c_str(),getTime());
-    saveImage(fname,fileId,messageIndex,toUInt8(hueStr.c_str()),toUInt8(saturationStr.c_str()),toUInt8(blurStr.c_str()),coordinateLines,0xFFFFFFFF,"",landBorder,landMaskStr,seaMaskStr,"",geometryId,projectionId,symbolMap,locations,true);
+    saveImage(fname,fileId,messageIndex,toUInt8(hueStr),toUInt8(saturationStr),toUInt8(blurStr),coordinateLines,0xFFFFFFFF,"",landBorder,landMaskStr,seaMaskStr,"",geometryId,projectionId,symbolMap,locations,true);
 
     loadImage(fname,theResponse);
 
@@ -3477,7 +3477,7 @@ int Plugin::page_map(Spine::Reactor &theReactor,
 
     T::ParamValue_vec values;
 
-    int result = dataServer->getGridValueVectorByRectangle(0,toInt64(fileIdStr.c_str()),toInt64(messageIndexStr.c_str()),T::CoordinateTypeValue::LATLON_COORDINATES,columns,rows,-180,90,360/C_DOUBLE(columns),-180/C_DOUBLE(rows),T::AreaInterpolationMethod::Nearest,values);
+    int result = dataServer->getGridValueVectorByRectangle(0,toUInt32(fileIdStr),toUInt32(messageIndexStr),T::CoordinateTypeValue::LATLON_COORDINATES,columns,rows,-180,90,360/C_DOUBLE(columns),-180/C_DOUBLE(rows),T::AreaInterpolationMethod::Nearest,values);
     if (result != 0)
     {
       std::ostringstream ostr;
@@ -3493,7 +3493,7 @@ int Plugin::page_map(Spine::Reactor &theReactor,
 
     char fname[200];
     sprintf(fname,"/%s/grid-gui-image_%llu.jpg",itsImageCache_dir.c_str(),getTime());
-    saveMap(fname,columns,rows,values,toUInt8(hueStr.c_str()),toUInt8(saturationStr.c_str()),toUInt8(blurStr.c_str()),coordinateLines,landBorder,landMaskStr,seaMaskStr,colorMap);
+    saveMap(fname,columns,rows,values,toUInt8(hueStr),toUInt8(saturationStr),toUInt8(blurStr),coordinateLines,landBorder,landMaskStr,seaMaskStr,colorMap);
 
     loadImage(fname,theResponse);
 
@@ -4075,7 +4075,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     contentServer->getProducerInfoList(0,producerInfoList);
     uint len = producerInfoList.getLength();
     producerInfoList.sortByName();
-    uint pid = toInt64(producerIdStr.c_str());
+    uint pid = toUInt32(producerIdStr);
 
     ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Producer:</TD></TR>\n";
     ostr1 << "<TR height=\"30\"><TD>\n";
@@ -4115,7 +4115,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     contentServer->getGenerationInfoListByProducerId(0,pid,generationInfoList2);
     generationInfoList2.getGenerationInfoListByProducerIdAndStatus(pid,generationInfoList,T::GenerationInfo::Status::Ready);
 
-    uint gid = toInt64(generationIdStr.c_str());
+    uint gid = toUInt32(generationIdStr);
 
     if (generationInfoList.getGenerationInfoById(gid) == nullptr)
       gid = 0;
@@ -4246,7 +4246,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     T::ContentInfoList contentInfoList;
     contentServer->getContentListByParameterAndGenerationId(0,gid,T::ParamKeyTypeValue::FMI_NAME,parameterIdStr,T::ParamLevelIdTypeValue::IGNORE,0,0,0,-2,-2,-2,"10000101T000000","30000101T000000",0,contentInfoList);
     len = contentInfoList.getLength();
-    int levelId = toInt64(parameterLevelIdStr.c_str());
+    int levelId = toInt32(parameterLevelIdStr);
 
     ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Level type:</TD></TR>\n";
     ostr1 << "<TR height=\"30\"><TD>\n";
@@ -4323,7 +4323,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     contentInfoList.clear();
     contentServer->getContentListByParameterAndGenerationId(0,gid,T::ParamKeyTypeValue::FMI_NAME,parameterIdStr,levelIdType,(levelId % 1000),0,0x7FFFFFFF,-2,-2,-2,"10000101T000000","30000101T000000",0,contentInfoList);
     len = contentInfoList.getLength();
-    T::ParamLevel level = (T::ParamLevel)toInt64(parameterLevelStr.c_str());
+    T::ParamLevel level = toInt32(parameterLevelStr);
 
     ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Level:</TD></TR>\n";
     ostr1 << "<TR height=\"30\"><TD>\n";
@@ -4361,7 +4361,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
     // ### Forecast type:
 
-    short forecastType = (short)toInt64(forecastTypeStr.c_str());
+    short forecastType = toInt16(forecastTypeStr);
 
     ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Forecast type</TD></TR>\n";
     ostr1 << "<TR height=\"30\"><TD>\n";
@@ -4406,7 +4406,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
     // ### Forecast number:
 
-    short forecastNumber = (short)toInt64(forecastNumberStr.c_str());
+    short forecastNumber = toInt16(forecastNumberStr);
 
     ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Forecast number</TD></TR>\n";
     ostr1 << "<TR height=\"30\"><TD>\n";
@@ -4443,7 +4443,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
     // ### Geometries:
 
-    T::GeometryId geometryId  = (T::GeometryId)toInt64(geometryIdStr.c_str());
+    T::GeometryId geometryId  = toInt32(geometryIdStr);
 
     ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Geometry:</TD></TR>\n";
     ostr1 << "<TR height=\"30\"><TD>\n";
@@ -4700,7 +4700,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
       std::set<T::GeometryId> projections;
       Identification::gridDef.getGeometryIdList(projections);
 
-      T::GeometryId projectionId  = (T::GeometryId)toInt64(projectionIdStr.c_str());
+      T::GeometryId projectionId  = toInt32(projectionIdStr);
 
       ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Projection:</TD></TR>\n";
       ostr1 << "<TR height=\"30\"><TD>\n";
@@ -4899,7 +4899,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
         ostr1 << " >\n";
 
 
-        uint hue = toInt64(hueStr.c_str());
+        uint hue = toUInt32(hueStr);
         for (uint a=0; a<256; a++)
         {
           if (a == hue)
@@ -4910,7 +4910,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
         ostr1 << "</SELECT>\n";
 
 
-        uint saturation = toInt64(saturationStr.c_str());
+        uint saturation = toUInt32(saturationStr);
         ostr1 << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&generationId=" + generationIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&landBorder=" + landBorderStr + "&seaMask=" + seaMaskStr + "&landMask=" + landMaskStr + "&saturation=' + this.options[this.selectedIndex].value)\"";
         ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&saturation=')\"";
         ostr1 << " >\n";
@@ -4931,7 +4931,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
         ostr1 << " >\n";
 
 
-        uint blur = toInt64(blurStr.c_str());
+        uint blur = toUInt32(blurStr);
         for (uint a=1; a<=200; a++)
         {
           if (a == blur)
