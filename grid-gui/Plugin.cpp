@@ -205,7 +205,7 @@ void Plugin::shutdown()
 {
   try
   {
-    std::cout << "  -- Shutdown requested (grid-content)\n";
+    std::cout << "  -- Shutdown requested (grid-plugin)\n";
   }
   catch (...)
   {
@@ -670,8 +670,6 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
 
     uint *image = new uint[width*height];
 
-    //unsigned char hue = 30;
-    //unsigned char saturation = 128;
     uint c = 0;
     int ss = 2;
     bool yLand[width];
@@ -684,7 +682,6 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
       for (int x=0; x<width; x++)
       {
         T::ParamValue val = values[c];
-        //printf("Val(%u,%u) : %f\n",x,y,val);
         uint v = 200 - ((val - minValue) / step);
         v = v / blur;
         v = v * blur;
@@ -696,8 +693,6 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
 
         double xc = xd*(x-(dWidth/2));
         double yc = yd*((dHeight-y-1)-(dHeight/2));
-
-        //printf("%f,%f\n",xc,yc);
 
         if (val == ParamValueMissing)
           col = 0xE8E8E8;
@@ -933,7 +928,6 @@ void Plugin::saveImage(
         if (showSymbols)
           interpolationMethod = T::AreaInterpolationMethod::Nearest;
 
-        //int result = dataServer->getGridValueVectorByCoordinateList(0,fileId,messageIndex,T::CoordinateTypeValue::LATLON_COORDINATES,coordinates,interpolationMethod,values);
         T::AttributeList attributeList;
         attributeList.addAttribute("grid.geometryId",std::to_string(geomId));
         attributeList.addAttribute("grid.areaInterpolationMethod",std::to_string(interpolationMethod));
@@ -1267,7 +1261,6 @@ void Plugin::saveImage(const char *imageFile,T::GridData&  gridData,unsigned cha
     if (seaMask == "Simple"  &&  !showSymbols)
       showSeaMask = true;
 
-    //printf("*** COORDINATES %u\n",coordinates.size());
     double maxValue = -1000000000;
     double minValue = 1000000000;
 
@@ -1286,8 +1279,6 @@ void Plugin::saveImage(const char *imageFile,T::GridData&  gridData,unsigned cha
       printf("ERROR: There are not enough values (= %lu) for the grid (%u x %u)!\n",sz,width,height);
       return;
     }
-
-    //std::set<unsigned long long> cList;
 
     for (uint t=0; t<size; t++)
     {
@@ -1360,7 +1351,6 @@ void Plugin::saveImage(const char *imageFile,T::GridData&  gridData,unsigned cha
           if (!showValues || val == ParamValueMissing)
             col = 0xE8E8E8;
 
-          //printf("COORDINATES : %d,%d => %f,%f\n",x,y,coordinates[c].x(),coordinates[c].y());
           bool land = false;
           if (landSeaMask)
             land = isLand(coordinates[c].x(),coordinates[c].y());
@@ -1434,9 +1424,6 @@ void Plugin::saveImage(const char *imageFile,T::GridData&  gridData,unsigned cha
                 image[(y-1)*width + x] = landBorder;
             }
           }
-
-      //    if ((coordinates[c].x() % 10) == 0  ||  (coordinates[c].y() % 10) == 0)
-      //      col = 0xFF0000;
 
           yLand[x] = land;
           prevLand = land;
@@ -1579,9 +1566,6 @@ void Plugin::saveImage(const char *imageFile,T::GridData&  gridData,unsigned cha
           {
             T::ParamValue val = gridData.mValues[C_INT(round(grid_j))*width + C_INT(round(grid_i))];
 
-            //if (rotate)
-            //  val = gridData.mValues[(height-round(grid_j)-1)*width + round(grid_i)];
-
             CImage img;
             if (symbolMapFile->getSymbol(val,img))
             {
@@ -1683,8 +1667,6 @@ void Plugin::saveTimeSeries(const char *imageFile,std::vector<T::ParamValue>& va
     {
       int xp = x*3;
       int yp = C_INT(dd*(valueList[x]-minValue)) + 1;
-      //uint col = 0x404040;
-
       uint v = 200 - C_UINT((valueList[x]-minValue) / step);
       v = v + 55;
       uint col = hsv_to_rgb(0,0,C_UCHAR(v));
@@ -1765,8 +1747,6 @@ int Plugin::page_info(Spine::Reactor &theReactor,
       theResponse.setHeader("Content-Type", "text/html; charset=UTF-8");
       return HTTP::Status::ok;
     }
-
-    //contentInfo.print(std::cout,0,0);
 
     T::FileInfo fileInfo;
     result = contentServer->getFileInfoById(0,contentInfo.mFileId,fileInfo);
@@ -2105,8 +2085,6 @@ int Plugin::page_download(Spine::Reactor &theReactor,
       content->push_back('7');
       content->push_back('7');
 
-      //theResponse.setHeader("Content-Type","image/jpg");
-
       char val[1000];
       sprintf(val,"attachment; filename=message_%s_%s.grib",fileIdStr.c_str(),messageIndexStr.c_str());
       theResponse.setHeader("Content-Disposition",val);
@@ -2271,20 +2249,6 @@ int Plugin::page_table(Spine::Reactor &theReactor,
 
 
     T::Coordinate_svec coordinates = Identification::gridDef.getGridOriginalCoordinatesByGeometryId(geometryId);
-    /*
-    T::GridCoordinates coordinates;
-    result = dataServer->getGridCoordinates(0,toInt64(fileIdStr.c_str()),toInt64(messageIndexStr.c_str()),T::CoordinateTypeValue::ORIGINAL_COORDINATES,coordinates);
-    if (result != 0)
-    {
-      ostr << "<HTML><BODY>\n";
-      ostr << "DataServer request 'getGridCoordinates()' failed : " << result << "\n";
-      ostr << "</BODY></HTML>\n";
-      theResponse.setContent(std::string(ostr.str()));
-      return HTTP::Status::ok;
-    }
-    */
-
-    // printf("*** COORDINATES %u : %d\n",geometryId,coordinates.size());
 
     uint c = 0;
     uint height = gridData.mRows;
@@ -2666,9 +2630,6 @@ int Plugin::page_timeseries(Spine::Reactor &theReactor,
     double xx = xPos * dWidth;
     double yy = yPos * dHeight;
 
-    //if (presentation == "image(rotated)")
-    //  yy = height-yy;
-
     T::ContentInfoList contentInfoList;
     contentServer->getContentListByParameterAndGenerationId(0,contentInfo.mGenerationId,T::ParamKeyTypeValue::FMI_NAME,contentInfo.getFmiParameterName(),T::ParamLevelIdTypeValue::FMI,contentInfo.mFmiParameterLevelId,contentInfo.mParameterLevel,contentInfo.mParameterLevel,-2,-2,-2,"19000101T000000","23000101T000000",0,contentInfoList);
 
@@ -2677,7 +2638,6 @@ int Plugin::page_timeseries(Spine::Reactor &theReactor,
     std::vector <T::ParamValue> valueList;
 
     int idx = -1;
-    //std::ostringstream ostr;
     std::set<int> dayIdx;
 
     uint c = 0;
@@ -3999,7 +3959,6 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     output << "  if (keyCode == 40) index++;\n";
 
     output << "  setImage(img,url + obj.options[index].value);\n";
-    //output << "  alert (\"The Unicode key code is: \" + keyCode);\n";
     output << "}\n";
 
     output << "function setText(id,txt)\n";
@@ -4022,14 +3981,9 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     output << "  var prosY = posY / img.height;\n";
     output << "  var url = \"/grid-gui?page=value&presentation=\" + presentation + \"&fileId=\" + fileId + \"&messageIndex=\" + messageIndex + \"&x=\" + prosX + \"&y=\" + prosY;\n";
 
-    //output << "  document.getElementById('gridValue').value = url;\n";
     output << "  var txt = httpGet(url);\n";
     output << "  document.getElementById('gridValue').value = txt;\n";
 
-    //output << "  var url2 = \"/grid-gui?page=timeseries&presentation=\" + presentation + \"&fileId=\" + fileId + \"&messageIndex=\" + messageIndex + \"&x=\" + prosX + \"&y=\" + prosY;\n";
-    //output << "  document.getElementById('timeseries').src = url2;\n";
-
-    //output << "  alert(\"You clicked at: (\"+posX+\",\"+posY+\")\");\n";
     output << "}\n";
     output << "</SCRIPT>\n";
 
@@ -4607,8 +4561,6 @@ int Plugin::page_main(Spine::Reactor &theReactor,
                   if (cc == 0)
                     ostr3 << "<TD style=\"text-align:center; font-size:12;width:120;background:#F0F0F0;\" id=\"ftime\">" + startTime + "</TD><TD style=\"width:1;\"> </TD>\n";
 
-                  //ostr3 << "<TD style=\"width:1;\"> </TD>\n";
-
                   if (u > " ")
                     ostr3 << "<TD style=\"width:5; background:"+bg+";\" onmouseout=\"this.style='width:5;background:"+bg+";'\" onmouseover=\"this.style='width:5;height:30;background:#FF0000;'; setText('ftime','" + g->mForecastTime + "');setImage(document.getElementById('myimage'),'" + u + uu + "');\" > </TD>\n";
                   else
@@ -5061,9 +5013,6 @@ int Plugin::page_main(Spine::Reactor &theReactor,
       if (presentation == "Image" || presentation == "Map" || presentation == "Symbols" || presentation == "Isolines")
         ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&landBorder=" + landBorderStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&landMask=')\"";
 
-      //if (presentation == "Image" || presentation == "Map" || presentation == "Symbols")
-      //  ostr1 << " onkeydown=\"setImage(document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&landBorder=" + landBorderStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&landMask=' + this.options[this.selectedIndex].value)\"";
-
       ostr1 << " >\n";
 
       const char *landMasks[] = {"Simple",nullptr};
@@ -5378,13 +5327,8 @@ void Plugin::requestHandler(Spine::Reactor &theReactor,
       //  std::cout << it->first << " = " << it->second << "\n";
 
       theResponse.setHeader("Access-Control-Allow-Origin", "*");
-
-      //std::cout << theRequest.toString() << "\n";
-
       int status = request(theReactor, theRequest, theResponse);
       theResponse.setStatus(status);
-
-      // std::cout << theResponse.headersToString() << "\n";
     }
     catch (...)
     {
