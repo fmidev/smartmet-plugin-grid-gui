@@ -1817,6 +1817,8 @@ int Plugin::page_info(Spine::Reactor &theReactor,
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Name</TD><TD>" << generationInfo.mName << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Description</TD><TD>" << generationInfo.mDescription << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Analysis time</TD><TD>" << generationInfo.mAnalysisTime << "</TD></TR>\n";
+    if (generationInfo.mDeletionTime > 0)
+      ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Deletion time</TD><TD>" << utcTimeFromTimeT(generationInfo.mDeletionTime) << "</TD></TR>\n";
 
     ostr << "</TABLE></TD></TR>\n";
 
@@ -1826,6 +1828,8 @@ int Plugin::page_info(Spine::Reactor &theReactor,
 
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Id</TD><TD>" << fileInfo.mFileId << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Name</TD><TD>" << fileInfo.mName << "</TD></TR>\n";
+    if (fileInfo.mDeletionTime > 0)
+      ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Deletion time</TD><TD>" << utcTimeFromTimeT(fileInfo.mDeletionTime) << "</TD></TR>\n";
 
     ostr << "</TABLE></TD></TR>\n";
 
@@ -3791,6 +3795,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     std::string fmiKey = "";
     std::string daliIdStr = "";
     uint daliId = 0;
+    time_t requiredAccessTime = time(nullptr) + 120;
 
     boost::optional<std::string> v;
     v = theRequest.getParameter("producerId");
@@ -4094,7 +4099,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
       {
         std::string name = *it;
         T::GenerationInfo *g = generationInfoList.getGenerationInfoByName(name);
-        if (g != nullptr)
+        if (g != nullptr && (g->mDeletionTime == 0 || g->mDeletionTime > requiredAccessTime))
         {
           if (gid == 0)
           {
