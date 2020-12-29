@@ -2,78 +2,31 @@ SUBNAME = grid-gui
 SPEC = smartmet-plugin-$(SUBNAME)
 INCDIR = smartmet/plugins/$(SUBNAME)
 
-# Installation directories
+REQUIRES = gdal
 
-processor := $(shell uname -p)
-
-ifeq ($(origin PREFIX), undefined)
-  PREFIX = /usr
-else
-  PREFIX = $(PREFIX)
-endif
-
-ifeq ($(processor), x86_64)
-  libdir = $(PREFIX)/lib64
-else
-  libdir = $(PREFIX)/lib
-endif
-
-bindir = $(PREFIX)/bin
-includedir = $(PREFIX)/include
-datadir = $(PREFIX)/share
-plugindir = $(datadir)/smartmet/plugins
-objdir = obj
+include $(shell echo $${PREFIX-/usr})/share/smartmet/devel/makefile.inc
 
 # Compiler options
 
+CFLAGS += -Wno-maybe-uninitialized $(CORBA_FLAGS)
+
 DEFINES = -DUNIX -D_REENTRANT
-
-# Boost 1.69
-
-ifneq "$(wildcard /usr/include/boost169)" ""
-  INCLUDES += -isystem /usr/include/boost169
-  LIBS += -L/usr/lib64/boost169
-endif
-
-FLAGS = -std=c++11 -fPIC -MD -Wall -W -Wno-unused-parameter -fno-omit-frame-pointer
-
-FLAGS_DEBUG = \
-	-Wcast-align \
-	-Wcast-qual \
-	-Winline \
-	-Wno-multichar \
-	-Wno-pmf-conversions \
-	-Wpointer-arith
-
-FLAGS_RELEASE = -Wuninitialized
 
 INCLUDES += \
 	-I$(includedir)/smartmet \
-
-# Compile options in detault, debug and profile modes
-
-CFLAGS_RELEASE = $(DEFINES) $(FLAGS) $(FLAGS_RELEASE) -DNDEBUG -O2 -g
-CFLAGS_DEBUG   = $(DEFINES) $(FLAGS) $(FLAGS_DEBUG)   -Werror  -O0 -g
-
-ifneq (,$(findstring debug,$(MAKECMDGOALS)))
-  override CFLAGS += $(CFLAGS_DEBUG)
-else
-  override CFLAGS += $(CFLAGS_RELEASE)
-endif
+	-I$(includedir)/smartmet/grid-files \
+	-I$(includedir)/smartmet/grid-content
 
 LIBS += -L$(libdir) \
+	$(REQUIRED_LIBS) \
+	-lsmartmet-grid-files \
+	-lsmartmet-grid-content \
 	-lsmartmet-spine \
 	-lsmartmet-macgyver \
-	-lboost_date_time
 
 # What to install
 
 LIBFILE = $(SUBNAME).so
-
-# How to install
-
-INSTALL_PROG = install -p -m 775
-INSTALL_DATA = install -p -m 664
 
 # Compilation directories
 
@@ -86,7 +39,7 @@ SRCS = $(wildcard $(SUBNAME)/*.cpp)
 HDRS = $(wildcard $(SUBNAME)/*.h)
 OBJS = $(patsubst %.cpp, obj/%.o, $(notdir $(SRCS)))
 
-INCLUDES := -Iinclude $(INCLUDES)
+INCLUDES := -I$(SUBNAME) $(INCLUDES)
 
 .PHONY: test rpm
 
@@ -98,17 +51,22 @@ release: all
 profile: all
 
 configtest:
-	@if [ -x "$$(command -v cfgvalidate)" ]; then cfgvalidate -v cnf/crid-gui.conf.sample; fi
+	@if [ -x "$$(command -v cfgvalidate)" ]; then cfgvalidate -v cfg/grid-gui-plugin.conf; fi
 
 $(LIBFILE): $(OBJS)
-	$(CC) $(LDFLAGS) -shared -rdynamic -o $(LIBFILE) $(OBJS) $(LIBS)
+	$(CXX) $(LDFLAGS) -shared -rdynamic -o $(LIBFILE) $(OBJS) $(LIBS)
+	@echo Checking $(LIBFILE) for unresolved references
+	@if ldd -r $(LIBFILE) 2>&1 | c++filt | grep ^undefined\ symbol | grep -v SmartMet::Engine:: ; \
+		then rm -v $(LIBFILE); \
+		exit 1; \
+	fi
 
 clean:
 	rm -f $(LIBFILE) *~ $(SUBNAME)/*~
 	rm -rf obj
 
 format:
-	clang-format -i -style=file $(SUBNAME)/*.h $(SUBNAME)/*.cpp
+	clang-format -i -style=file $(SUBNAME)/*.h $(SUBNAME)/*.cpp test/*.cpp
 
 install:
 	@mkdir -p $(plugindir)
@@ -122,7 +80,7 @@ objdir:
 
 rpm: clean $(SPEC).spec
 	rm -f $(SPEC).tar.gz # Clean a possible leftover from previous attempt
-	tar -czvf $(SPEC).tar.gz --transform "s,^,$(SPEC)/," *
+	tar -czvf $(SPEC).tar.gz --exclude test --exclude-vcs --transform "s,^,$(SPEC)/," *
 	rpmbuild -tb $(SPEC).tar.gz
 	rm -f $(SPEC).tar.gz
 

@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-plugin-%{DIRNAME}
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
-Version: 20.12.3
+Version: 20.12.29
 Release: 1%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
@@ -16,15 +16,15 @@ BuildRequires: make
 BuildRequires: boost169-devel
 BuildRequires: libconfig-devel
 BuildRequires: smartmet-library-spine-devel
-BuildRequires: smartmet-library-grid-files-devel >= 20.12.3
-BuildRequires: smartmet-library-grid-content-devel >= 20.12.3
-BuildRequires: smartmet-engine-grid-devel >= 20.12.3
-BuildRequires: gdal-devel
+BuildRequires: smartmet-library-grid-files-devel >= 20.12.28
+BuildRequires: smartmet-library-grid-content-devel >= 20.12.28
+BuildRequires: smartmet-engine-grid-devel >= 20.12.28
+BuildRequires: gdal32-devel
 Requires: libconfig
-Requires: smartmet-library-macgyver >= 20.11.24
-Requires: smartmet-library-spine >= 20.11.23
+Requires: smartmet-library-macgyver >= 20.12.15
+Requires: smartmet-library-spine >= 20.12.15
 Requires: smartmet-server >= 20.10.28
-Requires: smartmet-engine-grid >= 20.12.3
+Requires: smartmet-engine-grid >= 20.12.28
 Requires: boost169-date-time
 Provides: %{SPECNAME}
 
@@ -50,6 +50,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/plugins/%{DIRNAME}.so
 
 %changelog
+* Tue Dec 29 2020 Mika Heiskanen <mika.heiskanen@fmi.fi> - 20.12.29-1.fmi
+- GDAL upgrade
+
 * Thu Dec  3 2020 Mika Heiskanen <mika.heiskanen@fmi.fi> - 20.12.3-1.fmi
 - Repackaged due to library ABI changes
 
