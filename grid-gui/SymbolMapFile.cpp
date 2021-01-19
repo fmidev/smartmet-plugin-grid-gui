@@ -334,7 +334,7 @@ void SymbolMapFile::loadFile()
           {
             if (strcasecmp(field[0],"NAME") == 0)
             {
-              mNames.push_back(std::string(field[1]));
+              mNames.emplace_back(std::string(field[1]));
             }
             else
             if (strcasecmp(field[0],"DIR") == 0)

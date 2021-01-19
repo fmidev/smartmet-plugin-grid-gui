@@ -176,7 +176,7 @@ T::Coordinate_vec LocationFile::getCoordinates()
 
     for (auto it = mLocations.begin(); it != mLocations.end(); ++it)
     {
-      coordinates.push_back(T::Coordinate(it->mX,it->mY));
+      coordinates.emplace_back(T::Coordinate(it->mX,it->mY));
     }
     return coordinates;
   }
@@ -306,7 +306,7 @@ void LocationFile::loadFile()
         {
           if (strcasecmp(field[0],"NAME") == 0)
           {
-            mNames.push_back(std::string(field[1]));
+            mNames.emplace_back(std::string(field[1]));
           }
           else
           {
@@ -314,7 +314,7 @@ void LocationFile::loadFile()
             {
               double lat = toDouble(field[1]);
               double lon = toDouble(field[2]);
-              mLocations.push_back(T::Location(field[0],lon,lat));
+              mLocations.emplace_back(T::Location(field[0],lon,lat));
             }
           }
         }

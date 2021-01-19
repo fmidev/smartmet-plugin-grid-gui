@@ -109,21 +109,21 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
     {
       T::ColorMapFile colorMapFile;
       colorMapFile.init(it->c_str());
-      itsColorMapFiles.push_back(colorMapFile);
+      itsColorMapFiles.emplace_back(colorMapFile);
     }
 
     for (auto it = itsSymbolMapFileNames.begin(); it != itsSymbolMapFileNames.end(); ++it)
     {
       T::SymbolMapFile symbolMapFile;
       symbolMapFile.init(it->c_str());
-      itsSymbolMapFiles.push_back(symbolMapFile);
+      itsSymbolMapFiles.emplace_back(symbolMapFile);
     }
 
     for (auto it = itsLocationFileNames.begin(); it != itsLocationFileNames.end(); ++it)
     {
       T::LocationFile locationFile;
       locationFile.init(it->c_str());
-      itsLocationFiles.push_back(locationFile);
+      itsLocationFiles.emplace_back(locationFile);
     }
 
     loadColorFile();
@@ -139,7 +139,7 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
     std::set<std::string> dirList;
     std::vector<std::pair<std::string,std::string>> fileList;
 
-    filePatterns.push_back(std::string("grid-gui-image_*"));
+    filePatterns.emplace_back(std::string("grid-gui-image_*"));
 
     getFileList(itsImageCache_dir.c_str(),filePatterns,false,dirList,fileList);
 
@@ -292,7 +292,7 @@ void Plugin::loadColorFile()
             std::string colorName = field[0];
             uint color = strtoul(field[1],nullptr,16);
 
-            itsColors.push_back(std::pair<std::string,unsigned int>(colorName,color));
+            itsColors.emplace_back(std::pair<std::string,unsigned int>(colorName,color));
           }
         }
       }
@@ -364,14 +364,14 @@ void Plugin::loadDaliFile()
           for (auto it=plist.begin(); it!=plist.end();++it)
           {
             string_vec vec;
-            vec.push_back(*it);
-            vec.push_back(field[1]);
-            vec.push_back(field[2]);
-            vec.push_back(field[3]);
-            vec.push_back(field[4]);
-            vec.push_back(field[5]);
+            vec.emplace_back(*it);
+            vec.emplace_back(field[1]);
+            vec.emplace_back(field[2]);
+            vec.emplace_back(field[3]);
+            vec.emplace_back(field[4]);
+            vec.emplace_back(field[5]);
 
-            itsDaliProducts.push_back(vec);
+            itsDaliProducts.emplace_back(vec);
           }
         }
       }
@@ -448,7 +448,7 @@ void Plugin::loadIsolineFile()
             for (uint t=1; t<c; t++)
             {
               float val = toFloat(field[t]);
-              values.push_back(val);
+              values.emplace_back(val);
             }
 
             itsIsolines.insert(std::pair<std::string,T::ParamValue_vec>(isolineName,values));
@@ -1057,7 +1057,7 @@ void Plugin::saveImage(
       {
         double stp = dd / 10;
         for (int t=0; t<10; t++)
-          contourValues.push_back(minValue + t*stp);
+          contourValues.emplace_back(minValue + t*stp);
       }
       getIsolines(values,nullptr,width,height,contourValues,T::AreaInterpolationMethod::Linear,3,3,contours);
     }
@@ -2081,13 +2081,13 @@ int Plugin::page_download(Spine::Reactor &theReactor,
         uchar ch = messageBytes[t];
         char *c = (char*)&ch;
 
-        content->push_back(*c);
+        content->emplace_back(*c);
       }
 
-      content->push_back('7');
-      content->push_back('7');
-      content->push_back('7');
-      content->push_back('7');
+      content->emplace_back('7');
+      content->emplace_back('7');
+      content->emplace_back('7');
+      content->emplace_back('7');
 
       char val[1000];
       sprintf(val,"attachment; filename=message_%s_%s.grib",fileIdStr.c_str(),messageIndexStr.c_str());
@@ -2663,7 +2663,7 @@ int Plugin::page_timeseries(Spine::Reactor &theReactor,
             if (strstr(info->mForecastTime.c_str(),"T000000") != nullptr)
               dayIdx.insert(t);
 
-            valueList.push_back(value);
+            valueList.emplace_back(value);
             c++;
           }
         }
@@ -2695,7 +2695,7 @@ int Plugin::page_timeseries(Spine::Reactor &theReactor,
           {
             for (int t=0; t<n; t++)
             {
-              content->push_back(buf[t]);
+              content->emplace_back(buf[t]);
             }
           }
         }
@@ -2756,7 +2756,7 @@ void Plugin::loadImage(const char *fname,Spine::HTTP::Response &theResponse)
           {
             for (int t=0; t<n; t++)
             {
-              content->push_back(buf[t]);
+              content->emplace_back(buf[t]);
             }
           }
         }
@@ -4009,8 +4009,8 @@ int Plugin::page_main(Spine::Reactor &theReactor,
             uint id = toUInt32((*it)[3]);
             if (daliId == 0)
               daliId = id;
-            daliIds.push_back(id);
-            daliNames.push_back((*it)[4]);
+            daliIds.emplace_back(id);
+            daliNames.emplace_back((*it)[4]);
             daliUrls.insert(std::pair<uint,std::string>(id,(*it)[5]));
           }
         }

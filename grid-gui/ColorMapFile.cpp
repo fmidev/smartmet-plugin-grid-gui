@@ -144,8 +144,8 @@ void ColorMapFile::getValuesAndColors(std::vector<float>& values,std::vector<uns
 
     for (auto it = mColorMap.begin(); it != mColorMap.end(); ++it)
     {
-      values.push_back(it->first);
-      colors.push_back(it->second);
+      values.emplace_back(it->first);
+      colors.emplace_back(it->second);
     }
   }
   catch (...)
@@ -329,7 +329,7 @@ void ColorMapFile::loadFile()
           {
             if (strcasecmp(field[0],"NAME") == 0)
             {
-              mNames.push_back(std::string(field[1]));
+              mNames.emplace_back(std::string(field[1]));
             }
             else
             {
