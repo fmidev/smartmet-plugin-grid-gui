@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-plugin-%{DIRNAME}
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
-Version: 21.1.14
+Version: 21.1.19
 Release: 1%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
@@ -16,15 +16,15 @@ BuildRequires: make
 BuildRequires: boost169-devel
 BuildRequires: libconfig-devel
 BuildRequires: smartmet-library-spine-devel
-BuildRequires: smartmet-library-grid-files-devel >= 21.1.14
-BuildRequires: smartmet-library-grid-content-devel >= 21.1.14
-BuildRequires: smartmet-engine-grid-devel >= 21.1.14
+BuildRequires: smartmet-library-grid-files-devel >= 21.1.19
+BuildRequires: smartmet-library-grid-content-devel >= 21.1.19
+BuildRequires: smartmet-engine-grid-devel >= 21.1.19
 BuildRequires: gdal32-devel
 Requires: libconfig
 Requires: smartmet-library-macgyver >= 21.1.14
 Requires: smartmet-library-spine >= 21.1.14
 Requires: smartmet-server >= 21.1.14
-Requires: smartmet-engine-grid >= 21.1.14
+Requires: smartmet-engine-grid >= 21.1.19
 Requires: boost169-date-time
 Provides: %{SPECNAME}
 
@@ -50,6 +50,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/plugins/%{DIRNAME}.so
 
 %changelog
+* Tue Jan 19 2021 Mika Heiskanen <mika.heiskanen@fmi.fi> - 21.1.19-1.fmi
+- Repackaged due to base library ABI changes
+
 * Thu Jan 14 2021 Mika Heiskanen <mika.heiskanen@fmi.fi> - 21.1.14-1.fmi
 - Repackaged smartmet to resolve debuginfo issues
 
