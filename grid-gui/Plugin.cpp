@@ -5210,6 +5210,18 @@ int Plugin::request(Spine::Reactor &theReactor,
     int result = HTTP::Status::ok;
     int expires_seconds = 1;
 
+    if (!itsGridEngine->isEnabled())
+    {
+      std::ostringstream output;
+      output << "<HTML><BODY>\n";
+      output << "<B>Grid-gui cannot be used because the grid-engine is disabled!</B>\n";
+      output << "</BODY></HTML>\n";
+
+      theResponse.setContent(std::string(output.str()));
+      theResponse.setHeader("Content-Type", "text/html; charset=UTF-8");
+      return HTTP::Status::ok;
+    }
+
     std::string page = "main";
     boost::optional<std::string> v = theRequest.getParameter("page");
     if (v)
