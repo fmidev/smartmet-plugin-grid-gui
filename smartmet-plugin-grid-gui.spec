@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-plugin-%{DIRNAME}
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
-Version: 21.3.5
+Version: 21.4.1
 Release: 1%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
@@ -16,15 +16,15 @@ BuildRequires: make
 BuildRequires: boost169-devel
 BuildRequires: libconfig-devel
 BuildRequires: smartmet-library-spine-devel
-BuildRequires: smartmet-library-grid-files-devel >= 21.3.4
-BuildRequires: smartmet-library-grid-content-devel >= 21.3.4
-BuildRequires: smartmet-engine-grid-devel >= 21.3.3
+BuildRequires: smartmet-library-grid-files-devel >= 21.3.31
+BuildRequires: smartmet-library-grid-content-devel >= 21.3.29
+BuildRequires: smartmet-engine-grid-devel >= 21.3.29
 BuildRequires: gdal32-devel
 Requires: libconfig
 Requires: smartmet-library-macgyver >= 21.2.25
-Requires: smartmet-library-spine >= 21.3.1
+Requires: smartmet-library-spine >= 21.3.27
 Requires: smartmet-server >= 21.1.14
-Requires: smartmet-engine-grid >= 21.3.3
+Requires: smartmet-engine-grid >= 21.3.29
 Requires: boost169-date-time
 Provides: %{SPECNAME}
 
@@ -50,6 +50,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/plugins/%{DIRNAME}.so
 
 %changelog
+* Thu Apr  1 2021 Pertti Kinnia <pertti.kinnia@fmi.fi> - 21.4.1-1.fmi
+- Repackaged due to grid-files API changes
+
 * Fri Mar  5 2021 Mika Heiskanen <mika.heiskanen@fmi.fi> - 21.3.5-1.fmi
 - Detect whether the grid-engine is disabled
 
