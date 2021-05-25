@@ -1062,7 +1062,7 @@ void Plugin::saveImage(
       getIsolines(values,nullptr,width,height,contourValues,T::AreaInterpolationMethod::Linear,3,3,contours);
     }
 
-    ImagePaint imagePaint(width,height,0x0,false,rotate);
+    ImagePaint imagePaint(width,height,0x0,isolines,0xFFFFFFFF,false,rotate);
 
     uint c = 0;
     int ss = 2;
@@ -1170,7 +1170,7 @@ void Plugin::saveImage(
     }
 
     if (showIsolines)
-      imagePaint.paintWkb(1,1,0,0,contours,isolines);
+      imagePaint.paintWkb(1,1,0,0,contours);
 
     if (coordinateLines != 0xFFFFFFFF  &&  lineCoordinates.size() > 0)
     {
@@ -2271,11 +2271,13 @@ int Plugin::page_table(Spine::Reactor &theReactor,
 
     if (presentation == "Table(sample)")
     {
+      /*
       if (width > 100)
         width = 100;
 
       if (height > 100)
         height = 100;
+        */
     }
 
     ostr << "<HTML><BODY>\n";
