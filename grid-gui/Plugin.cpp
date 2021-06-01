@@ -1840,20 +1840,16 @@ int Plugin::page_info(Spine::Reactor &theReactor,
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Message index</TD><TD>" << contentInfo.mMessageIndex << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">File Position</TD><TD>" << contentInfo.mFilePosition << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Size</TD><TD>" << contentInfo.mMessageSize << "</TD></TR>\n";
-    ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Forecast time</TD><TD>" << contentInfo.mForecastTime << "</TD></TR>\n";
+    ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Forecast time</TD><TD>" << contentInfo.getForecastTime() << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Level</TD><TD>" << contentInfo.mParameterLevel << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">FMI identifier</TD><TD>" << contentInfo.mFmiParameterId << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">FMI name</TD><TD>" << contentInfo.getFmiParameterName() << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">FMI level identifier</TD><TD>" << toString(contentInfo.mFmiParameterLevelId) << "</TD></TR>\n";
-    ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">FMI units</TD><TD>" << contentInfo.mFmiParameterUnits << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">GRIB identifier</TD><TD>" << contentInfo.mGribParameterId << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">GRIB1 level identifier</TD><TD>" << toString(contentInfo.mGrib1ParameterLevelId) << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">GRIB2 level identifier</TD><TD>" << toString(contentInfo.mGrib2ParameterLevelId) << "</TD></TR>\n";
-    ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">GRIB units</TD><TD>" << contentInfo.mGribParameterUnits << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Newbase identifier</TD><TD>" << contentInfo.mNewbaseParameterId << "</TD></TR>\n";
-    ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Newbase name</TD><TD>" << contentInfo.mNewbaseParameterName << "</TD></TR>\n";
-    ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">CDM identifier</TD><TD>" << contentInfo.mCdmParameterId << "</TD></TR>\n";
-    ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">CDM name</TD><TD>" << contentInfo.mCdmParameterName << "</TD></TR>\n";
+    ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Newbase name</TD><TD>" << contentInfo.getNewbaseParameterName() << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Forecast type</TD><TD>" << contentInfo.mForecastType << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Forecast number</TD><TD>" << contentInfo.mForecastNumber << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Geometry identifier</TD><TD>" << contentInfo.mGeometryId << "</TD></TR>\n";
@@ -2662,7 +2658,7 @@ int Plugin::page_timeseries(Spine::Reactor &theReactor,
             if (info->mFileId == fileId  &&  info->mMessageIndex == messageIndex)
               idx = c;
 
-            if (strstr(info->mForecastTime.c_str(),"T000000") != nullptr)
+            if (strstr(info->getForecastTime(),"T000000") != nullptr)
               dayIdx.insert(t);
 
             valueList.emplace_back(value);
@@ -3691,11 +3687,11 @@ std::string Plugin::getFmiKey(std::string& producerName,T::ContentInfo& contentI
     char buf[200];
     char *p = buf;
 
-    if (contentInfo.getFmiParameterName() > " ")
-      p += sprintf(p,"%s",contentInfo.getFmiParameterName().c_str());
+    if (strlen(contentInfo.getFmiParameterName()) >0)
+      p += sprintf(p,"%s",contentInfo.getFmiParameterName());
     else
-    if (contentInfo.mGribParameterId > " ")
-      p += sprintf(p,"GRIB-%s",contentInfo.mGribParameterId.c_str());
+    if (contentInfo.mGribParameterId > 0)
+      p += sprintf(p,"GRIB-%u",contentInfo.mGribParameterId);
 
     p += sprintf(p,":%s",producerName.c_str());
 
@@ -4148,7 +4144,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
           std::string key = st+5;
 
           Identification::GribParameterDef  def;
-          if (Identification::gridDef.getGribParamDefById(key,def))
+          if (Identification::gridDef.getGribParamDefById(toUInt32(key),def))
           {
             pName = *it + " (" + def.mParameterDescription + ")";
           }
@@ -4159,7 +4155,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
           std::string key = st+3;
 
           Identification::NewbaseParameterDef  def;
-          if (Identification::gridDef.getNewbaseParameterDefById(key,def))
+          if (Identification::gridDef.getNewbaseParameterDefById(toUInt32(key),def))
           {
             pName = *it + " (" + def.mParameterName + ")";
           }
@@ -4507,7 +4503,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
         if (g->mGeometryId == geometryId)
         {
-          if (prevTime < g->mForecastTime)
+          if (prevTime < g->getForecastTime())
           {
             if (forecastType == g->mForecastType)
             {
@@ -4531,69 +4527,69 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
         if (g->mGeometryId == geometryId)
         {
-          if (prevTime < g->mForecastTime)
+          if (prevTime < g->getForecastTime())
           {
             if (forecastType == g->mForecastType)
             {
               if (forecastNumber == g->mForecastNumber)
               {
-                std::string url = "&start=" + g->mForecastTime + "&fileId=" + std::to_string(g->mFileId) + "&messageIndex=" + std::to_string(g->mMessageIndex) + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&daliId=" + std::to_string(daliId);
+                std::string url = "&start=" + std::string(g->getForecastTime()) + "&fileId=" + std::to_string(g->mFileId) + "&messageIndex=" + std::to_string(g->mMessageIndex) + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&daliId=" + std::to_string(daliId);
                 std::string uu = url;
 
                 if (presentation == "Dali")
-                  uu = "&time=" + g->mForecastTime;
+                  uu = "&time=" + std::string(g->getForecastTime());
 
                 if (currentCont != nullptr  &&  nextCont == nullptr)
                   nextCont = g;
 
                 if (startTime.empty())
                 {
-                  startTime = g->mForecastTime;
+                  startTime = g->getForecastTime();
                   prevTime = startTime;
                 }
 
                 std::string bg = "#E0E0E0";
 
-                if (g->mForecastTime.substr(0,8) != pTime.substr(0,8))
+                if (strncmp(g->getForecastTime(),pTime.c_str(),8) != 0)
                   daySwitch++;
 
                 if ((daySwitch % 2) == 1)
                   bg = "#D0D0D0";
 
-                if (startTime == g->mForecastTime)
+                if (startTime == g->getForecastTime())
                   bg = "#0000FF";
 
-                if (tCount < 124  ||  (g->mForecastTime >= startTime  &&  cc < 124))
+                if (tCount < 124  ||  (g->getForecastTime() >= startTime  &&  cc < 124))
                 {
                   if (cc == 0)
                     ostr3 << "<TD style=\"text-align:center; font-size:12;width:120;background:#F0F0F0;\" id=\"ftime\">" + startTime + "</TD><TD style=\"width:1;\"> </TD>\n";
 
                   if (u > " ")
-                    ostr3 << "<TD style=\"width:5; background:"+bg+";\" onmouseout=\"this.style='width:5;background:"+bg+";'\" onmouseover=\"this.style='width:5;height:30;background:#FF0000;'; setText('ftime','" + g->mForecastTime + "');setImage(document.getElementById('myimage'),'" + u + uu + "');\" > </TD>\n";
+                    ostr3 << "<TD style=\"width:5; background:"+bg+";\" onmouseout=\"this.style='width:5;background:"+bg+";'\" onmouseover=\"this.style='width:5;height:30;background:#FF0000;'; setText('ftime','" + g->getForecastTime() + "');setImage(document.getElementById('myimage'),'" + u + uu + "');\" > </TD>\n";
                   else
                     ostr3 << "<TD style=\"width:5; background:"+bg+";\"> </TD>\n";
 
-                  prevTime = g->mForecastTime;
+                  prevTime = g->getForecastTime();
                   cc++;
                 }
 
-                if (startTime == g->mForecastTime)
+                if (startTime == g->getForecastTime())
                 {
                   currentCont = g;
                   fmiKey = getFmiKey(producerName,*g);
-                  ostr1 << "<OPTION selected value=\"" <<  url << "\">" <<  g->mForecastTime << "</OPTION>\n";
+                  ostr1 << "<OPTION selected value=\"" <<  url << "\">" <<  g->getForecastTime() << "</OPTION>\n";
                   fileIdStr = std::to_string(g->mFileId);
                   messageIndexStr = std::to_string(g->mMessageIndex);
                 }
                 else
                 {
-                  ostr1 << "<OPTION value=\"" <<  url << "\">" <<  g->mForecastTime << "</OPTION>\n";
+                  ostr1 << "<OPTION value=\"" <<  url << "\">" <<  g->getForecastTime() << "</OPTION>\n";
                 }
 
                 if (currentCont == nullptr)
                   prevCont = g;
 
-                pTime = g->mForecastTime;
+                pTime = g->getForecastTime();
               }
             }
           }
@@ -4604,12 +4600,12 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     ostr1 << "</TD>\n";
 
     if (prevCont != nullptr)
-      ostr1 << "<TD width=\"20\" > <button type=\"button\" onClick=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&producerId=" << producerIdStr << "&generationId=" << generationIdStr << "&geometryId=" << geometryIdStr << "&projectionId=" << projectionIdStr << "&parameterId=" << parameterIdStr << "&levelId=" << parameterLevelIdStr << "&level=" << parameterLevelStr << "&start=" << prevCont->mForecastTime << "&fileId=" << prevCont->mFileId << "&messageIndex=" << prevCont->mMessageIndex << "&forecastType=" << forecastTypeStr << "&forecastNumber=" << forecastNumberStr << "&hue=" << hueStr << "&saturation=" << saturationStr << "&blur=" << blurStr << "&coordinateLines=" << coordinateLinesStr << "&isolines=" << isolinesStr  << "&isolineValues=" << isolineValuesStr << "&landBorder=" << landBorderStr << "&landMask=" << landMaskStr << "&seaMask=" << seaMaskStr << "&colorMap=" << colorMap << "&locations=" << locations << "&symbolMap=" << symbolMap << "&daliId=" << daliId << "');\">&lt;</button></TD>\n";
+      ostr1 << "<TD width=\"20\" > <button type=\"button\" onClick=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&producerId=" << producerIdStr << "&generationId=" << generationIdStr << "&geometryId=" << geometryIdStr << "&projectionId=" << projectionIdStr << "&parameterId=" << parameterIdStr << "&levelId=" << parameterLevelIdStr << "&level=" << parameterLevelStr << "&start=" << prevCont->getForecastTime() << "&fileId=" << prevCont->mFileId << "&messageIndex=" << prevCont->mMessageIndex << "&forecastType=" << forecastTypeStr << "&forecastNumber=" << forecastNumberStr << "&hue=" << hueStr << "&saturation=" << saturationStr << "&blur=" << blurStr << "&coordinateLines=" << coordinateLinesStr << "&isolines=" << isolinesStr  << "&isolineValues=" << isolineValuesStr << "&landBorder=" << landBorderStr << "&landMask=" << landMaskStr << "&seaMask=" << seaMaskStr << "&colorMap=" << colorMap << "&locations=" << locations << "&symbolMap=" << symbolMap << "&daliId=" << daliId << "');\">&lt;</button></TD>\n";
     else
       ostr1 << "<TD width=\"20\"><button type=\"button\">&lt;</button></TD></TD>\n";
 
     if (nextCont != nullptr)
-      ostr1 << "<TD width=\"20\"><button type=\"button\" onClick=\"getPage(this,parent,'/grid-gui?page=main&presentation=" + presentation + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + nextCont->mForecastTime + "&fileId=" + std::to_string(nextCont->mFileId) + "&messageIndex=" + std::to_string(nextCont->mMessageIndex) + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&daliId=" + std::to_string(daliId) + "');\">&gt;</button></TD>\n";
+      ostr1 << "<TD width=\"20\"><button type=\"button\" onClick=\"getPage(this,parent,'/grid-gui?page=main&presentation=" + presentation + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + nextCont->getForecastTime() + "&fileId=" + std::to_string(nextCont->mFileId) + "&messageIndex=" + std::to_string(nextCont->mMessageIndex) + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&daliId=" + std::to_string(daliId) + "');\">&gt;</button></TD>\n";
     else
       ostr1 << "<TD width=\"20\"><button type=\"button\">&gt;</button></TD></TD>\n";
 
