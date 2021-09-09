@@ -14,17 +14,17 @@ BuildRequires: rpm-build
 BuildRequires: gcc-c++
 BuildRequires: make
 BuildRequires: boost169-devel
-BuildRequires: libconfig-devel
-BuildRequires: smartmet-library-spine-devel
+BuildRequires: libconfig17-devel
+BuildRequires: smartmet-library-spine-devel >= 21.9.7
 BuildRequires: smartmet-library-grid-files-devel >= 21.6.8
 BuildRequires: smartmet-library-grid-content-devel >= 21.8.18
-BuildRequires: smartmet-engine-grid-devel >= 21.8.31
+BuildRequires: smartmet-engine-grid-devel >= 21.9.7
 BuildRequires: gdal32-devel
-Requires: libconfig
+Requires: libconfig17
 Requires: smartmet-library-macgyver >= 21.8.30
-Requires: smartmet-library-spine >= 21.8.30
+Requires: smartmet-library-spine >= 21.9.7
 Requires: smartmet-server >= 21.6.3
-Requires: smartmet-engine-grid >= 21.8.31
+Requires: smartmet-engine-grid >= 21.9.7
 Requires: boost169-date-time
 Provides: %{SPECNAME}
 
