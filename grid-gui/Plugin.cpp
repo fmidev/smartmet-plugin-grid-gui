@@ -626,9 +626,6 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
     if (seaMask == "Simple")
       showSeaMask = true;
 
-    double maxValue = -1000000000;
-    double minValue = 1000000000;
-
     uint sz = values.size();
 
     if (sz == 0)
@@ -640,11 +637,18 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
       exit(-1);
     }
 
+    double maxValue = -1000000000;
+    double minValue = 1000000000;
+    double total = 0;
+    uint cnt = 0;
+
     for (uint t=0; t<sz; t++)
     {
       double val = values[t];
       if (val != ParamValueMissing)
       {
+        total = total + val;
+        cnt++;
         if (val < minValue)
           minValue = val;
 
@@ -665,8 +669,12 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
     double xd = 360/dWidth;
     double yd = 180/dHeight;
 
+    double avg = total / (double)cnt;
     double dd = maxValue - minValue;
+    double ddd = avg-minValue;
     double step = dd / 200;
+    if (maxValue > (minValue + 5*ddd))
+      step = 5*ddd / 200;
 
     uint *image = new uint[width*height];
 
@@ -682,7 +690,11 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
       for (int x=0; x<width; x++)
       {
         T::ParamValue val = values[c];
-        uint v = 200 - ((val - minValue) / step);
+        uint vv = ((val - minValue) / step);
+        uint v = 200 - vv;
+        if (vv > 200)
+          v = 0;
+
         v = v / blur;
         v = v * blur;
         v = v + 55;
@@ -1017,12 +1029,16 @@ void Plugin::saveImage(
 
     double maxValue = -1000000000;
     double minValue = 1000000000;
+    double total = 0;
+    uint cnt = 0;
 
     for (uint t=0; t<size; t++)
     {
       double val = values[t];
       if (val != ParamValueMissing)
       {
+        total = total + val;
+        cnt++;
         if (val < minValue)
           minValue = val;
 
@@ -1035,8 +1051,12 @@ void Plugin::saveImage(
     if (coordinates.size() == 0)
       landSeaMask = false;
 
+    double avg = total / (double)cnt;
     double dd = maxValue - minValue;
+    double ddd = avg-minValue;
     double step = dd / 200;
+    if (maxValue > (minValue + 5*ddd))
+      step = 5*ddd / 200;
 
     bool rotate = true;
     if (coordinates.size() > C_UINT(10*width)  &&  coordinates[0].y() < coordinates[10*width].y())
@@ -1077,7 +1097,11 @@ void Plugin::saveImage(
       for (int x=0; x<width; x++)
       {
         T::ParamValue val = values[c];
-        uint v = 200 - ((val - minValue) / step);
+        uint vv = ((val - minValue) / step);
+        uint v = 200 - vv;
+        if (vv > 200)
+          v = 0;
+
         v = v / blur;
         v = v * blur;
         v = v + 55;
@@ -1850,6 +1874,7 @@ int Plugin::page_info(Spine::Reactor &theReactor,
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">GRIB2 level identifier</TD><TD>" << toString(contentInfo.mGrib2ParameterLevelId) << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Newbase identifier</TD><TD>" << contentInfo.mNewbaseParameterId << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Newbase name</TD><TD>" << contentInfo.getNewbaseParameterName() << "</TD></TR>\n";
+    ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">NetCDF name</TD><TD>" << contentInfo.getNetCdfParameterName() << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Forecast type</TD><TD>" << contentInfo.mForecastType << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Forecast number</TD><TD>" << contentInfo.mForecastNumber << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Geometry identifier</TD><TD>" << contentInfo.mGeometryId << "</TD></TR>\n";
@@ -2633,7 +2658,7 @@ int Plugin::page_timeseries(Spine::Reactor &theReactor,
     double yy = yPos * dHeight;
 
     T::ContentInfoList contentInfoList;
-    contentServer->getContentListByParameterAndGenerationId(0,contentInfo.mGenerationId,T::ParamKeyTypeValue::FMI_NAME,contentInfo.getFmiParameterName(),T::ParamLevelIdTypeValue::FMI,contentInfo.mFmiParameterLevelId,contentInfo.mParameterLevel,contentInfo.mParameterLevel,-2,-2,-2,"19000101T000000","23000101T000000",0,contentInfoList);
+    contentServer->getContentListByParameterAndGenerationId(0,contentInfo.mGenerationId,T::ParamKeyTypeValue::FMI_NAME,contentInfo.getFmiParameterName(),T::ParamLevelIdTypeValue::FMI,contentInfo.mFmiParameterLevelId,contentInfo.mParameterLevel,contentInfo.mParameterLevel,-2,-2,-2,"14000101T000000","23000101T000000",0,contentInfoList);
 
     contentInfoList.sort(T::ContentInfo::ComparisonMethod::fmiId_producer_generation_level_time);
 
@@ -4144,7 +4169,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
           std::string key = st+5;
 
           Identification::GribParameterDef  def;
-          if (Identification::gridDef.getGribParamDefById(toUInt32(key),def))
+          if (Identification::gridDef.getGribParameterDefById(toUInt32(key),def))
           {
             pName = *it + " (" + def.mParameterDescription + ")";
           }
@@ -4201,7 +4226,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     // ### Level identifiers:
 
     T::ContentInfoList contentInfoList;
-    contentServer->getContentListByParameterAndGenerationId(0,gid,T::ParamKeyTypeValue::FMI_NAME,parameterIdStr,T::ParamLevelIdTypeValue::IGNORE,0,0,0,-2,-2,-2,"19000101T000000","30000101T000000",0,contentInfoList);
+    contentServer->getContentListByParameterAndGenerationId(0,gid,T::ParamKeyTypeValue::FMI_NAME,parameterIdStr,T::ParamLevelIdTypeValue::IGNORE,0,0,0,-2,-2,-2,"14000101T000000","30000101T000000",0,contentInfoList);
     len = contentInfoList.getLength();
     int levelId = toInt32(parameterLevelIdStr);
 
@@ -4278,7 +4303,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     // ### Levels:
 
     contentInfoList.clear();
-    contentServer->getContentListByParameterAndGenerationId(0,gid,T::ParamKeyTypeValue::FMI_NAME,parameterIdStr,levelIdType,(levelId % 1000),0,0x7FFFFFFF,-2,-2,-2,"19000101T000000","30000101T000000",0,contentInfoList);
+    contentServer->getContentListByParameterAndGenerationId(0,gid,T::ParamKeyTypeValue::FMI_NAME,parameterIdStr,levelIdType,(levelId % 1000),0,0x7FFFFFFF,-2,-2,-2,"14000101T000000","30000101T000000",0,contentInfoList);
     len = contentInfoList.getLength();
     T::ParamLevel level = toInt32(parameterLevelStr);
 
@@ -4457,9 +4482,9 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     // ### Times:
 
     contentInfoList.clear();
-    contentServer->getContentListByParameterAndGenerationId(0,gid,T::ParamKeyTypeValue::FMI_NAME,parameterIdStr,levelIdType,(levelId % 1000),level,level,-2,-2,-2,"19000101T000000","30000101T000000",0,contentInfoList);
+    contentServer->getContentListByParameterAndGenerationId(0,gid,T::ParamKeyTypeValue::FMI_NAME,parameterIdStr,levelIdType,(levelId % 1000),level,level,-2,-2,-2,"14000101T000000","30000101T000000",0,contentInfoList);
     len = contentInfoList.getLength();
-    std::string prevTime = "19000101T0000";
+    std::string prevTime = "14000101T0000";
 
     ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Time (UTC):</TD></TR>\n";
     ostr1 << "<TR height=\"30\"><TD><TABLE><TR><TD>\n";
