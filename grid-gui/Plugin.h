@@ -125,6 +125,7 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
                       std::string landMask,
                       std::string seaMask,
                       std::string colorMapName,
+                      std::string missingStr,
                       T::GeometryId geometryId,
                       std::string symbolMap,
                       std::string locations,
@@ -143,6 +144,7 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
                       std::string landMask,
                       std::string seaMask,
                       std::string colorMapName,
+                      std::string missingStr,
                       T::GeometryId geometryId,
                       T::GeometryId projectionId,
                       std::string symbolMap,
@@ -160,7 +162,8 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
                       uint landBorder,
                       std::string landMask,
                       std::string seaMask,
-                      std::string colorMapName);
+                      std::string colorMapName,
+                      std::string missingStr);
 
     void saveTimeSeries(const char *imageFile,std::vector<T::ParamValue>& valueList,int idx,std::set<int> dayIdx);
 
