@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-plugin-%{DIRNAME}
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
-Version: 21.9.15
+Version: 21.9.27
 Release: 1%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
@@ -50,6 +50,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/plugins/%{DIRNAME}.so
 
 %changelog
+* Mon Sep 27 2021 Andris Pavēnis <andris.pavenis@fmi.fi> 21.9.27-1.fmi
+- Repackage due to dependency change (libgonfig++)
+
 * Wed Sep 15 2021 Mika Heiskanen <mika.heiskanen@fmi.fi> - 21.9.15-1.fmi
 - Repackaged due to NetCDF related ABI changes in base libraries
 
