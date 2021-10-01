@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-plugin-%{DIRNAME}
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
-Version: 21.9.9
+Version: 21.9.27
 Release: 1%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
@@ -15,16 +15,16 @@ BuildRequires: gcc-c++
 BuildRequires: make
 BuildRequires: boost169-devel
 BuildRequires: libconfig17-devel
-BuildRequires: smartmet-library-spine-devel >= 21.9.7
-BuildRequires: smartmet-library-grid-files-devel >= 21.6.8
-BuildRequires: smartmet-library-grid-content-devel >= 21.8.18
-BuildRequires: smartmet-engine-grid-devel >= 21.9.7
+BuildRequires: smartmet-library-spine-devel >= 21.9.13
+BuildRequires: smartmet-library-grid-files-devel >= 21.9.15
+BuildRequires: smartmet-library-grid-content-devel >= 21.9.15
+BuildRequires: smartmet-engine-grid-devel >= 21.9.15
 BuildRequires: gdal32-devel
 Requires: libconfig17
-Requires: smartmet-library-macgyver >= 21.8.30
-Requires: smartmet-library-spine >= 21.9.7
-Requires: smartmet-server >= 21.6.3
-Requires: smartmet-engine-grid >= 21.9.7
+Requires: smartmet-library-macgyver >= 21.9.13
+Requires: smartmet-library-spine >= 21.9.13
+Requires: smartmet-server >= 21.9.7
+Requires: smartmet-engine-grid >= 21.9.15
 Requires: boost169-date-time
 Provides: %{SPECNAME}
 
@@ -50,6 +50,12 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/plugins/%{DIRNAME}.so
 
 %changelog
+* Mon Sep 27 2021 Andris Pavēnis <andris.pavenis@fmi.fi> 21.9.27-1.fmi
+- Repackage due to dependency change (libgonfig++)
+
+* Wed Sep 15 2021 Mika Heiskanen <mika.heiskanen@fmi.fi> - 21.9.15-1.fmi
+- Repackaged due to NetCDF related ABI changes in base libraries
+
 * Thu Sep  9 2021 Andris Pavenis <andris.pavenis@fmi.fi> 21.9.9-1.fmi
 - Repackage due to dependency change (libconfig->libconfig17)
 
