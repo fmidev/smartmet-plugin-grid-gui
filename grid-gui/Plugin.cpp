@@ -3798,6 +3798,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
           else
             lStr = "FMI-" + std::to_string(*it) + " : ";
         }
+        /*
         else
         if (*it < 2000)
         {
@@ -3813,17 +3814,19 @@ int Plugin::page_main(Spine::Reactor &theReactor,
           else
             lStr = "GRIB2-" + std::to_string(*it % 1000) + " : ";
         }
-
+*/
         if (levelId == *it)
         {
           ostr1 << "<OPTION selected value=\"" <<  *it << "\">" <<  lStr << "</OPTION>\n";
-          if (*it < 1000)
-            levelIdType = T::ParamLevelIdTypeValue::FMI;
+          //if (*it < 1000)
+          levelIdType = T::ParamLevelIdTypeValue::FMI;
+          /*
           else
           if (*it < 2000)
             levelIdType = T::ParamLevelIdTypeValue::GRIB1;
           else
             levelIdType = T::ParamLevelIdTypeValue::GRIB2;
+          */
         }
         else
           ostr1 << "<OPTION value=\"" <<  *it << "\">" <<  lStr << "</OPTION>\n";
