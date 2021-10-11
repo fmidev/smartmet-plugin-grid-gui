@@ -1390,12 +1390,14 @@ int Plugin::page_info(Spine::Reactor &theReactor,
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">FMI identifier</TD><TD>" << contentInfo.mFmiParameterId << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">FMI name</TD><TD>" << contentInfo.getFmiParameterName() << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">FMI level identifier</TD><TD>" << toString(contentInfo.mFmiParameterLevelId) << "</TD></TR>\n";
+    /*
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">GRIB identifier</TD><TD>" << contentInfo.mGribParameterId << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">GRIB1 level identifier</TD><TD>" << toString(contentInfo.mGrib1ParameterLevelId) << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">GRIB2 level identifier</TD><TD>" << toString(contentInfo.mGrib2ParameterLevelId) << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Newbase identifier</TD><TD>" << contentInfo.mNewbaseParameterId << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Newbase name</TD><TD>" << contentInfo.getNewbaseParameterName() << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">NetCDF name</TD><TD>" << contentInfo.getNetCdfParameterName() << "</TD></TR>\n";
+    */
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Forecast type</TD><TD>" << contentInfo.mForecastType << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Forecast number</TD><TD>" << contentInfo.mForecastNumber << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Geometry identifier</TD><TD>" << contentInfo.mGeometryId << "</TD></TR>\n";
@@ -2177,7 +2179,7 @@ int Plugin::page_timeseries(Spine::Reactor &theReactor,
     double yy = yPos * dHeight;
 
     T::ContentInfoList contentInfoList;
-    contentServer->getContentListByParameterAndGenerationId(0,contentInfo.mGenerationId,T::ParamKeyTypeValue::FMI_NAME,contentInfo.getFmiParameterName(),T::ParamLevelIdTypeValue::FMI,contentInfo.mFmiParameterLevelId,contentInfo.mParameterLevel,contentInfo.mParameterLevel,-2,-2,-2,"14000101T000000","23000101T000000",0,contentInfoList);
+    contentServer->getContentListByParameterAndGenerationId(0,contentInfo.mGenerationId,T::ParamKeyTypeValue::FMI_NAME,contentInfo.getFmiParameterName(),contentInfo.mFmiParameterLevelId,contentInfo.mParameterLevel,contentInfo.mParameterLevel,-2,-2,-2,"14000101T000000","23000101T000000",0,contentInfoList);
 
     contentInfoList.sort(T::ContentInfo::ComparisonMethod::fmiId_producer_generation_level_time);
 
@@ -3049,6 +3051,7 @@ void Plugin::getLevelIds(T::ContentInfoList& contentInfoList,std::set<int>& leve
           levelIds.insert(g->mFmiParameterLevelId);
         }
       }
+      /*
       else
       if (g->mGrib1ParameterLevelId > 0)
       {
@@ -3065,6 +3068,7 @@ void Plugin::getLevelIds(T::ContentInfoList& contentInfoList,std::set<int>& leve
           levelIds.insert(g->mGrib2ParameterLevelId+2000);
         }
       }
+      */
     }
   }
   catch (...)
@@ -3090,9 +3094,9 @@ void Plugin::getLevels(T::ContentInfoList& contentInfoList,int levelId,std::set<
     {
       T::ContentInfo *g = contentInfoList.getContentInfoByIndex(a);
 
-      if ((levelId >= 0  &&  levelId < 1000  &&  id == g->mFmiParameterLevelId) ||
+      if ((levelId >= 0  &&  levelId < 1000  &&  id == g->mFmiParameterLevelId)/* ||
           (levelId >= 1000  &&  levelId < 2000  &&  id == g->mGrib1ParameterLevelId) ||
-          (levelId >= 2000  &&  id == g->mGrib2ParameterLevelId))
+          (levelId >= 2000  &&  id == g->mGrib2ParameterLevelId)*/)
       {
         if (levels.find(g->mParameterLevel) == levels.end())
         {
@@ -3124,9 +3128,9 @@ void Plugin::getForecastTypes(T::ContentInfoList& contentInfoList,int levelId,in
     {
       T::ContentInfo *g = contentInfoList.getContentInfoByIndex(a);
 
-      if ((levelId >= 0  &&  levelId < 1000  &&  id == g->mFmiParameterLevelId) ||
+      if ((levelId >= 0  &&  levelId < 1000  &&  id == g->mFmiParameterLevelId)/* ||
           (levelId >= 1000  &&  levelId < 2000  &&  id == g->mGrib1ParameterLevelId) ||
-          (levelId >= 2000  &&  id == g->mGrib2ParameterLevelId))
+          (levelId >= 2000  &&  id == g->mGrib2ParameterLevelId)*/)
       {
         if (level == g->mParameterLevel)
         {
@@ -3161,9 +3165,9 @@ void Plugin::getForecastNumbers(T::ContentInfoList& contentInfoList,int levelId,
     {
       T::ContentInfo *g = contentInfoList.getContentInfoByIndex(a);
 
-      if ((levelId >= 0  &&  levelId < 1000  &&  id == g->mFmiParameterLevelId) ||
+      if ((levelId >= 0  &&  levelId < 1000  &&  id == g->mFmiParameterLevelId)/* ||
           (levelId >= 1000  &&  levelId < 2000  &&  id == g->mGrib1ParameterLevelId) ||
-          (levelId >= 2000  &&  id == g->mGrib2ParameterLevelId))
+          (levelId >= 2000  &&  id == g->mGrib2ParameterLevelId)*/)
       {
         if (level == g->mParameterLevel)
         {
@@ -3201,9 +3205,9 @@ void Plugin::getGeometries(T::ContentInfoList& contentInfoList,int levelId,int l
     {
       T::ContentInfo *g = contentInfoList.getContentInfoByIndex(a);
 
-      if ((levelId >= 0  &&  levelId < 1000  &&  id == g->mFmiParameterLevelId) ||
+      if ((levelId >= 0  &&  levelId < 1000  &&  id == g->mFmiParameterLevelId) /*||
           (levelId >= 1000  &&  levelId < 2000  &&  id == g->mGrib1ParameterLevelId) ||
-          (levelId >= 2000  &&  id == g->mGrib2ParameterLevelId))
+          (levelId >= 2000  &&  id == g->mGrib2ParameterLevelId)*/)
       {
         if (level == g->mParameterLevel)
         {
@@ -3242,9 +3246,9 @@ std::string Plugin::getFmiKey(std::string& producerName,T::ContentInfo& contentI
 
     if (strlen(contentInfo.getFmiParameterName()) >0)
       p += sprintf(p,"%s",contentInfo.getFmiParameterName());
-    else
-    if (contentInfo.mGribParameterId > 0)
-      p += sprintf(p,"GRIB-%u",contentInfo.mGribParameterId);
+    //else
+    //if (contentInfo.mGribParameterId > 0)
+    //  p += sprintf(p,"GRIB-%u",contentInfo.mGribParameterId);
 
     p += sprintf(p,":%s",producerName.c_str());
 
@@ -3759,7 +3763,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     // ### Level identifiers:
 
     T::ContentInfoList contentInfoList;
-    contentServer->getContentListByParameterAndGenerationId(0,gid,T::ParamKeyTypeValue::FMI_NAME,parameterIdStr,T::ParamLevelIdTypeValue::IGNORE,0,0,0,-2,-2,-2,"14000101T000000","30000101T000000",0,contentInfoList);
+    contentServer->getContentListByParameterAndGenerationId(0,gid,T::ParamKeyTypeValue::FMI_NAME,parameterIdStr,-1,0,0,-2,-2,-2,"14000101T000000","30000101T000000",0,contentInfoList);
     len = contentInfoList.getLength();
     int levelId = toInt32(parameterLevelIdStr);
 
@@ -3770,9 +3774,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     getLevelIds(contentInfoList,levelIds);
 
     if (levelIds.find(levelId) == levelIds.end())
-      levelId = 0;
-
-    T::ParamLevelIdType levelIdType = T::ParamLevelIdTypeValue::FMI;
+      levelId = -1;
 
     if (levelIds.size() > 0)
     {
@@ -3818,15 +3820,6 @@ int Plugin::page_main(Spine::Reactor &theReactor,
         if (levelId == *it)
         {
           ostr1 << "<OPTION selected value=\"" <<  *it << "\">" <<  lStr << "</OPTION>\n";
-          //if (*it < 1000)
-          levelIdType = T::ParamLevelIdTypeValue::FMI;
-          /*
-          else
-          if (*it < 2000)
-            levelIdType = T::ParamLevelIdTypeValue::GRIB1;
-          else
-            levelIdType = T::ParamLevelIdTypeValue::GRIB2;
-          */
         }
         else
           ostr1 << "<OPTION value=\"" <<  *it << "\">" <<  lStr << "</OPTION>\n";
@@ -3839,7 +3832,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     // ### Levels:
 
     contentInfoList.clear();
-    contentServer->getContentListByParameterAndGenerationId(0,gid,T::ParamKeyTypeValue::FMI_NAME,parameterIdStr,levelIdType,(levelId % 1000),0,0x7FFFFFFF,-2,-2,-2,"14000101T000000","30000101T000000",0,contentInfoList);
+    contentServer->getContentListByParameterAndGenerationId(0,gid,T::ParamKeyTypeValue::FMI_NAME,parameterIdStr,levelId,0,0x7FFFFFFF,-2,-2,-2,"14000101T000000","30000101T000000",0,contentInfoList);
     len = contentInfoList.getLength();
     T::ParamLevel level = toInt32(parameterLevelStr);
 
@@ -4018,7 +4011,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     // ### Times:
 
     contentInfoList.clear();
-    contentServer->getContentListByParameterAndGenerationId(0,gid,T::ParamKeyTypeValue::FMI_NAME,parameterIdStr,levelIdType,(levelId % 1000),level,level,-2,-2,-2,"14000101T000000","30000101T000000",0,contentInfoList);
+    contentServer->getContentListByParameterAndGenerationId(0,gid,T::ParamKeyTypeValue::FMI_NAME,parameterIdStr,levelId,level,level,-2,-2,-2,"14000101T000000","30000101T000000",0,contentInfoList);
     len = contentInfoList.getLength();
     std::string prevTime = "14000101T0000";
 
