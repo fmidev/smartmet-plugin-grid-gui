@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-plugin-%{DIRNAME}
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
-Version: 21.10.4
+Version: 21.10.11
 Release: 1%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
@@ -15,16 +15,16 @@ BuildRequires: gcc-c++
 BuildRequires: make
 BuildRequires: boost169-devel
 BuildRequires: libconfig17-devel
-BuildRequires: smartmet-library-spine-devel >= 21.9.17
-BuildRequires: smartmet-library-grid-files-devel >= 21.10.4
-BuildRequires: smartmet-library-grid-content-devel >= 21.10.4
-BuildRequires: smartmet-engine-grid-devel >= 21.10.4
+BuildRequires: smartmet-library-spine-devel >= 21.10.11
+BuildRequires: smartmet-library-grid-files-devel >= 21.10.11
+BuildRequires: smartmet-library-grid-content-devel >= 21.10.11
+BuildRequires: smartmet-engine-grid-devel >= 21.10.11
 BuildRequires: gdal32-devel
 Requires: libconfig17
-Requires: smartmet-library-macgyver >= 21.9.21
-Requires: smartmet-library-spine >= 21.9.17
+Requires: smartmet-library-macgyver >= 21.10.4
+Requires: smartmet-library-spine >= 21.10.11
 Requires: smartmet-server >= 21.9.7
-Requires: smartmet-engine-grid >= 21.10.4
+Requires: smartmet-engine-grid >= 21.10.11
 Requires: boost169-date-time
 Provides: %{SPECNAME}
 
@@ -50,6 +50,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/plugins/%{DIRNAME}.so
 
 %changelog
+* Mon Oct 11 2021 Mika Heiskanen <mika.heiskanen@fmi.fi> - 21.10.11-1.fmi
+- Simplified grid storage structures
+
 * Mon Oct  4 2021 Mika Heiskanen <mika.heiskanen@fmi.fi> - 21.10.4-1.fmi
 - Repackaged due to grid-files ABI changes
 
