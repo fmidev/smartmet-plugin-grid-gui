@@ -901,11 +901,12 @@ void Plugin::saveImage(
         attributeList.addAttribute("grid.areaInterpolationMethod",std::to_string(interpolationMethod));
         if (fileId > 0)
         {
-         int result = dataServer->getGridValueVectorByGeometry(0,fileId,messageIndex,attributeList,values);
-         if (result != 0)
-           throw Fmi::Exception(BCP,"Data fetching failed!");
+          double_vec modificationParameters;
+          int result = dataServer->getGridValueVectorByGeometry(0,fileId,messageIndex,attributeList,0,modificationParameters,values);
+          if (result != 0)
+            throw Fmi::Exception(BCP,"Data fetching failed!");
 
-         saveImage(imageFile,cols,rows,values,*coordinates,*lineCoordinates,hue,saturation,blur,coordinateLines,isolines,isolineValues,landBorder,landMask,seaMask,colorMapName,missingStr,geomId,symbolMap,locations,showSymbols);
+          saveImage(imageFile,cols,rows,values,*coordinates,*lineCoordinates,hue,saturation,blur,coordinateLines,isolines,isolineValues,landBorder,landMask,seaMask,colorMapName,missingStr,geomId,symbolMap,locations,showSymbols);
         }
       }
     }
@@ -1703,7 +1704,8 @@ int Plugin::page_locations(Spine::Reactor &theReactor,
       T::Location_vec locationList = locationFile->getLocations();
       T::GridValueList valueList;
 
-      if (dataServer->getGridValueListByPointList(0,toUInt32(fileIdStr),toUInt32(messageIndexStr),T::CoordinateTypeValue::LATLON_COORDINATES,coordinateList,T::AreaInterpolationMethod::Linear,valueList) == 0)
+      double_vec modificationParameters;
+      if (dataServer->getGridValueListByPointList(0,toUInt32(fileIdStr),toUInt32(messageIndexStr),T::CoordinateTypeValue::LATLON_COORDINATES,coordinateList,T::AreaInterpolationMethod::Linear,0,modificationParameters,valueList) == 0)
       {
         for (auto it = locationList.begin(); it != locationList.end(); ++it)
         {
@@ -2094,7 +2096,8 @@ int Plugin::page_value(Spine::Reactor &theReactor,
       xx = dWidth - (xPos * dWidth);
 
     T::ParamValue value = 0;
-    dataServer->getGridValueByPoint(0,fileId,messageIndex,T::CoordinateTypeValue::GRID_COORDINATES,xx,yy,T::AreaInterpolationMethod::Nearest,value);
+    double_vec modificationParameters;
+    dataServer->getGridValueByPoint(0,fileId,messageIndex,T::CoordinateTypeValue::GRID_COORDINATES,xx,yy,T::AreaInterpolationMethod::Nearest,0,modificationParameters,value);
 
     if (value != ParamValueMissing)
       theResponse.setContent(std::to_string(value));
@@ -2197,7 +2200,8 @@ int Plugin::page_timeseries(Spine::Reactor &theReactor,
       if (info->mGeometryId == contentInfo.mGeometryId  &&  info->mForecastType == contentInfo.mForecastType  &&  info->mForecastNumber == contentInfo.mForecastNumber)
       {
         T::ParamValue value = 0;
-        if (dataServer->getGridValueByPoint(0,info->mFileId,info->mMessageIndex,T::CoordinateTypeValue::GRID_COORDINATES,xx,yy,T::AreaInterpolationMethod::Linear,value) == 0)
+        double_vec modificationParameters;
+        if (dataServer->getGridValueByPoint(0,info->mFileId,info->mMessageIndex,T::CoordinateTypeValue::GRID_COORDINATES,xx,yy,T::AreaInterpolationMethod::Linear,0,modificationParameters,value) == 0)
         {
           if (value != ParamValueMissing)
           {
@@ -2993,8 +2997,8 @@ int Plugin::page_map(Spine::Reactor &theReactor,
     uint coordinateLines = getColorValue(coordinateLinesStr);
 
     T::ParamValue_vec values;
-
-    int result = dataServer->getGridValueVectorByRectangle(0,toUInt32(fileIdStr),toUInt32(messageIndexStr),T::CoordinateTypeValue::LATLON_COORDINATES,columns,rows,-180,90,360/C_DOUBLE(columns),-180/C_DOUBLE(rows),T::AreaInterpolationMethod::Nearest,values);
+    double_vec modificationParameters;
+    int result = dataServer->getGridValueVectorByRectangle(0,toUInt32(fileIdStr),toUInt32(messageIndexStr),T::CoordinateTypeValue::LATLON_COORDINATES,columns,rows,-180,90,360/C_DOUBLE(columns),-180/C_DOUBLE(rows),T::AreaInterpolationMethod::Nearest,0,modificationParameters,values);
     if (result != 0)
     {
       std::ostringstream ostr;
