@@ -3048,7 +3048,7 @@ void Plugin::getLevelIds(T::ContentInfoList& contentInfoList,std::set<int>& leve
     {
       T::ContentInfo *g = contentInfoList.getContentInfoByIndex(a);
 
-      if (g->mFmiParameterLevelId > 0)
+      if (g->mFmiParameterLevelId >= 0)
       {
         if (levelIds.find(g->mFmiParameterLevelId) == levelIds.end())
         {
