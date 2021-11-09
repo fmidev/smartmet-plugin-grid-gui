@@ -3248,11 +3248,11 @@ std::string Plugin::getFmiKey(std::string& producerName,T::ContentInfo& contentI
     char buf[200];
     char *p = buf;
 
-    if (strlen(contentInfo.getFmiParameterName()) >0)
+    if (strlen(contentInfo.getFmiParameterName()) > 0)
       p += sprintf(p,"%s",contentInfo.getFmiParameterName());
-    //else
-    //if (contentInfo.mGribParameterId > 0)
-    //  p += sprintf(p,"GRIB-%u",contentInfo.mGribParameterId);
+    else
+    if (contentInfo.mFmiParameterId > 0)
+      p += sprintf(p,"FMI-%u",contentInfo.mFmiParameterId);
 
     p += sprintf(p,":%s",producerName.c_str());
 
@@ -3727,6 +3727,20 @@ int Plugin::page_main(Spine::Reactor &theReactor,
           }
         }
         else
+        if (strncasecmp(st,"FMI-",4) == 0)
+        {
+          std::string key = st+4;
+
+          Identification::FmiParameterDef def;
+          if (Identification::gridDef.getFmiParameterDefById(toUInt32(key),def))
+          {
+            pId = def.mParameterName;
+            pName = def.mParameterName + " (" + def.mParameterDescription + ")";
+            if (parameterIdStr == pId || parameterIdStr.empty())
+              unitStr = def.mParameterUnits;
+          }
+        }
+        else
         {
           Identification::FmiParameterDef def;
           if (Identification::gridDef.getFmiParameterDefByName(*it,def))
@@ -3735,13 +3749,6 @@ int Plugin::page_main(Spine::Reactor &theReactor,
             pName = def.mParameterName + " (" + def.mParameterDescription + ")";
             if (parameterIdStr == pId || parameterIdStr.empty())
               unitStr = def.mParameterUnits;
-/*
-            Identification::NewbaseParameterDef nbParamDef;
-            if (Identification::gridDef.getNewbaseParameterDefByFmiId(def.mFmiParameterId,nbParamDef)  &&  !nbParamDef.mParameterName.empty())
-            {
-              pName = pName + " (" + nbParamDef.mParameterName + ")";
-            }
-*/
           }
         }
 
