@@ -65,6 +65,9 @@ clean:
 	rm -f $(LIBFILE) *~ $(SUBNAME)/*~
 	rm -rf obj
 
+clean-install:
+	rm -r $(plugindir)/$(LIBFILE)
+
 format:
 	clang-format -i -style=file $(SUBNAME)/*.h $(SUBNAME)/*.cpp test/*.cpp
 
