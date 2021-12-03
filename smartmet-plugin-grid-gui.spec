@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-plugin-%{DIRNAME}
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
-Version: 21.11.15
+Version: 21.12.3
 Release: 1%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
@@ -15,16 +15,16 @@ BuildRequires: gcc-c++
 BuildRequires: make
 BuildRequires: boost169-devel
 BuildRequires: libconfig17-devel
-BuildRequires: smartmet-library-spine-devel >= 21.11.10
-BuildRequires: smartmet-library-grid-files-devel >= 21.11.15
-BuildRequires: smartmet-library-grid-content-devel >= 21.11.15
-BuildRequires: smartmet-engine-grid-devel >= 21.11.15
-BuildRequires: gdal32-devel
+BuildRequires: smartmet-library-spine-devel >= 21.12.2
+BuildRequires: smartmet-library-grid-files-devel >= 21.12.2
+BuildRequires: smartmet-library-grid-content-devel >= 21.12.2
+BuildRequires: smartmet-engine-grid-devel >= 21.12.2
+BuildRequires: gdal33-devel
 Requires: libconfig17
-Requires: smartmet-library-macgyver >= 21.10.4
-Requires: smartmet-library-spine >= 21.11.10
+Requires: smartmet-library-macgyver >= 21.12.1
+Requires: smartmet-library-spine >= 21.12.2
 Requires: smartmet-server >= 21.9.7
-Requires: smartmet-engine-grid >= 21.11.15
+Requires: smartmet-engine-grid >= 21.12.2
 Requires: boost169-date-time
 Provides: %{SPECNAME}
 
