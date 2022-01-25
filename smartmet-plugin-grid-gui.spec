@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-plugin-%{DIRNAME}
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
-Version: 22.1.21
+Version: 22.1.25
 Release: 1%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
@@ -15,16 +15,16 @@ BuildRequires: gcc-c++
 BuildRequires: make
 BuildRequires: boost169-devel
 BuildRequires: libconfig17-devel
-BuildRequires: smartmet-library-spine-devel >= 21.1.21
-BuildRequires: smartmet-library-grid-files-devel >= 21.1.21
-BuildRequires: smartmet-library-grid-content-devel >= 21.1.21
-BuildRequires: smartmet-engine-grid-devel >= 21.1.21
+BuildRequires: smartmet-library-spine-devel >= 22.1.21
+BuildRequires: smartmet-library-grid-files-devel >= 22.1.25
+BuildRequires: smartmet-library-grid-content-devel >= 22.1.25
+BuildRequires: smartmet-engine-grid-devel >= 22.1.25
 BuildRequires: gdal34-devel
 Requires: libconfig17
-Requires: smartmet-library-macgyver >= 21.1.21
-Requires: smartmet-library-spine >= 21.1.21
+Requires: smartmet-library-macgyver >= 22.1.21
+Requires: smartmet-library-spine >= 22.1.21
 Requires: smartmet-server >= 21.11.25
-Requires: smartmet-engine-grid >= 21.1.21
+Requires: smartmet-engine-grid >= 22.1.25
 Requires: boost169-date-time
 Provides: %{SPECNAME}
 
@@ -50,6 +50,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/plugins/%{DIRNAME}.so
 
 %changelog
+* Tue Jan 25 2022 Mika Heiskanen <mika.heiskanen@fmi.fi> - 22.1.25-1.fmi
+- Improved handling of unfinished generations
+
 * Fri Jan 21 2022 Andris Pavēnis <andris.pavenis@fmi.fi> 22.1.21-1.fmi
 - Repackage due to upgrade of packages from PGDG repo: gdal-3.4, geos-3.10, proj-8.2
 
