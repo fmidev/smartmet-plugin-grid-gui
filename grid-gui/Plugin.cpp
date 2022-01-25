@@ -3636,7 +3636,8 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     T::GenerationInfoList generationInfoList;
     T::GenerationInfoList generationInfoList2;
     contentServer->getGenerationInfoListByProducerId(0,pid,generationInfoList2);
-    generationInfoList2.getGenerationInfoListByProducerIdAndStatus(pid,generationInfoList,T::GenerationInfo::Status::Ready);
+    generationInfoList2.getGenerationInfoListByProducerId(pid,generationInfoList);
+    //generationInfoList2.getGenerationInfoListByProducerIdAndStatus(pid,generationInfoList,T::GenerationInfo::Status::Ready);
 
     uint gid = toUInt32(generationIdStr);
 
