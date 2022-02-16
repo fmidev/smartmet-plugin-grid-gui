@@ -66,7 +66,7 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
       throw Fmi::Exception(BCP, "GridGui plugin and Server API version mismatch");
 
     // Register the handler
-    if (!theReactor->addContentHandler(
+    if (!theReactor->addPrivateContentHandler(
             this, "/grid-gui", boost::bind(&Plugin::callRequestHandler, this, _1, _2, _3)))
       throw Fmi::Exception(BCP, "Failed to register GridGui request handler");
 

@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-plugin-%{DIRNAME}
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
-Version: 22.2.9
+Version: 22.2.16
 Release: 1%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
@@ -15,14 +15,14 @@ BuildRequires: gcc-c++
 BuildRequires: make
 BuildRequires: boost169-devel
 BuildRequires: libconfig17-devel
-BuildRequires: smartmet-library-spine-devel >= 22.1.21
+BuildRequires: smartmet-library-spine-devel >= 22.2.10
 BuildRequires: smartmet-library-grid-files-devel >= 22.2.9
-BuildRequires: smartmet-library-grid-content-devel >= 22.2.9
+BuildRequires: smartmet-library-grid-content-devel >= 22.2.14
 BuildRequires: smartmet-engine-grid-devel >= 22.2.9
 BuildRequires: gdal34-devel
 Requires: libconfig17
 Requires: smartmet-library-macgyver >= 22.1.21
-Requires: smartmet-library-spine >= 22.1.21
+Requires: smartmet-library-spine >= 22.2.10
 Requires: smartmet-server >= 21.11.25
 Requires: smartmet-engine-grid >= 22.2.9
 Requires: boost169-date-time
@@ -50,6 +50,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/plugins/%{DIRNAME}.so
 
 %changelog
+* Wed Feb 16 2022 Mika Heiskanen <mika.heiskanen@fmi.fi> - 22.2.16-1.fmi
+- The plugin is now private and not seen by the frontentds
+
 * Wed Feb  9 2022 Mika Heiskanen <mika.heiskanen@fmi.fi> - 22.2.9-1.fmi
 - Repackaged due to ABI changes in grid libraries
 
