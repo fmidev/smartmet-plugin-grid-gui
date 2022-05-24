@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-plugin-%{DIRNAME}
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
-Version: 22.4.28
+Version: 22.5.24
 Release: 1%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
@@ -15,16 +15,16 @@ BuildRequires: gcc-c++
 BuildRequires: make
 BuildRequires: boost169-devel
 BuildRequires: libconfig17-devel
-BuildRequires: smartmet-library-spine-devel >= 22.4.26
-BuildRequires: smartmet-library-grid-files-devel >= 22.3.15
-BuildRequires: smartmet-library-grid-content-devel >= 22.3.28
-BuildRequires: smartmet-engine-grid-devel >= 22.3.28
+BuildRequires: smartmet-library-spine-devel >= 22.5.24
+BuildRequires: smartmet-library-grid-files-devel >= 22.5.24
+BuildRequires: smartmet-library-grid-content-devel >= 22.5.24
+BuildRequires: smartmet-engine-grid-devel >= 22.5.24
 BuildRequires: gdal34-devel
 Requires: libconfig17
-Requires: smartmet-library-macgyver >= 22.3.28
-Requires: smartmet-library-spine >= 22.4.26
-Requires: smartmet-server >= 21.11.25
-Requires: smartmet-engine-grid >= 22.3.28
+Requires: smartmet-library-macgyver >= 22.5.24
+Requires: smartmet-library-spine >= 22.5.24
+Requires: smartmet-server >= 22.5.16
+Requires: smartmet-engine-grid >= 22.5.24
 Requires: boost169-date-time
 Provides: %{SPECNAME}
 
@@ -50,6 +50,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/plugins/%{DIRNAME}.so
 
 %changelog
+* Tue May 24 2022 Mika Heiskanen <mika.heiskanen@fmi.fi> - 22.5.24-1.fmi
+- Repackaged due to NFmiArea ABI changes
+
 * Thu Apr 28 2022 Andris Pavenis <andris.pavenis@fmi.fi> 22.4.28-1.fmi
 - Repackage due to SmartMet::Spine::Reactor ABI changes
 
