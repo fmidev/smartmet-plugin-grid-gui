@@ -12,6 +12,7 @@
 #include <spine/SmartMet.h>
 #include <macgyver/TimeFormatter.h>
 #include <macgyver/FastMath.h>
+#include <boost/bind/bind.hpp>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
 
 namespace SmartMet
@@ -35,6 +36,7 @@ using namespace SmartMet::Spine;
 Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
     : SmartMetPlugin(), itsModuleName("GridGui")
 {
+  using namespace boost::placeholders;
   try
   {
     const char *configAttribute[] =
