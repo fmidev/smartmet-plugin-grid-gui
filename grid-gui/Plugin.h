@@ -27,10 +27,13 @@ namespace GridGui
 typedef std::vector<std::pair<std::string,unsigned int>> Colors;
 
 
-class Plugin : public SmartMetPlugin, private boost::noncopyable
+class Plugin : public SmartMetPlugin
 {
   public:
 
+    Plugin() = delete;
+    Plugin(const Plugin& other) = delete;
+    Plugin& operator=(const Plugin& other) = delete;
     Plugin(Spine::Reactor* theReactor, const char* theConfig);
     virtual ~Plugin();
 
@@ -47,8 +50,6 @@ class Plugin : public SmartMetPlugin, private boost::noncopyable
                       Spine::HTTP::Response& theResponse);
 
   private:
-
-    Plugin();
 
     bool isLand(double lon,double lat);
 

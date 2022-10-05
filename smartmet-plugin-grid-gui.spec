@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-plugin-%{DIRNAME}
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
-Version: 22.8.24
+Version: 22.10.5
 Release: 1%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
@@ -24,16 +24,16 @@ BuildRequires: gcc-c++
 BuildRequires: make
 BuildRequires: %{smartmet_boost}-devel
 BuildRequires: libconfig17-devel
-BuildRequires: smartmet-library-spine-devel >= 22.8.23
-BuildRequires: smartmet-library-grid-files-devel >= 22.6.23
-BuildRequires: smartmet-library-grid-content-devel >= 22.8.24
-BuildRequires: smartmet-engine-grid-devel >= 22.8.24
+BuildRequires: smartmet-library-spine-devel >= 22.9.5
+BuildRequires: smartmet-library-grid-files-devel >= 22.9.29
+BuildRequires: smartmet-library-grid-content-devel >= 22.9.29
+BuildRequires: smartmet-engine-grid-devel >= 22.9.9
 BuildRequires: gdal34-devel
 Requires: libconfig17
 Requires: smartmet-library-macgyver >= 22.8.23
-Requires: smartmet-library-spine >= 22.8.23
-Requires: smartmet-server >= 22.8.19
-Requires: smartmet-engine-grid >= 22.8.24
+Requires: smartmet-library-spine >= 22.9.5
+Requires: smartmet-server >= 22.10.5
+Requires: smartmet-engine-grid >= 22.9.9
 Requires: %{smartmet_boost}-date-time
 Provides: %{SPECNAME}
 
@@ -59,6 +59,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/plugins/%{DIRNAME}.so
 
 %changelog
+* Wed Oct  5 2022 Mika Heiskanen <mika.heiskanen@fmi.fi> - 22.10.5-1.fmi
+- Do not use boost::noncopyable
+
 * Wed Aug 24 2022 Mika Heiskanen <mika.heiskanen@fmi.fi> - 22.8.24-1.fmi
 - Repackaged since ABI changed in ServiceImplementation
 
