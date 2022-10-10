@@ -186,7 +186,7 @@ class Plugin : public SmartMetPlugin
     void loadColorFile();
     void loadDaliFile();
     void loadIsolineFile();
-    void loadImage(const char *fname,Spine::HTTP::Response &theResponse);
+    bool loadImage(const char *fname,Spine::HTTP::Response &theResponse);
 
 
     Engine::Grid::Engine*     itsGridEngine;

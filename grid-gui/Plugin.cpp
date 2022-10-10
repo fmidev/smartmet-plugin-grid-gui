@@ -9,11 +9,15 @@
 #include <grid-files/common/GeneralFunctions.h>
 #include <grid-files/common/ImagePaint.h>
 #include <grid-files/identification/GridDef.h>
+#include <grid-files/common/ShowFunction.h>
 #include <spine/SmartMet.h>
 #include <macgyver/TimeFormatter.h>
 #include <macgyver/FastMath.h>
 #include <boost/bind/bind.hpp>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
+
+#define FUNCTION_TRACE FUNCTION_TRACE_OFF
+
 
 namespace SmartMet
 {
@@ -177,6 +181,7 @@ Plugin::~Plugin()
 // ----------------------------------------------------------------------
 void Plugin::init()
 {
+  FUNCTION_TRACE
   try
   {
     auto engine = itsReactor->getSingleton("grid", nullptr);
@@ -205,6 +210,7 @@ void Plugin::init()
 
 void Plugin::shutdown()
 {
+  FUNCTION_TRACE
   try
   {
     std::cout << "  -- Shutdown requested (grid-plugin)\n";
@@ -221,6 +227,7 @@ void Plugin::shutdown()
 
 T::ColorMapFile* Plugin::getColorMapFile(std::string colorMapName)
 {
+  FUNCTION_TRACE
   try
   {
     T::ColorMapFile *map = nullptr;
@@ -246,6 +253,7 @@ T::ColorMapFile* Plugin::getColorMapFile(std::string colorMapName)
 
 void Plugin::loadColorFile()
 {
+  FUNCTION_TRACE
   try
   {
     FILE *file = fopen(itsColorFile.c_str(),"re");
@@ -317,6 +325,7 @@ void Plugin::loadColorFile()
 
 void Plugin::loadDaliFile()
 {
+  FUNCTION_TRACE
   try
   {
     FILE *file = fopen(itsDaliFile.c_str(),"re");
@@ -396,6 +405,7 @@ void Plugin::loadDaliFile()
 
 void Plugin::loadIsolineFile()
 {
+  FUNCTION_TRACE
   try
   {
     if (itsIsolineFile.empty())
@@ -476,6 +486,7 @@ void Plugin::loadIsolineFile()
 
 uint Plugin::getColorValue(std::string& colorName)
 {
+  FUNCTION_TRACE
   try
   {
     for (auto it = itsColors.begin(); it != itsColors.end(); ++it)
@@ -500,6 +511,7 @@ uint Plugin::getColorValue(std::string& colorName)
 
 T::ParamValue_vec Plugin::getIsolineValues(std::string& isolineValues)
 {
+  FUNCTION_TRACE
   try
   {
     auto it = itsIsolines.find(isolineValues);
@@ -523,6 +535,7 @@ T::ParamValue_vec Plugin::getIsolineValues(std::string& isolineValues)
 
 T::SymbolMapFile* Plugin::getSymbolMapFile(std::string symbolMap)
 {
+  FUNCTION_TRACE
   try
   {
     T::SymbolMapFile *map = nullptr;
@@ -548,6 +561,7 @@ T::SymbolMapFile* Plugin::getSymbolMapFile(std::string symbolMap)
 
 T::LocationFile* Plugin::getLocationFile(std::string name)
 {
+  FUNCTION_TRACE
   try
   {
     T::LocationFile *file = nullptr;
@@ -573,6 +587,7 @@ T::LocationFile* Plugin::getLocationFile(std::string name)
 
 bool Plugin::isLand(double lon,double lat)
 {
+  //FUNCTION_TRACE
   try
   {
     if (itsLandSeaMask.pixel == nullptr)
@@ -610,6 +625,7 @@ bool Plugin::isLand(double lon,double lat)
 
 void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_vec&  values,unsigned char hue,unsigned char saturation,unsigned char blur,uint coordinateLines,uint landBorder,std::string landMask,std::string seaMask,std::string colorMapName,std::string missingStr)
 {
+  FUNCTION_TRACE
   try
   {
     bool zeroIsMissingValue = false;
@@ -768,6 +784,7 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
 
 void Plugin::checkImageCache()
 {
+  FUNCTION_TRACE
   try
   {
     AutoThreadLock lock(&itsThreadLock);
@@ -824,6 +841,7 @@ void Plugin::saveImage(
     std::string locations,
     bool showSymbols)
 {
+  FUNCTION_TRACE
   try
   {
     auto dataServer = itsGridEngine->getDataServer_sptr();
@@ -948,6 +966,7 @@ void Plugin::saveImage(
     std::string locations,
     bool showSymbols)
 {
+  FUNCTION_TRACE
   try
   {
     T::ColorMapFile *colorMapFile = nullptr;
@@ -1175,6 +1194,7 @@ void Plugin::saveImage(
 
 void Plugin::saveTimeSeries(const char *imageFile,std::vector<T::ParamValue>& valueList,int idx,std::set<int> dayIdx)
 {
+  FUNCTION_TRACE
   try
   {
     T::ParamValue maxValue = -1000000000;
@@ -1262,6 +1282,7 @@ int Plugin::page_info(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse)
 {
+  FUNCTION_TRACE
   try
   {
     auto contentServer = itsGridEngine->getContentServer_sptr();
@@ -1375,6 +1396,9 @@ int Plugin::page_info(Spine::Reactor &theReactor,
     ostr << "<TR><TD bgColor=\"#000080\" width=\"100\">File</TD><TD><TABLE border=\"1\" width=\"100%\" style=\"font-size:12;\">\n";
 
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Id</TD><TD>" << fileInfo.mFileId << "</TD></TR>\n";
+    ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Server</TD><TD>" << fileInfo.mServer << "</TD></TR>\n";
+    ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Protocol</TD><TD>" << C_INT(fileInfo.mProtocol) << "</TD></TR>\n";
+    ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Type</TD><TD>" << C_INT(fileInfo.mFileType) << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Name</TD><TD>" << fileInfo.mName << "</TD></TR>\n";
     if (fileInfo.mDeletionTime > 0)
       ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Deletion time</TD><TD>" << utcTimeFromTimeT(fileInfo.mDeletionTime) << "</TD></TR>\n";
@@ -1393,14 +1417,6 @@ int Plugin::page_info(Spine::Reactor &theReactor,
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">FMI identifier</TD><TD>" << contentInfo.mFmiParameterId << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">FMI name</TD><TD>" << contentInfo.getFmiParameterName() << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">FMI level identifier</TD><TD>" << toString(contentInfo.mFmiParameterLevelId) << "</TD></TR>\n";
-    /*
-    ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">GRIB identifier</TD><TD>" << contentInfo.mGribParameterId << "</TD></TR>\n";
-    ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">GRIB1 level identifier</TD><TD>" << toString(contentInfo.mGrib1ParameterLevelId) << "</TD></TR>\n";
-    ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">GRIB2 level identifier</TD><TD>" << toString(contentInfo.mGrib2ParameterLevelId) << "</TD></TR>\n";
-    ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Newbase identifier</TD><TD>" << contentInfo.mNewbaseParameterId << "</TD></TR>\n";
-    ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Newbase name</TD><TD>" << contentInfo.getNewbaseParameterName() << "</TD></TR>\n";
-    ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">NetCDF name</TD><TD>" << contentInfo.getNetCdfParameterName() << "</TD></TR>\n";
-    */
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Forecast type</TD><TD>" << contentInfo.mForecastType << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Forecast number</TD><TD>" << contentInfo.mForecastNumber << "</TD></TR>\n";
     ostr << "<TR><TD width=\"180\" bgColor=\"#E0E0E0\">Geometry identifier</TD><TD>" << contentInfo.mGeometryId << "</TD></TR>\n";
@@ -1447,6 +1463,7 @@ int Plugin::page_message(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse)
 {
+  FUNCTION_TRACE
   try
   {
     auto dataServer = itsGridEngine->getDataServer_sptr();
@@ -1580,6 +1597,7 @@ int Plugin::page_download(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse)
 {
+  FUNCTION_TRACE
   try
   {
     auto dataServer = itsGridEngine->getDataServer_sptr();
@@ -1668,6 +1686,7 @@ int Plugin::page_locations(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse)
 {
+  FUNCTION_TRACE
   try
   {
     auto dataServer = itsGridEngine->getDataServer_sptr();
@@ -1752,6 +1771,7 @@ int Plugin::page_table(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse)
 {
+  FUNCTION_TRACE
   try
   {
     auto dataServer = itsGridEngine->getDataServer_sptr();
@@ -1908,6 +1928,7 @@ int Plugin::page_coordinates(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse)
 {
+  FUNCTION_TRACE
   try
   {
     auto dataServer = itsGridEngine->getDataServer_sptr();
@@ -2023,6 +2044,7 @@ int Plugin::page_value(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse)
 {
+  FUNCTION_TRACE
   try
   {
     auto contentServer = itsGridEngine->getContentServer_sptr();
@@ -2126,6 +2148,7 @@ int Plugin::page_timeseries(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse)
 {
+  FUNCTION_TRACE
   try
   {
     auto contentServer = itsGridEngine->getContentServer_sptr();
@@ -2282,8 +2305,9 @@ int Plugin::page_timeseries(Spine::Reactor &theReactor,
 
 
 
-void Plugin::loadImage(const char *fname,Spine::HTTP::Response &theResponse)
+bool Plugin::loadImage(const char *fname,Spine::HTTP::Response &theResponse)
 {
+  FUNCTION_TRACE
   try
   {
     long long sz = getFileSize(fname);
@@ -2314,7 +2338,9 @@ void Plugin::loadImage(const char *fname,Spine::HTTP::Response &theResponse)
 
         theResponse.setHeader("Content-Type","image/jpg");
         theResponse.setContent(sContent);
+        return true;
       }
+      return false;
     }
     else
     {
@@ -2324,6 +2350,7 @@ void Plugin::loadImage(const char *fname,Spine::HTTP::Response &theResponse)
       ostr << "</BODY></HTML>\n";
       theResponse.setContent(std::string(ostr.str()));
       theResponse.setHeader("Content-Type", "text/html; charset=UTF-8");
+      return false;
     }
   }
   catch (...)
@@ -2342,6 +2369,7 @@ int Plugin::page_image(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse)
 {
+  FUNCTION_TRACE
   try
   {
     auto dataServer = itsGridEngine->getDataServer_sptr();
@@ -2483,32 +2511,45 @@ int Plugin::page_image(Spine::Reactor &theReactor,
         // ### found from the itsImages list.
 
         time_usleep(0,10000);
+        found = false;
       }
     }
 
     // ### It seems that we should generated the requested image by ourselves.
 
-    itsImagesUnderConstruction[itsImageCounter % 100] = hash;
+    uint idx = itsImageCounter % 100;
+    itsImagesUnderConstruction[idx] = hash;
     itsImageCounter++;
 
-    uint fileId = toUInt32(fileIdStr);
-    uint messageIndex = toUInt32(messageIndexStr);
-    int geometryId = toInt32(geometryIdStr);
-    uint projectionId = toUInt32(projectionIdStr);
-    uint landBorder = getColorValue(landBorderStr);
-    uint coordinateLines = getColorValue(coordinateLinesStr);
-
-    char fname[200];
-    sprintf(fname,"%s/grid-gui-image_%llu.jpg",itsImageCache_dir.c_str(),getTime());
-
-    saveImage(fname,fileId,messageIndex,toUInt8(hueStr),toUInt8(saturationStr),toUInt8(blurStr),coordinateLines,0xFFFFFFFF,"",landBorder,landMaskStr,seaMaskStr,colorMap,missingStr,geometryId,projectionId,"","",false);
-
-    loadImage(fname,theResponse);
-
-    AutoThreadLock lock(&itsThreadLock);
-    if (itsImages.find(hash) == itsImages.end())
+    try
     {
-      itsImages.insert(std::pair<std::string,std::string>(hash,fname));
+      uint fileId = toUInt32(fileIdStr);
+      uint messageIndex = toUInt32(messageIndexStr);
+      int geometryId = toInt32(geometryIdStr);
+      uint projectionId = toUInt32(projectionIdStr);
+      uint landBorder = getColorValue(landBorderStr);
+      uint coordinateLines = getColorValue(coordinateLinesStr);
+
+      char fname[200];
+      sprintf(fname,"%s/grid-gui-image_%llu.jpg",itsImageCache_dir.c_str(),getTime());
+
+      saveImage(fname,fileId,messageIndex,toUInt8(hueStr),toUInt8(saturationStr),toUInt8(blurStr),coordinateLines,0xFFFFFFFF,"",landBorder,landMaskStr,seaMaskStr,colorMap,missingStr,geometryId,projectionId,"","",false);
+
+      if (loadImage(fname,theResponse))
+      {
+        AutoThreadLock lock(&itsThreadLock);
+        if (itsImages.find(hash) == itsImages.end())
+        {
+          itsImages.insert(std::pair<std::string,std::string>(hash,fname));
+        }
+      }
+      itsImagesUnderConstruction[idx] = "";
+    }
+    catch (...)
+    {
+      itsImagesUnderConstruction[idx] = "";
+      Fmi::Exception exception(BCP, "Operation failed!", nullptr);
+      throw exception;
     }
 
     return HTTP::Status::ok;
@@ -2529,6 +2570,7 @@ int Plugin::page_isolines(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse)
 {
+  FUNCTION_TRACE
   try
   {
     auto dataServer = itsGridEngine->getDataServer_sptr();
@@ -2638,28 +2680,41 @@ int Plugin::page_isolines(Spine::Reactor &theReactor,
         time_usleep(0,10000);
     }
 
-    itsImagesUnderConstruction[itsImageCounter % 100] = hash;
+    uint idx = itsImageCounter % 100;
+    itsImagesUnderConstruction[idx] = hash;
     itsImageCounter++;
 
-    uint fileId = toUInt32(fileIdStr);
-    uint messageIndex = toUInt32(messageIndexStr);
-    int geometryId = toInt32(geometryIdStr);
-    uint projectionId = toUInt32(projectionIdStr);
-    uint landBorder = getColorValue(landBorderStr);
-    uint coordinateLines = getColorValue(coordinateLinesStr);
-    uint isolines = getColorValue(isolinesStr);
-
-    char fname[200];
-    sprintf(fname,"%s/grid-gui-image_%llu.jpg",itsImageCache_dir.c_str(),getTime());
-
-    saveImage(fname,fileId,messageIndex,0,0,0,coordinateLines,isolines,isolineValuesStr,landBorder,landMaskStr,seaMaskStr,"","",geometryId,projectionId,"","",false);
-
-    loadImage(fname,theResponse);
-
-    AutoThreadLock lock(&itsThreadLock);
-    if (itsImages.find(hash) == itsImages.end())
+    try
     {
-      itsImages.insert(std::pair<std::string,std::string>(hash,fname));
+      uint fileId = toUInt32(fileIdStr);
+      uint messageIndex = toUInt32(messageIndexStr);
+      int geometryId = toInt32(geometryIdStr);
+      uint projectionId = toUInt32(projectionIdStr);
+      uint landBorder = getColorValue(landBorderStr);
+      uint coordinateLines = getColorValue(coordinateLinesStr);
+      uint isolines = getColorValue(isolinesStr);
+
+      char fname[200];
+      sprintf(fname,"%s/grid-gui-image_%llu.jpg",itsImageCache_dir.c_str(),getTime());
+
+      saveImage(fname,fileId,messageIndex,0,0,0,coordinateLines,isolines,isolineValuesStr,landBorder,landMaskStr,seaMaskStr,"","",geometryId,projectionId,"","",false);
+
+      if (loadImage(fname,theResponse))
+      {
+        AutoThreadLock lock(&itsThreadLock);
+        if (itsImages.find(hash) == itsImages.end())
+        {
+          itsImages.insert(std::pair<std::string,std::string>(hash,fname));
+        }
+      }
+
+      itsImagesUnderConstruction[idx] = "";
+    }
+    catch (...)
+    {
+      itsImagesUnderConstruction[idx] = "";
+      Fmi::Exception exception(BCP, "Operation failed!", nullptr);
+      throw exception;
     }
 
     return HTTP::Status::ok;
@@ -2680,6 +2735,7 @@ int Plugin::page_symbols(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse)
 {
+  FUNCTION_TRACE
   try
   {
     auto dataServer = itsGridEngine->getDataServer_sptr();
@@ -2830,27 +2886,39 @@ int Plugin::page_symbols(Spine::Reactor &theReactor,
         time_usleep(0,10000);
     }
 
-    itsImagesUnderConstruction[itsImageCounter % 100] = hash;
+    uint idx = itsImageCounter % 100;
+    itsImagesUnderConstruction[idx] = hash;
     itsImageCounter++;
 
-
-    uint fileId = toUInt32(fileIdStr);
-    uint messageIndex = toUInt32(messageIndexStr);
-    int geometryId = toInt32(geometryIdStr);
-    uint projectionId = toUInt32(projectionIdStr);
-    uint landBorder = getColorValue(landBorderStr);
-    uint coordinateLines = getColorValue(coordinateLinesStr);
-
-    char fname[200];
-    sprintf(fname,"/%s/grid-gui-image_%llu.jpg",itsImageCache_dir.c_str(),getTime());
-    saveImage(fname,fileId,messageIndex,toUInt8(hueStr),toUInt8(saturationStr),toUInt8(blurStr),coordinateLines,0xFFFFFFFF,"",landBorder,landMaskStr,seaMaskStr,"","",geometryId,projectionId,symbolMap,locations,true);
-
-    loadImage(fname,theResponse);
-
-    AutoThreadLock lock(&itsThreadLock);
-    if (itsImages.find(hash) == itsImages.end())
+    try
     {
-      itsImages.insert(std::pair<std::string,std::string>(hash,fname));
+      uint fileId = toUInt32(fileIdStr);
+      uint messageIndex = toUInt32(messageIndexStr);
+      int geometryId = toInt32(geometryIdStr);
+      uint projectionId = toUInt32(projectionIdStr);
+      uint landBorder = getColorValue(landBorderStr);
+      uint coordinateLines = getColorValue(coordinateLinesStr);
+
+      char fname[200];
+      sprintf(fname,"/%s/grid-gui-image_%llu.jpg",itsImageCache_dir.c_str(),getTime());
+      saveImage(fname,fileId,messageIndex,toUInt8(hueStr),toUInt8(saturationStr),toUInt8(blurStr),coordinateLines,0xFFFFFFFF,"",landBorder,landMaskStr,seaMaskStr,"","",geometryId,projectionId,symbolMap,locations,true);
+
+      if (loadImage(fname,theResponse))
+      {
+        AutoThreadLock lock(&itsThreadLock);
+        if (itsImages.find(hash) == itsImages.end())
+        {
+          itsImages.insert(std::pair<std::string,std::string>(hash,fname));
+        }
+      }
+
+      itsImagesUnderConstruction[idx] = "";
+    }
+    catch (...)
+    {
+      itsImagesUnderConstruction[idx] = "";
+      Fmi::Exception exception(BCP, "Operation failed!", nullptr);
+      throw exception;
     }
 
     return HTTP::Status::ok;
@@ -2871,6 +2939,7 @@ int Plugin::page_map(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse)
 {
+  FUNCTION_TRACE
   try
   {
     auto dataServer = itsGridEngine->getDataServer_sptr();
@@ -2990,40 +3059,52 @@ int Plugin::page_map(Spine::Reactor &theReactor,
         time_usleep(0,10000);
     }
 
-    itsImagesUnderConstruction[itsImageCounter % 100] = hash;
+    uint idx = itsImageCounter % 100;
+    itsImagesUnderConstruction[idx] = hash;
     itsImageCounter++;
 
-
-    uint columns = 1800;
-    uint rows = 900;
-    uint coordinateLines = getColorValue(coordinateLinesStr);
-
-    T::ParamValue_vec values;
-    double_vec modificationParameters;
-    int result = dataServer->getGridValueVectorByRectangle(0,toUInt32(fileIdStr),toUInt32(messageIndexStr),T::CoordinateTypeValue::LATLON_COORDINATES,columns,rows,-180,90,360/C_DOUBLE(columns),-180/C_DOUBLE(rows),T::AreaInterpolationMethod::Nearest,0,modificationParameters,values);
-    if (result != 0)
+    try
     {
-      std::ostringstream ostr;
-      ostr << "<HTML><BODY>\n";
-      ostr << "DataServer request 'getGridValuesByArea()' failed : " << result << "\n";
-      ostr << "</BODY></HTML>\n";
-      theResponse.setContent(std::string(ostr.str()));
-      theResponse.setHeader("Content-Type", "text/html; charset=UTF-8");
-      return HTTP::Status::ok;
+      uint columns = 1800;
+      uint rows = 900;
+      uint coordinateLines = getColorValue(coordinateLinesStr);
+
+      T::ParamValue_vec values;
+      double_vec modificationParameters;
+      int result = dataServer->getGridValueVectorByRectangle(0,toUInt32(fileIdStr),toUInt32(messageIndexStr),T::CoordinateTypeValue::LATLON_COORDINATES,columns,rows,-180,90,360/C_DOUBLE(columns),-180/C_DOUBLE(rows),T::AreaInterpolationMethod::Nearest,0,modificationParameters,values);
+      if (result != 0)
+      {
+        std::ostringstream ostr;
+        ostr << "<HTML><BODY>\n";
+        ostr << "DataServer request 'getGridValuesByArea()' failed : " << result << "\n";
+        ostr << "</BODY></HTML>\n";
+        theResponse.setContent(std::string(ostr.str()));
+        theResponse.setHeader("Content-Type", "text/html; charset=UTF-8");
+        return HTTP::Status::ok;
+      }
+
+      uint landBorder = getColorValue(landBorderStr);
+
+      char fname[200];
+      sprintf(fname,"/%s/grid-gui-image_%llu.jpg",itsImageCache_dir.c_str(),getTime());
+      saveMap(fname,columns,rows,values,toUInt8(hueStr),toUInt8(saturationStr),toUInt8(blurStr),coordinateLines,landBorder,landMaskStr,seaMaskStr,colorMap,missingStr);
+
+      if (loadImage(fname,theResponse))
+      {
+        AutoThreadLock lock(&itsThreadLock);
+        if (itsImages.find(hash) == itsImages.end())
+        {
+          itsImages.insert(std::pair<std::string,std::string>(hash,fname));
+        }
+      }
+
+      itsImagesUnderConstruction[idx] = "";
     }
-
-    uint landBorder = getColorValue(landBorderStr);
-
-    char fname[200];
-    sprintf(fname,"/%s/grid-gui-image_%llu.jpg",itsImageCache_dir.c_str(),getTime());
-    saveMap(fname,columns,rows,values,toUInt8(hueStr),toUInt8(saturationStr),toUInt8(blurStr),coordinateLines,landBorder,landMaskStr,seaMaskStr,colorMap,missingStr);
-
-    loadImage(fname,theResponse);
-
-    AutoThreadLock lock(&itsThreadLock);
-    if (itsImages.find(hash) == itsImages.end())
+    catch (...)
     {
-      itsImages.insert(std::pair<std::string,std::string>(hash,fname));
+      itsImagesUnderConstruction[idx] = "";
+      Fmi::Exception exception(BCP, "Operation failed!", nullptr);
+      throw exception;
     }
 
     return HTTP::Status::ok;
@@ -3042,6 +3123,7 @@ int Plugin::page_map(Spine::Reactor &theReactor,
 
 void Plugin::getLevelIds(T::ContentInfoList& contentInfoList,std::set<int>& levelIds)
 {
+  FUNCTION_TRACE
   try
   {
     uint len = contentInfoList.getLength();
@@ -3091,6 +3173,7 @@ void Plugin::getLevelIds(T::ContentInfoList& contentInfoList,std::set<int>& leve
 
 void Plugin::getLevels(T::ContentInfoList& contentInfoList,int levelId,std::set<int>& levels)
 {
+  FUNCTION_TRACE
   try
   {
     uint len = contentInfoList.getLength();
@@ -3125,6 +3208,7 @@ void Plugin::getLevels(T::ContentInfoList& contentInfoList,int levelId,std::set<
 
 void Plugin::getForecastTypes(T::ContentInfoList& contentInfoList,int levelId,int level,std::set<int>& forecastTypes)
 {
+  FUNCTION_TRACE
   try
   {
     uint len = contentInfoList.getLength();
@@ -3162,6 +3246,7 @@ void Plugin::getForecastTypes(T::ContentInfoList& contentInfoList,int levelId,in
 
 void Plugin::getForecastNumbers(T::ContentInfoList& contentInfoList,int levelId,int level,int forecastType,std::set<int>& forecastNumbers)
 {
+  FUNCTION_TRACE
   try
   {
     uint len = contentInfoList.getLength();
@@ -3202,6 +3287,7 @@ void Plugin::getForecastNumbers(T::ContentInfoList& contentInfoList,int levelId,
 
 void Plugin::getGeometries(T::ContentInfoList& contentInfoList,int levelId,int level,int forecastType,int forecastNumber,std::set<int>& geometries)
 {
+  FUNCTION_TRACE
   try
   {
     uint len = contentInfoList.getLength();
@@ -3245,6 +3331,7 @@ void Plugin::getGeometries(T::ContentInfoList& contentInfoList,int levelId,int l
 
 std::string Plugin::getFmiKey(std::string& producerName,T::ContentInfo& contentInfo)
 {
+  FUNCTION_TRACE
   try
   {
     char buf[200];
@@ -3294,6 +3381,7 @@ std::string Plugin::getFmiKey(std::string& producerName,T::ContentInfo& contentI
 
 void Plugin::getGenerations(T::GenerationInfoList& generationInfoList,std::set<std::string>& generations)
 {
+  FUNCTION_TRACE
   try
   {
     uint len = generationInfoList.getLength();
@@ -3322,6 +3410,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse)
 {
+  FUNCTION_TRACE
   try
   {
     auto contentServer = itsGridEngine->getContentServer_sptr();
@@ -4778,6 +4867,7 @@ int Plugin::request(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse)
 {
+  FUNCTION_TRACE
   try
   {
     int result = HTTP::Status::ok;
@@ -4908,6 +4998,7 @@ void Plugin::requestHandler(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse)
 {
+  FUNCTION_TRACE
   try
   {
     try
