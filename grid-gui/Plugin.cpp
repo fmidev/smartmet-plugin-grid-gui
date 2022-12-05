@@ -5003,6 +5003,11 @@ void Plugin::requestHandler(Spine::Reactor &theReactor,
   {
     try
     {
+      // Check request method (support GET, OPTIONS)
+      if (checkRequest(theRequest, theResponse, false)) {
+        return;
+      }
+
       //auto headers = theRequest.getHeaders();
       //for (auto it = headers.begin(); it != headers.end(); ++it)
       //  std::cout << it->first << " = " << it->second << "\n";
