@@ -15,6 +15,8 @@
 #include <macgyver/FastMath.h>
 #include <boost/bind/bind.hpp>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
+#include <webp/encode.h>
+#include <webp/mux.h>
 
 #define FUNCTION_TRACE FUNCTION_TRACE_OFF
 
@@ -28,7 +30,83 @@ namespace GridGui
 
 using namespace SmartMet::Spine;
 
+/*
+#define ATTR_BACKGROUND         "background"
+#define ATTR_BLUR               "blur"
+#define ATTR_COLOR_MAP          "colorMap"
+#define ATTR_COORDINATE_LINES   "coordinateLines"
+#define ATTR_DALI_ID            "daliId"
+#define ATTR_FILE_ID            "fileId"
+#define ATTR_FMI_KEY            "fmiKey"
+#define ATTR_FORECAST_NUMBER    "forecastNumber"
+#define ATTR_FORECAST_TYPE      "forecastType"
+#define ATTR_GENERATION_ID      "generationId"
+#define ATTR_GEOMETRY_ID        "geometryId"
+#define ATTR_HUE                "hue"
+#define ATTR_ISOLINES           "isolines"
+#define ATTR_ISOLINE_VALUES     "isolineValues"
+#define ATTR_LAND_BORDER        "landBorder"
+#define ATTR_LAND_MASK          "landMask"
+#define ATTR_LEVEL              "level"
+#define ATTR_LEVEL_ID           "levelId"
+#define ATTR_LOCATIONS          "locations"
+#define ATTR_MAX_LENGTH         "maxLength"
+#define ATTR_MESSAGE_INDEX      "messageIndex"
+#define ATTR_MIN_LENGTH         "minLength"
+#define ATTR_MISSING            "missing"
+#define ATTR_PAGE               "page"
+#define ATTR_PARAMETER_ID       "parameterId"
+#define ATTR_PRESENTATION       "presentation"
+#define ATTR_PRODUCER_ID        "producerId"
+#define ATTR_PRODUCER_NAME      "producerName"
+#define ATTR_PROJECTION_ID      "projectionId"
+#define ATTR_SATURATION         "saturation"
+#define ATTR_SEA_MASK           "seaMask"
+#define ATTR_STEP               "step"
+#define ATTR_SYMBOL_MAP         "symbolMap"
+#define ATTR_TIME               "time"
+#define ATTR_UNIT               "unit"
+#define ATTR_X                  "x"
+#define ATTR_Y                  "y"
+*/
 
+#define ATTR_BACKGROUND         "a"
+#define ATTR_BLUR               "b"
+#define ATTR_COLOR_MAP          "c"
+#define ATTR_COORDINATE_LINES   "d"
+//#define ATTR_DALI_ID            "e"
+#define ATTR_FILE_ID            "f"
+#define ATTR_FMI_KEY            "g"
+#define ATTR_FORECAST_NUMBER    "h"
+#define ATTR_FORECAST_TYPE      "i"
+#define ATTR_GENERATION_ID      "j"
+#define ATTR_GEOMETRY_ID        "k"
+#define ATTR_HUE                "l"
+#define ATTR_ISOLINES           "m"
+#define ATTR_ISOLINE_VALUES     "n"
+#define ATTR_LAND_BORDER        "o"
+#define ATTR_LAND_MASK          "p"
+#define ATTR_LEVEL              "q"
+#define ATTR_LEVEL_ID           "r"
+#define ATTR_LOCATIONS          "s"
+#define ATTR_MAX_LENGTH         "t"
+#define ATTR_MESSAGE_INDEX      "u"
+#define ATTR_MIN_LENGTH         "v"
+#define ATTR_MISSING            "w"
+#define ATTR_PAGE               "x"
+#define ATTR_PARAMETER_ID       "y"
+#define ATTR_PRESENTATION       "z"
+#define ATTR_PRODUCER_ID        "a0"
+#define ATTR_PRODUCER_NAME      "a1"
+#define ATTR_PROJECTION_ID      "a2"
+#define ATTR_SATURATION         "a3"
+#define ATTR_SEA_MASK           "a4"
+#define ATTR_STEP               "a5"
+#define ATTR_SYMBOL_MAP         "a6"
+#define ATTR_TIME               "a7"
+#define ATTR_UNIT               "a8"
+#define ATTR_X                  "xx"
+#define ATTR_Y                  "yy"
 
 
 // ----------------------------------------------------------------------
@@ -98,7 +176,7 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
     itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.symbolMapFiles",itsSymbolMapFileNames);
     itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.locationFiles",itsLocationFileNames);
     itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.colorFile",itsColorFile);
-    itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.daliFile",itsDaliFile);
+    //itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.daliFile",itsDaliFile);
     itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.isolineFile",itsIsolineFile);
     itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.animationEnabled",itsAnimationEnabled);
     itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.imageCache.directory",itsImageCache_dir);
@@ -135,9 +213,10 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
     loadColorFile();
     loadIsolineFile();
 
+    /*
     if (itsDaliFile > " ")
       loadDaliFile();
-
+    */
 
     // Removing files from the image cache.
 
@@ -322,7 +401,7 @@ void Plugin::loadColorFile()
 
 
 
-
+/*
 void Plugin::loadDaliFile()
 {
   FUNCTION_TRACE
@@ -398,7 +477,7 @@ void Plugin::loadDaliFile()
     throw exception;
   }
 }
-
+*/
 
 
 
@@ -839,7 +918,12 @@ void Plugin::saveImage(
     T::GeometryId projectionId,
     std::string symbolMap,
     std::string locations,
-    bool showSymbols)
+    bool showSymbols,
+    int pstep,
+    int minLength,
+    int maxLength,
+    bool lightBackground,
+    bool animation)
 {
   FUNCTION_TRACE
   try
@@ -902,7 +986,7 @@ void Plugin::saveImage(
         throw exception;
       }
 
-      saveImage(imageFile,gridData.mColumns,gridData.mRows,gridData.mValues,*coordinates,*lineCoordinates,hue,saturation,blur,coordinateLines,isolines,isolineValues,landBorder,landMask,seaMask,colorMapName,missingStr,geometryId,symbolMap,locations,showSymbols);
+      saveImage(imageFile,gridData.mColumns,gridData.mRows,gridData.mValues,*coordinates,*lineCoordinates,hue,saturation,blur,coordinateLines,isolines,isolineValues,landBorder,landMask,seaMask,colorMapName,missingStr,geometryId,symbolMap,locations,showSymbols,pstep,minLength,maxLength,lightBackground,animation);
     }
     else
     {
@@ -926,7 +1010,7 @@ void Plugin::saveImage(
           if (result != 0)
             throw Fmi::Exception(BCP,"Data fetching failed!");
 
-          saveImage(imageFile,cols,rows,values,*coordinates,*lineCoordinates,hue,saturation,blur,coordinateLines,isolines,isolineValues,landBorder,landMask,seaMask,colorMapName,missingStr,geomId,symbolMap,locations,showSymbols);
+          saveImage(imageFile,cols,rows,values,*coordinates,*lineCoordinates,hue,saturation,blur,coordinateLines,isolines,isolineValues,landBorder,landMask,seaMask,colorMapName,missingStr,geomId,symbolMap,locations,showSymbols,pstep,minLength,maxLength,lightBackground,animation);
         }
       }
     }
@@ -964,7 +1048,12 @@ void Plugin::saveImage(
     T::GeometryId geometryId,
     std::string symbolMap,
     std::string locations,
-    bool showSymbols)
+    bool showSymbols,
+    int pstep,
+    int minLength,
+    int maxLength,
+    bool lightBackground,
+    bool animation)
 {
   FUNCTION_TRACE
   try
@@ -1027,6 +1116,15 @@ void Plugin::saveImage(
       }
     }
 
+    bool rotate = true;
+    if (coordinates.size() > C_UINT(10*width)  &&  coordinates[0].y() < coordinates[10*width].y())
+      rotate = true;
+    else
+      rotate = false;
+
+
+    ImagePaint imagePaint(width,height,0x0,isolines,0xFFFFFFFF,false,rotate);
+
     bool landSeaMask = true;
     if (coordinates.size() == 0)
       landSeaMask = false;
@@ -1037,12 +1135,6 @@ void Plugin::saveImage(
     double step = dd / 200;
     if (maxValue > (minValue + 5*ddd))
       step = 5*ddd / 200;
-
-    bool rotate = true;
-    if (coordinates.size() > C_UINT(10*width)  &&  coordinates[0].y() < coordinates[10*width].y())
-      rotate = true;
-    else
-      rotate = false;
 
     if (blur == 0)
       blur = 1;
@@ -1061,8 +1153,6 @@ void Plugin::saveImage(
       }
       getIsolines(values,nullptr,width,height,contourValues,T::AreaInterpolationMethod::Linear,3,3,contours);
     }
-
-    ImagePaint imagePaint(width,height,0x0,isolines,0xFFFFFFFF,false,rotate);
 
     uint c = 0;
 
@@ -1089,6 +1179,9 @@ void Plugin::saveImage(
         v = v * blur;
         v = v + 55;
         uint col = hsv_to_rgb(hue,saturation,C_UCHAR(v));
+
+        if (pstep > 0)
+          col = 0xFFFFFFFF;
 
         if (colorMapFile != nullptr)
           col = colorMapFile->getColor(val);
@@ -1120,7 +1213,8 @@ void Plugin::saveImage(
 
         yLand[x] = land;
         prevLand = land;
-        imagePaint.paintPixel(x,y,col);
+        if (col != 0xFFFFFFFF)
+          imagePaint.paintPixel(x,y,col);
         c++;
       }
     }
@@ -1175,6 +1269,103 @@ void Plugin::saveImage(
       }
     }
 
+    if (pstep > 0)
+    {
+      // Draw stream lines
+
+      T::ParamValue *direction = new float[size];
+      if (!rotate)
+      {
+        uint idx = 0;
+        for (int y=0; y<height; y++)
+        {
+          for (int x=0; x<width; x++)
+          {
+            direction[idx] = values[idx];
+            idx++;
+          }
+        }
+      }
+      else
+      {
+        uint idx = 0;
+        for (int y=0; y<height; y++)
+        {
+          uint idx2 = (height-y-1) * width;
+          for (int x=0; x<width; x++)
+          {
+            direction[idx] = values[idx2];
+            idx++;
+            idx2++;
+          }
+        }
+      }
+
+      uint *img = imagePaint.getImage();
+      uint *image = new uint[size];
+
+      if (animation)
+      {
+        uint *wimage[16];
+        for (uint t=0; t<16; t++)
+          wimage[t] = new uint[size];
+
+        getStreamlineImage(direction,nullptr,image,width,height,pstep,pstep,minLength,maxLength);
+
+        uint color[16];
+        for (uint t=0; t<16; t++)
+        {
+          uint cc = t * 0x10 + 0x0F;
+          if (lightBackground)
+            cc = (16-t) * 0x10 + 0x0F;
+
+          color[t] = (cc << 16) + (cc << 8) + cc;
+        }
+
+        uint idx = 0;
+        for (int y = 0; y < height; y++)
+        {
+          for (int x=0; x < width; x++)
+          {
+            uint col = image[idx];
+            for (uint t=0; t<16; t++)
+            {
+              uint newCol = img[idx];
+              if (col != 0)
+              {
+                newCol = color[15-((col+t) % 16)];
+              }
+              wimage[t][idx] = newCol;
+            }
+            idx++;
+          }
+        }
+
+        webp_anim_save(imageFile,wimage,width,height,16,50);
+
+        for (uint t=0; t<16; t++)
+          delete [] wimage[t];
+
+        delete [] direction;
+        delete [] image;
+        return;
+      }
+      else
+      {
+        if (lightBackground)
+          getStreamlineImage(direction,nullptr,image,width,height,pstep,pstep,minLength,maxLength,0,1000000,0,255,0xFFFFFFFF);
+        else
+          getStreamlineImage(direction,nullptr,image,width,height,pstep,pstep,minLength,maxLength,0,1000000,255,0,0xFFFFFFFF);
+
+        for (uint t=0; t<size; t++)
+        {
+          if (image[t] != 0xFFFFFFFF)
+            img[t] = image[t];
+        }
+      }
+      delete [] direction;
+      delete [] image;
+    }
 
     imagePaint.saveJpgImage(imageFile);
 
@@ -1280,7 +1471,8 @@ void Plugin::saveTimeSeries(const char *imageFile,std::vector<T::ParamValue>& va
 
 int Plugin::page_info(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
-                            HTTP::Response &theResponse)
+                            HTTP::Response &theResponse,
+                            Session& session)
 {
   FUNCTION_TRACE
   try
@@ -1288,19 +1480,8 @@ int Plugin::page_info(Spine::Reactor &theReactor,
     auto contentServer = itsGridEngine->getContentServer_sptr();
     auto dataServer = itsGridEngine->getDataServer_sptr();
 
-    std::string fileIdStr = "";
-    std::string messageIndexStr = "0";
-
-    boost::optional<std::string> v = theRequest.getParameter("fileId");
-    if (v)
-      fileIdStr = *v;
-
-    v = theRequest.getParameter("messageIndex");
-    if (v)
-      messageIndexStr = *v;
-
-    if (fileIdStr.empty())
-      return HTTP::Status::ok;
+    std::string fileIdStr = session.getAttribute(ATTR_FILE_ID);
+    std::string messageIndexStr = session.getAttribute(ATTR_MESSAGE_INDEX);
 
 
     std::ostringstream ostr;
@@ -1461,23 +1642,16 @@ int Plugin::page_info(Spine::Reactor &theReactor,
 
 int Plugin::page_message(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
-                            HTTP::Response &theResponse)
+                            HTTP::Response &theResponse,
+                            Session& session)
 {
   FUNCTION_TRACE
   try
   {
     auto dataServer = itsGridEngine->getDataServer_sptr();
 
-    std::string fileIdStr = "";
-    std::string messageIndexStr = "0";
-
-    boost::optional<std::string> v = theRequest.getParameter("fileId");
-    if (v)
-      fileIdStr = *v;
-
-    v = theRequest.getParameter("messageIndex");
-    if (v)
-      messageIndexStr = *v;
+    std::string fileIdStr = session.getAttribute(ATTR_FILE_ID);
+    std::string messageIndexStr = session.getAttribute(ATTR_MESSAGE_INDEX);
 
     if (fileIdStr.empty())
       return HTTP::Status::ok;
@@ -1595,27 +1769,16 @@ int Plugin::page_message(Spine::Reactor &theReactor,
 
 int Plugin::page_download(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
-                            HTTP::Response &theResponse)
+                            HTTP::Response &theResponse,
+                            Session& session)
 {
   FUNCTION_TRACE
   try
   {
     auto dataServer = itsGridEngine->getDataServer_sptr();
 
-    std::string fileIdStr = "";
-    std::string messageIndexStr = "0";
-
-    boost::optional<std::string> v = theRequest.getParameter("fileId");
-    if (v)
-      fileIdStr = *v;
-
-    v = theRequest.getParameter("messageIndex");
-    if (v)
-      messageIndexStr = *v;
-
-    if (fileIdStr.empty())
-      return HTTP::Status::ok;
-
+    std::string fileIdStr = session.getAttribute(ATTR_FILE_ID);
+    std::string messageIndexStr = session.getAttribute(ATTR_MESSAGE_INDEX);
 
     std::ostringstream ostr;
 
@@ -1684,28 +1847,17 @@ int Plugin::page_download(Spine::Reactor &theReactor,
 
 int Plugin::page_locations(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
-                            HTTP::Response &theResponse)
+                            HTTP::Response &theResponse,
+                            Session& session)
 {
   FUNCTION_TRACE
   try
   {
     auto dataServer = itsGridEngine->getDataServer_sptr();
 
-    std::string fileIdStr = "";
-    std::string messageIndexStr = "0";
-    std::string locations = "";
-
-    boost::optional<std::string> v = theRequest.getParameter("fileId");
-    if (v)
-      fileIdStr = *v;
-
-    v = theRequest.getParameter("messageIndex");
-    if (v)
-      messageIndexStr = *v;
-
-    v = theRequest.getParameter("locations");
-    if (v)
-      locations = *v;
+    std::string fileIdStr = session.getAttribute(ATTR_FILE_ID);
+    std::string messageIndexStr = session.getAttribute(ATTR_MESSAGE_INDEX);
+    std::string locations = session.getAttribute(ATTR_LOCATIONS);
 
 
     if (fileIdStr.empty())
@@ -1769,34 +1921,19 @@ int Plugin::page_locations(Spine::Reactor &theReactor,
 
 int Plugin::page_table(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
-                            HTTP::Response &theResponse)
+                            HTTP::Response &theResponse,
+                            Session& session)
 {
   FUNCTION_TRACE
   try
   {
     auto dataServer = itsGridEngine->getDataServer_sptr();
 
-    std::string fileIdStr = "";
-    std::string messageIndexStr = "0";
-    std::string presentation = "Table(sample)";
-    std::string geometryIdStr = "0";
+    std::string geometryIdStr = session.getAttribute(ATTR_GEOMETRY_ID);
+    std::string fileIdStr = session.getAttribute(ATTR_FILE_ID);
+    std::string messageIndexStr = session.getAttribute(ATTR_MESSAGE_INDEX);
+
     char tmp[1000];
-
-    boost::optional<std::string> v = theRequest.getParameter("presentation");
-    if (v)
-      presentation = *v;
-
-    v = theRequest.getParameter("fileId");
-    if (v)
-      fileIdStr = *v;
-
-    v = theRequest.getParameter("messageIndex");
-    if (v)
-      messageIndexStr = *v;
-
-    v = theRequest.getParameter("geometryId");
-    if (v)
-      geometryIdStr = *v;
 
     if (fileIdStr.empty())
       return HTTP::Status::ok;
@@ -1837,14 +1974,11 @@ int Plugin::page_table(Spine::Reactor &theReactor,
       return HTTP::Status::ok;
     }
 
-    if (presentation == "Table(sample)")
-    {
-      if (width > 100)
-        width = 100;
+    if (width > 100)
+      width = 100;
 
-      if (height > 100)
-        height = 100;
-    }
+    if (height > 100)
+      height = 100;
 
     ostr << "<HTML><BODY>\n";
     ostr << "<TABLE border=\"1\" style=\"text-align:right; font-size:10pt;\">\n";
@@ -1926,29 +2060,18 @@ int Plugin::page_table(Spine::Reactor &theReactor,
 
 int Plugin::page_coordinates(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
-                            HTTP::Response &theResponse)
+                            HTTP::Response &theResponse,
+                            Session& session)
 {
   FUNCTION_TRACE
   try
   {
     auto dataServer = itsGridEngine->getDataServer_sptr();
 
-    std::string fileIdStr = "";
-    std::string messageIndexStr = "0";
-    std::string presentation = "Coordinates(sample)";
+    std::string fileIdStr = session.getAttribute(ATTR_FILE_ID);
+    std::string messageIndexStr = session.getAttribute(ATTR_MESSAGE_INDEX);
+
     char tmp[1000];
-
-    boost::optional<std::string> v = theRequest.getParameter("presentation");
-    if (v)
-      presentation = *v;
-
-    v = theRequest.getParameter("fileId");
-    if (v)
-      fileIdStr = *v;
-
-    v = theRequest.getParameter("messageIndex");
-    if (v)
-      messageIndexStr = *v;
 
     if (fileIdStr.empty())
       return HTTP::Status::ok;
@@ -1972,14 +2095,11 @@ int Plugin::page_coordinates(Spine::Reactor &theReactor,
     uint height = coordinates.mRows;
     uint width = coordinates.mColumns;
 
-    if (presentation == "Coordinates(sample)")
-    {
-      if (width > 100)
-        width = 100;
+    if (width > 100)
+      width = 100;
 
-      if (height > 100)
-        height = 100;
-    }
+    if (height > 100)
+      height = 100;
 
     ostr << "<HTML><BODY>\n";
     ostr << "<TABLE border=\"1\" style=\"text-align:right; font-size:10pt;\">\n";
@@ -2042,7 +2162,8 @@ int Plugin::page_coordinates(Spine::Reactor &theReactor,
 
 int Plugin::page_value(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
-                            HTTP::Response &theResponse)
+                            HTTP::Response &theResponse,
+                            Session& session)
 {
   FUNCTION_TRACE
   try
@@ -2050,30 +2171,13 @@ int Plugin::page_value(Spine::Reactor &theReactor,
     auto contentServer = itsGridEngine->getContentServer_sptr();
     auto dataServer = itsGridEngine->getDataServer_sptr();
 
-    uint fileId = 0;
-    uint messageIndex = 0;
-    double xPos = 0;
-    double yPos = 0;
-
-    boost::optional<std::string> v = theRequest.getParameter("fileId");
-    if (v)
-      fileId = toUInt32(v->c_str());
-
-    v = theRequest.getParameter("messageIndex");
-    if (v)
-      messageIndex = toUInt32(v->c_str());
-
-    v = theRequest.getParameter("x");
-    if (v)
-      xPos = toDouble(v->c_str());
-
-    v = theRequest.getParameter("y");
-    if (v)
-      yPos = toDouble(v->c_str());
+    uint fileId = session.getUIntAttribute(ATTR_FILE_ID);
+    uint messageIndex = session.getUIntAttribute(ATTR_MESSAGE_INDEX);
+    float xPos = session.getDoubleAttribute(ATTR_X);
+    float yPos = session.getDoubleAttribute(ATTR_Y);
 
     if (fileId == 0)
       return HTTP::Status::ok;
-
 
     T::ContentInfo contentInfo;
     if (contentServer->getContentInfo(0,fileId,messageIndex,contentInfo) != 0)
@@ -2146,7 +2250,8 @@ int Plugin::page_value(Spine::Reactor &theReactor,
 
 int Plugin::page_timeseries(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
-                            HTTP::Response &theResponse)
+                            HTTP::Response &theResponse,
+                            Session& session)
 {
   FUNCTION_TRACE
   try
@@ -2154,35 +2259,13 @@ int Plugin::page_timeseries(Spine::Reactor &theReactor,
     auto contentServer = itsGridEngine->getContentServer_sptr();
     auto dataServer = itsGridEngine->getDataServer_sptr();
 
-    uint fileId = 0;
-    uint messageIndex = 0;
-    std::string presentation = "Image";
-    double xPos = 0;
-    double yPos = 0;
-
-    boost::optional<std::string> v = theRequest.getParameter("presentation");
-    if (v)
-      presentation = *v;
-
-    v = theRequest.getParameter("fileId");
-    if (v)
-      fileId = toUInt32(v->c_str());
-
-    v = theRequest.getParameter("messageIndex");
-    if (v)
-      messageIndex = toUInt32(v->c_str());
-
-    v = theRequest.getParameter("x");
-    if (v)
-      xPos = toDouble(v->c_str());
-
-    v = theRequest.getParameter("y");
-    if (v)
-      yPos = toDouble(v->c_str());
+    uint fileId = session.getUIntAttribute(ATTR_FILE_ID);
+    uint messageIndex = session.getUIntAttribute(ATTR_MESSAGE_INDEX);
+    float xPos = session.getDoubleAttribute(ATTR_X);
+    float yPos = session.getDoubleAttribute(ATTR_Y);
 
     if (fileId == 0)
       return HTTP::Status::ok;
-
 
     T::ContentInfo contentInfo;
     if (contentServer->getContentInfo(0,fileId,messageIndex,contentInfo) != 0)
@@ -2367,80 +2450,48 @@ bool Plugin::loadImage(const char *fname,Spine::HTTP::Response &theResponse)
 
 int Plugin::page_image(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
-                            HTTP::Response &theResponse)
+                            HTTP::Response &theResponse,
+                            Session& session)
 {
   FUNCTION_TRACE
   try
   {
     auto dataServer = itsGridEngine->getDataServer_sptr();
 
-    std::string fileIdStr = "";
-    std::string messageIndexStr = "0";
-    std::string hueStr = "128";
-    std::string saturationStr = "60";
-    std::string presentation = "Image";
-    std::string blurStr = "1";
-    std::string geometryIdStr = "0";
-    std::string projectionIdStr = "";
-    std::string coordinateLinesStr = "Grey";
-    std::string landBorderStr = "Grey";
-    std::string landMaskStr = "None";
-    std::string seaMaskStr = "None";
-    std::string colorMap = "None";
-    std::string missingStr = "Default";
-
-    boost::optional<std::string> v;
-    v = theRequest.getParameter("fileId");
-    if (v)
-      fileIdStr = *v;
-
-    v = theRequest.getParameter("messageIndex");
-    if (v)
-      messageIndexStr = *v;
-
-    v = theRequest.getParameter("geometryId");
-    if (v)
-      geometryIdStr = *v;
-
-    v = theRequest.getParameter("projectionId");
-    if (v)
-      projectionIdStr = *v;
-
-    v = theRequest.getParameter("hue");
-    if (v)
-      hueStr = *v;
-
-    v = theRequest.getParameter("saturation");
-    if (v)
-      saturationStr = *v;
-
-    v = theRequest.getParameter("blur");
-    if (v)
-      blurStr = *v;
-
-    v = theRequest.getParameter("coordinateLines");
-    if (v)
-      coordinateLinesStr = *v;
-
-    v = theRequest.getParameter("landBorder");
-    if (v)
-      landBorderStr = *v;
-
-    v = theRequest.getParameter("landMask");
-    if (v)
-      landMaskStr = *v;
-
-    v = theRequest.getParameter("seaMask");
-    if (v)
-      seaMaskStr = *v;
-
-    v = theRequest.getParameter("colorMap");
-    if (v)
-      colorMap = *v;
-
-    v = theRequest.getParameter("missing");
-    if (v)
-      missingStr = *v;
+    std::string producerIdStr = session.getAttribute(ATTR_PRODUCER_ID);
+    std::string generationIdStr = session.getAttribute(ATTR_GENERATION_ID);
+    std::string parameterIdStr = session.getAttribute(ATTR_PARAMETER_ID);
+    std::string levelIdStr = session.getAttribute(ATTR_LEVEL_ID);
+    std::string levelStr = session.getAttribute(ATTR_LEVEL);
+    std::string geometryIdStr = session.getAttribute(ATTR_GEOMETRY_ID);
+    std::string producerNameStr = session.getAttribute(ATTR_PRODUCER_NAME);
+    std::string forecastTypeStr = session.getAttribute(ATTR_FORECAST_TYPE);
+    std::string forecastNumberStr = session.getAttribute(ATTR_FORECAST_NUMBER);
+    std::string presentation = session.getAttribute(ATTR_PRESENTATION);
+    std::string projectionIdStr = session.getAttribute(ATTR_PROJECTION_ID);
+    std::string fileIdStr = session.getAttribute(ATTR_FILE_ID);
+    std::string messageIndexStr = session.getAttribute(ATTR_MESSAGE_INDEX);
+    std::string timeStr = session.getAttribute(ATTR_TIME);
+    std::string hueStr = session.getAttribute(ATTR_HUE);
+    std::string saturationStr = session.getAttribute(ATTR_SATURATION);
+    std::string blurStr = session.getAttribute(ATTR_BLUR);
+    std::string coordinateLinesStr = session.getAttribute(ATTR_COORDINATE_LINES);
+    std::string isolinesStr = session.getAttribute(ATTR_ISOLINES);
+    std::string isolineValuesStr = session.getAttribute(ATTR_ISOLINE_VALUES);
+    std::string landBorderStr = session.getAttribute(ATTR_LAND_BORDER);
+    std::string landMaskStr = session.getAttribute(ATTR_LAND_MASK);
+    std::string seaMaskStr = session.getAttribute(ATTR_SEA_MASK);
+    std::string colorMap = session.getAttribute(ATTR_COLOR_MAP);
+    std::string locations = session.getAttribute(ATTR_LOCATIONS);
+    std::string symbolMap = session.getAttribute(ATTR_SYMBOL_MAP);
+    std::string missingStr = session.getAttribute(ATTR_MISSING);
+    std::string stepStr = session.getAttribute(ATTR_STEP);
+    std::string minLengthStr = session.getAttribute(ATTR_MIN_LENGTH);
+    std::string maxLengthStr = session.getAttribute(ATTR_MAX_LENGTH);
+    std::string backgroundStr = session.getAttribute(ATTR_BACKGROUND);
+    //std::string daliIdStr = session.getAttribute(ATTR_DALI_ID);
+    std::string unitStr = session.getAttribute(ATTR_UNIT);
+    std::string fmiKeyStr = session.getAttribute(ATTR_FMI_KEY);
 
     if (projectionIdStr.empty())
       projectionIdStr = geometryIdStr;
@@ -2533,7 +2584,7 @@ int Plugin::page_image(Spine::Reactor &theReactor,
       char fname[200];
       sprintf(fname,"%s/grid-gui-image_%llu.jpg",itsImageCache_dir.c_str(),getTime());
 
-      saveImage(fname,fileId,messageIndex,toUInt8(hueStr),toUInt8(saturationStr),toUInt8(blurStr),coordinateLines,0xFFFFFFFF,"",landBorder,landMaskStr,seaMaskStr,colorMap,missingStr,geometryId,projectionId,"","",false);
+      saveImage(fname,fileId,messageIndex,toUInt8(hueStr),toUInt8(saturationStr),toUInt8(blurStr),coordinateLines,0xFFFFFFFF,"",landBorder,landMaskStr,seaMaskStr,colorMap,missingStr,geometryId,projectionId,"","",false,0,0,0,true,false);
 
       if (loadImage(fname,theResponse))
       {
@@ -2568,69 +2619,48 @@ int Plugin::page_image(Spine::Reactor &theReactor,
 
 int Plugin::page_isolines(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
-                            HTTP::Response &theResponse)
+                            HTTP::Response &theResponse,
+                            Session& session)
 {
   FUNCTION_TRACE
   try
   {
     auto dataServer = itsGridEngine->getDataServer_sptr();
 
-    std::string fileIdStr = "";
-    std::string messageIndexStr = "0";
-    std::string hueStr = "128";
-    std::string saturationStr = "60";
-    std::string presentation = "Image";
-    std::string blurStr = "1";
-    std::string geometryIdStr = "0";
-    std::string projectionIdStr = "";
-    std::string coordinateLinesStr = "Grey";
-    std::string isolinesStr = "DarkGrey";
-    std::string isolineValuesStr = "Generated";
-    std::string landBorderStr = "Grey";
-    std::string landMaskStr = "None";
-    std::string seaMaskStr = "None";
-    std::string colorMap = "None";
-
-    boost::optional<std::string> v;
-    v = theRequest.getParameter("fileId");
-    if (v)
-      fileIdStr = *v;
-
-    v = theRequest.getParameter("messageIndex");
-    if (v)
-      messageIndexStr = *v;
-
-    v = theRequest.getParameter("geometryId");
-    if (v)
-      geometryIdStr = *v;
-
-    v = theRequest.getParameter("projectionId");
-    if (v)
-      projectionIdStr = *v;
-
-    v = theRequest.getParameter("coordinateLines");
-    if (v)
-      coordinateLinesStr = *v;
-
-    v = theRequest.getParameter("isolines");
-    if (v)
-      isolinesStr = *v;
-
-    v = theRequest.getParameter("isolineValues");
-    if (v)
-      isolineValuesStr = *v;
-
-    v = theRequest.getParameter("landBorder");
-    if (v)
-      landBorderStr = *v;
-
-    v = theRequest.getParameter("landMask");
-    if (v)
-      landMaskStr = *v;
-
-    v = theRequest.getParameter("seaMask");
-    if (v)
-      seaMaskStr = *v;
+    std::string producerIdStr = session.getAttribute(ATTR_PRODUCER_ID);
+    std::string generationIdStr = session.getAttribute(ATTR_GENERATION_ID);
+    std::string parameterIdStr = session.getAttribute(ATTR_PARAMETER_ID);
+    std::string levelIdStr = session.getAttribute(ATTR_LEVEL_ID);
+    std::string levelStr = session.getAttribute(ATTR_LEVEL);
+    std::string geometryIdStr = session.getAttribute(ATTR_GEOMETRY_ID);
+    std::string producerNameStr = session.getAttribute(ATTR_PRODUCER_NAME);
+    std::string forecastTypeStr = session.getAttribute(ATTR_FORECAST_TYPE);
+    std::string forecastNumberStr = session.getAttribute(ATTR_FORECAST_NUMBER);
+    std::string presentation = session.getAttribute(ATTR_PRESENTATION);
+    std::string projectionIdStr = session.getAttribute(ATTR_PROJECTION_ID);
+    std::string fileIdStr = session.getAttribute(ATTR_FILE_ID);
+    std::string messageIndexStr = session.getAttribute(ATTR_MESSAGE_INDEX);
+    std::string timeStr = session.getAttribute(ATTR_TIME);
+    std::string hueStr = session.getAttribute(ATTR_HUE);
+    std::string saturationStr = session.getAttribute(ATTR_SATURATION);
+    std::string blurStr = session.getAttribute(ATTR_BLUR);
+    std::string coordinateLinesStr = session.getAttribute(ATTR_COORDINATE_LINES);
+    std::string isolinesStr = session.getAttribute(ATTR_ISOLINES);
+    std::string isolineValuesStr = session.getAttribute(ATTR_ISOLINE_VALUES);
+    std::string landBorderStr = session.getAttribute(ATTR_LAND_BORDER);
+    std::string landMaskStr = session.getAttribute(ATTR_LAND_MASK);
+    std::string seaMaskStr = session.getAttribute(ATTR_SEA_MASK);
+    std::string colorMap = session.getAttribute(ATTR_COLOR_MAP);
+    std::string locations = session.getAttribute(ATTR_LOCATIONS);
+    std::string symbolMap = session.getAttribute(ATTR_SYMBOL_MAP);
+    std::string missingStr = session.getAttribute(ATTR_MISSING);
+    std::string stepStr = session.getAttribute(ATTR_STEP);
+    std::string minLengthStr = session.getAttribute(ATTR_MIN_LENGTH);
+    std::string maxLengthStr = session.getAttribute(ATTR_MAX_LENGTH);
+    std::string backgroundStr = session.getAttribute(ATTR_BACKGROUND);
+    //std::string daliIdStr = session.getAttribute(ATTR_DALI_ID);
+    std::string unitStr = session.getAttribute(ATTR_UNIT);
+    std::string fmiKeyStr = session.getAttribute(ATTR_FMI_KEY);
 
     if (projectionIdStr.empty())
       projectionIdStr = geometryIdStr;
@@ -2697,7 +2727,307 @@ int Plugin::page_isolines(Spine::Reactor &theReactor,
       char fname[200];
       sprintf(fname,"%s/grid-gui-image_%llu.jpg",itsImageCache_dir.c_str(),getTime());
 
-      saveImage(fname,fileId,messageIndex,0,0,0,coordinateLines,isolines,isolineValuesStr,landBorder,landMaskStr,seaMaskStr,"","",geometryId,projectionId,"","",false);
+      saveImage(fname,fileId,messageIndex,0,0,0,coordinateLines,isolines,isolineValuesStr,landBorder,landMaskStr,seaMaskStr,"","",geometryId,projectionId,"","",false,0,0,0,true,false);
+
+      if (loadImage(fname,theResponse))
+      {
+        AutoThreadLock lock(&itsThreadLock);
+        if (itsImages.find(hash) == itsImages.end())
+        {
+          itsImages.insert(std::pair<std::string,std::string>(hash,fname));
+        }
+      }
+
+      itsImagesUnderConstruction[idx] = "";
+    }
+    catch (...)
+    {
+      itsImagesUnderConstruction[idx] = "";
+      Fmi::Exception exception(BCP, "Operation failed!", nullptr);
+      throw exception;
+    }
+
+    return HTTP::Status::ok;
+  }
+  catch (...)
+  {
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
+    exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
+    throw exception;
+  }
+}
+
+
+
+
+
+int Plugin::page_streams(Spine::Reactor &theReactor,
+                            const HTTP::Request &theRequest,
+                            HTTP::Response &theResponse,
+                            Session& session)
+{
+  FUNCTION_TRACE
+  try
+  {
+    auto dataServer = itsGridEngine->getDataServer_sptr();
+
+    std::string producerIdStr = session.getAttribute(ATTR_PRODUCER_ID);
+    std::string generationIdStr = session.getAttribute(ATTR_GENERATION_ID);
+    std::string parameterIdStr = session.getAttribute(ATTR_PARAMETER_ID);
+    std::string levelIdStr = session.getAttribute(ATTR_LEVEL_ID);
+    std::string levelStr = session.getAttribute(ATTR_LEVEL);
+    std::string geometryIdStr = session.getAttribute(ATTR_GEOMETRY_ID);
+    std::string producerNameStr = session.getAttribute(ATTR_PRODUCER_NAME);
+    std::string forecastTypeStr = session.getAttribute(ATTR_FORECAST_TYPE);
+    std::string forecastNumberStr = session.getAttribute(ATTR_FORECAST_NUMBER);
+    std::string presentation = session.getAttribute(ATTR_PRESENTATION);
+    std::string projectionIdStr = session.getAttribute(ATTR_PROJECTION_ID);
+    std::string fileIdStr = session.getAttribute(ATTR_FILE_ID);
+    std::string messageIndexStr = session.getAttribute(ATTR_MESSAGE_INDEX);
+    std::string timeStr = session.getAttribute(ATTR_TIME);
+    std::string hueStr = session.getAttribute(ATTR_HUE);
+    std::string saturationStr = session.getAttribute(ATTR_SATURATION);
+    std::string blurStr = session.getAttribute(ATTR_BLUR);
+    std::string coordinateLinesStr = session.getAttribute(ATTR_COORDINATE_LINES);
+    std::string isolinesStr = session.getAttribute(ATTR_ISOLINES);
+    std::string isolineValuesStr = session.getAttribute(ATTR_ISOLINE_VALUES);
+    std::string landBorderStr = session.getAttribute(ATTR_LAND_BORDER);
+    std::string landMaskStr = session.getAttribute(ATTR_LAND_MASK);
+    std::string seaMaskStr = session.getAttribute(ATTR_SEA_MASK);
+    std::string colorMap = session.getAttribute(ATTR_COLOR_MAP);
+    std::string locations = session.getAttribute(ATTR_LOCATIONS);
+    std::string symbolMap = session.getAttribute(ATTR_SYMBOL_MAP);
+    std::string missingStr = session.getAttribute(ATTR_MISSING);
+    std::string stepStr = session.getAttribute(ATTR_STEP);
+    std::string minLengthStr = session.getAttribute(ATTR_MIN_LENGTH);
+    std::string maxLengthStr = session.getAttribute(ATTR_MAX_LENGTH);
+    std::string backgroundStr = session.getAttribute(ATTR_BACKGROUND);
+    //std::string daliIdStr = session.getAttribute(ATTR_DALI_ID);
+    std::string unitStr = session.getAttribute(ATTR_UNIT);
+    std::string fmiKeyStr = session.getAttribute(ATTR_FMI_KEY);
+
+    if (projectionIdStr.empty())
+      projectionIdStr = geometryIdStr;
+
+    std::string hash = "Streams:" + fileIdStr + ":" + messageIndexStr + ":" +
+      coordinateLinesStr + ":" + landBorderStr + ":" + projectionIdStr + ":" +
+      landMaskStr + ":" + seaMaskStr+ ":" + stepStr+ ":" + minLengthStr+ ":" + maxLengthStr + ":" + backgroundStr;
+
+    std::size_t seed = 0;
+    boost::hash_combine(seed, hash);
+    std::string seedStr = std::to_string(seed);
+    theResponse.setHeader("ETag",seedStr);
+
+    auto etag = theRequest.getHeader("If-None-Match");
+    if (etag  && *etag == seedStr)
+      return HTTP::Status::not_modified;
+
+    bool found = false;
+    bool ind = true;
+
+    while (ind)
+    {
+      {
+        AutoThreadLock lock(&itsThreadLock);
+        auto it = itsImages.find(hash);
+        if (it != itsImages.end())
+        {
+          loadImage(it->second.c_str(),theResponse);
+          return HTTP::Status::ok;
+        }
+      }
+
+      if (!found)
+      {
+        for (uint t=0; t<100; t++)
+        {
+          if (itsImagesUnderConstruction[t] == hash)
+          {
+            found = true;
+          }
+        }
+        if (!found)
+          ind = false;
+      }
+
+      if (found)
+        time_usleep(0,10000);
+    }
+
+    uint idx = itsImageCounter % 100;
+    itsImagesUnderConstruction[idx] = hash;
+    itsImageCounter++;
+
+    try
+    {
+      uint fileId = toUInt32(fileIdStr);
+      uint messageIndex = toUInt32(messageIndexStr);
+      int geometryId = toInt32(geometryIdStr);
+      uint projectionId = toUInt32(projectionIdStr);
+      uint landBorder = getColorValue(landBorderStr);
+      uint step = toUInt32(stepStr);
+      uint minLength = toUInt32(minLengthStr);
+      uint maxLength = toUInt32(maxLengthStr);
+      bool lightBackground = true;
+      if (backgroundStr == "dark")
+        lightBackground = false;
+
+      uint coordinateLines = getColorValue(coordinateLinesStr);
+
+      char fname[200];
+      sprintf(fname,"%s/grid-gui-image_%llu.jpg",itsImageCache_dir.c_str(),getTime());
+
+      saveImage(fname,fileId,messageIndex,0,0,0,coordinateLines,0xFFFFFFFF,"",landBorder,landMaskStr,seaMaskStr,"","",geometryId,projectionId,"","",false,step,minLength,maxLength,lightBackground,false);
+
+      if (loadImage(fname,theResponse))
+      {
+        AutoThreadLock lock(&itsThreadLock);
+        if (itsImages.find(hash) == itsImages.end())
+        {
+          itsImages.insert(std::pair<std::string,std::string>(hash,fname));
+        }
+      }
+
+      itsImagesUnderConstruction[idx] = "";
+    }
+    catch (...)
+    {
+      itsImagesUnderConstruction[idx] = "";
+      Fmi::Exception exception(BCP, "Operation failed!", nullptr);
+      throw exception;
+    }
+
+    return HTTP::Status::ok;
+  }
+  catch (...)
+  {
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
+    exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
+    throw exception;
+  }
+}
+
+
+
+
+
+int Plugin::page_streamsAnimation(Spine::Reactor &theReactor,
+                            const HTTP::Request &theRequest,
+                            HTTP::Response &theResponse,
+                            Session& session)
+{
+  FUNCTION_TRACE
+  try
+  {
+    auto dataServer = itsGridEngine->getDataServer_sptr();
+
+    std::string producerIdStr = session.getAttribute(ATTR_PRODUCER_ID);
+    std::string generationIdStr = session.getAttribute(ATTR_GENERATION_ID);
+    std::string parameterIdStr = session.getAttribute(ATTR_PARAMETER_ID);
+    std::string levelIdStr = session.getAttribute(ATTR_LEVEL_ID);
+    std::string levelStr = session.getAttribute(ATTR_LEVEL);
+    std::string geometryIdStr = session.getAttribute(ATTR_GEOMETRY_ID);
+    std::string producerNameStr = session.getAttribute(ATTR_PRODUCER_NAME);
+    std::string forecastTypeStr = session.getAttribute(ATTR_FORECAST_TYPE);
+    std::string forecastNumberStr = session.getAttribute(ATTR_FORECAST_NUMBER);
+    std::string presentation = session.getAttribute(ATTR_PRESENTATION);
+    std::string projectionIdStr = session.getAttribute(ATTR_PROJECTION_ID);
+    std::string fileIdStr = session.getAttribute(ATTR_FILE_ID);
+    std::string messageIndexStr = session.getAttribute(ATTR_MESSAGE_INDEX);
+    std::string timeStr = session.getAttribute(ATTR_TIME);
+    std::string hueStr = session.getAttribute(ATTR_HUE);
+    std::string saturationStr = session.getAttribute(ATTR_SATURATION);
+    std::string blurStr = session.getAttribute(ATTR_BLUR);
+    std::string coordinateLinesStr = session.getAttribute(ATTR_COORDINATE_LINES);
+    std::string isolinesStr = session.getAttribute(ATTR_ISOLINES);
+    std::string isolineValuesStr = session.getAttribute(ATTR_ISOLINE_VALUES);
+    std::string landBorderStr = session.getAttribute(ATTR_LAND_BORDER);
+    std::string landMaskStr = session.getAttribute(ATTR_LAND_MASK);
+    std::string seaMaskStr = session.getAttribute(ATTR_SEA_MASK);
+    std::string colorMap = session.getAttribute(ATTR_COLOR_MAP);
+    std::string locations = session.getAttribute(ATTR_LOCATIONS);
+    std::string symbolMap = session.getAttribute(ATTR_SYMBOL_MAP);
+    std::string missingStr = session.getAttribute(ATTR_MISSING);
+    std::string stepStr = session.getAttribute(ATTR_STEP);
+    std::string minLengthStr = session.getAttribute(ATTR_MIN_LENGTH);
+    std::string maxLengthStr = session.getAttribute(ATTR_MAX_LENGTH);
+    std::string backgroundStr = session.getAttribute(ATTR_BACKGROUND);
+    //std::string daliIdStr = session.getAttribute(ATTR_DALI_ID);
+    std::string unitStr = session.getAttribute(ATTR_UNIT);
+    std::string fmiKeyStr = session.getAttribute(ATTR_FMI_KEY);
+
+    if (projectionIdStr.empty())
+      projectionIdStr = geometryIdStr;
+
+    std::string hash = "StreamsAnimation:" + fileIdStr + ":" + messageIndexStr + ":" +
+      coordinateLinesStr + ":" + landBorderStr + ":" + projectionIdStr + ":" +
+      landMaskStr + ":" + seaMaskStr+ ":" + stepStr+ ":" + minLengthStr+ ":" + maxLengthStr + ":" + backgroundStr;
+
+    std::size_t seed = 0;
+    boost::hash_combine(seed, hash);
+    std::string seedStr = std::to_string(seed);
+    theResponse.setHeader("ETag",seedStr);
+
+    auto etag = theRequest.getHeader("If-None-Match");
+    if (etag  && *etag == seedStr)
+      return HTTP::Status::not_modified;
+
+    bool found = false;
+    bool ind = true;
+
+    while (ind)
+    {
+      {
+        AutoThreadLock lock(&itsThreadLock);
+        auto it = itsImages.find(hash);
+        if (it != itsImages.end())
+        {
+          loadImage(it->second.c_str(),theResponse);
+          return HTTP::Status::ok;
+        }
+      }
+
+      if (!found)
+      {
+        for (uint t=0; t<100; t++)
+        {
+          if (itsImagesUnderConstruction[t] == hash)
+          {
+            found = true;
+          }
+        }
+        if (!found)
+          ind = false;
+      }
+
+      if (found)
+        time_usleep(0,10000);
+    }
+
+    uint idx = itsImageCounter % 100;
+    itsImagesUnderConstruction[idx] = hash;
+    itsImageCounter++;
+
+    try
+    {
+      uint fileId = toUInt32(fileIdStr);
+      uint messageIndex = toUInt32(messageIndexStr);
+      int geometryId = toInt32(geometryIdStr);
+      uint projectionId = toUInt32(projectionIdStr);
+      uint landBorder = getColorValue(landBorderStr);
+      uint step = toUInt32(stepStr);
+      uint minLength = toUInt32(minLengthStr);
+      uint maxLength = toUInt32(maxLengthStr);
+      bool lightBackground = true;
+      if (backgroundStr == "dark")
+        lightBackground = false;
+
+      uint coordinateLines = getColorValue(coordinateLinesStr);
+
+      char fname[200];
+      sprintf(fname,"%s/grid-gui-image_%llu.webp",itsImageCache_dir.c_str(),getTime());
+
+      saveImage(fname,fileId,messageIndex,0,0,0,coordinateLines,0xFFFFFFFF,"",landBorder,landMaskStr,seaMaskStr,"","",geometryId,projectionId,"","",false,step,minLength,maxLength,lightBackground,true);
 
       if (loadImage(fname,theResponse))
       {
@@ -2733,81 +3063,48 @@ int Plugin::page_isolines(Spine::Reactor &theReactor,
 
 int Plugin::page_symbols(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
-                            HTTP::Response &theResponse)
+                            HTTP::Response &theResponse,
+                            Session& session)
 {
   FUNCTION_TRACE
   try
   {
     auto dataServer = itsGridEngine->getDataServer_sptr();
 
-    std::string fileIdStr = "";
-    std::string messageIndexStr = "0";
-    std::string hueStr = "128";
-    std::string saturationStr = "60";
-    std::string presentation = "Symbols";
-    std::string blurStr = "1";
-    std::string geometryIdStr = "0";
-    std::string projectionIdStr = "";
-    std::string coordinateLinesStr = "Grey";
-    std::string landBorderStr = "Grey";
-    std::string landMaskStr = "None";
-    std::string seaMaskStr = "None";
-    std::string locations = "None";
-    std::string symbolMap = "None";
-
-    boost::optional<std::string> v;
-    v = theRequest.getParameter("fileId");
-    if (v)
-      fileIdStr = *v;
-
-    v = theRequest.getParameter("messageIndex");
-    if (v)
-      messageIndexStr = *v;
-
-    v = theRequest.getParameter("geometryId");
-    if (v)
-      geometryIdStr = *v;
-
-    v = theRequest.getParameter("projectionId");
-    if (v)
-      projectionIdStr = *v;
-
-    v = theRequest.getParameter("hue");
-    if (v)
-      hueStr = *v;
-
-    v = theRequest.getParameter("saturation");
-    if (v)
-      saturationStr = *v;
-
-    v = theRequest.getParameter("blur");
-    if (v)
-      blurStr = *v;
-
-    v = theRequest.getParameter("coordinateLines");
-    if (v)
-      coordinateLinesStr = *v;
-
-    v = theRequest.getParameter("landBorder");
-    if (v)
-      landBorderStr = *v;
-
-    v = theRequest.getParameter("landMask");
-    if (v)
-      landMaskStr = *v;
-
-    v = theRequest.getParameter("seaMask");
-    if (v)
-      seaMaskStr = *v;
-
-    v = theRequest.getParameter("locations");
-    if (v)
-      locations = *v;
-
-    v = theRequest.getParameter("symbolMap");
-    if (v)
-      symbolMap = *v;
-
+    std::string producerIdStr = session.getAttribute(ATTR_PRODUCER_ID);
+    std::string generationIdStr = session.getAttribute(ATTR_GENERATION_ID);
+    std::string parameterIdStr = session.getAttribute(ATTR_PARAMETER_ID);
+    std::string levelIdStr = session.getAttribute(ATTR_LEVEL_ID);
+    std::string levelStr = session.getAttribute(ATTR_LEVEL);
+    std::string geometryIdStr = session.getAttribute(ATTR_GEOMETRY_ID);
+    std::string producerNameStr = session.getAttribute(ATTR_PRODUCER_NAME);
+    std::string forecastTypeStr = session.getAttribute(ATTR_FORECAST_TYPE);
+    std::string forecastNumberStr = session.getAttribute(ATTR_FORECAST_NUMBER);
+    std::string presentation = session.getAttribute(ATTR_PRESENTATION);
+    std::string projectionIdStr = session.getAttribute(ATTR_PROJECTION_ID);
+    std::string fileIdStr = session.getAttribute(ATTR_FILE_ID);
+    std::string messageIndexStr = session.getAttribute(ATTR_MESSAGE_INDEX);
+    std::string timeStr = session.getAttribute(ATTR_TIME);
+    std::string hueStr = session.getAttribute(ATTR_HUE);
+    std::string saturationStr = session.getAttribute(ATTR_SATURATION);
+    std::string blurStr = session.getAttribute(ATTR_BLUR);
+    std::string coordinateLinesStr = session.getAttribute(ATTR_COORDINATE_LINES);
+    std::string isolinesStr = session.getAttribute(ATTR_ISOLINES);
+    std::string isolineValuesStr = session.getAttribute(ATTR_ISOLINE_VALUES);
+    std::string landBorderStr = session.getAttribute(ATTR_LAND_BORDER);
+    std::string landMaskStr = session.getAttribute(ATTR_LAND_MASK);
+    std::string seaMaskStr = session.getAttribute(ATTR_SEA_MASK);
+    std::string colorMap = session.getAttribute(ATTR_COLOR_MAP);
+    std::string locations = session.getAttribute(ATTR_LOCATIONS);
+    std::string symbolMap = session.getAttribute(ATTR_SYMBOL_MAP);
+    std::string missingStr = session.getAttribute(ATTR_MISSING);
+    std::string stepStr = session.getAttribute(ATTR_STEP);
+    std::string minLengthStr = session.getAttribute(ATTR_MIN_LENGTH);
+    std::string maxLengthStr = session.getAttribute(ATTR_MAX_LENGTH);
+    std::string backgroundStr = session.getAttribute(ATTR_BACKGROUND);
+    //std::string daliIdStr = session.getAttribute(ATTR_DALI_ID);
+    std::string unitStr = session.getAttribute(ATTR_UNIT);
+    std::string fmiKeyStr = session.getAttribute(ATTR_FMI_KEY);
 
     if (projectionIdStr.empty())
       projectionIdStr = geometryIdStr;
@@ -2901,7 +3198,7 @@ int Plugin::page_symbols(Spine::Reactor &theReactor,
 
       char fname[200];
       sprintf(fname,"/%s/grid-gui-image_%llu.jpg",itsImageCache_dir.c_str(),getTime());
-      saveImage(fname,fileId,messageIndex,toUInt8(hueStr),toUInt8(saturationStr),toUInt8(blurStr),coordinateLines,0xFFFFFFFF,"",landBorder,landMaskStr,seaMaskStr,"","",geometryId,projectionId,symbolMap,locations,true);
+      saveImage(fname,fileId,messageIndex,toUInt8(hueStr),toUInt8(saturationStr),toUInt8(blurStr),coordinateLines,0xFFFFFFFF,"",landBorder,landMaskStr,seaMaskStr,"","",geometryId,projectionId,symbolMap,locations,true,0,0,0,true,false);
 
       if (loadImage(fname,theResponse))
       {
@@ -2937,70 +3234,48 @@ int Plugin::page_symbols(Spine::Reactor &theReactor,
 
 int Plugin::page_map(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
-                            HTTP::Response &theResponse)
+                            HTTP::Response &theResponse,
+                            Session& session)
 {
   FUNCTION_TRACE
   try
   {
     auto dataServer = itsGridEngine->getDataServer_sptr();
 
-    std::string fileIdStr = "";
-    std::string messageIndexStr = "0";
-    std::string hueStr = "128";
-    std::string saturationStr = "60";
-    std::string blurStr = "1";
-    std::string coordinateLinesStr = "Grey";
-    std::string landBorderStr = "Grey";
-    std::string landMaskStr = "None";
-    std::string seaMaskStr = "None";
-    std::string colorMap = "None";
-    std::string missingStr = "Default";
-
-    boost::optional<std::string> v;
-    v = theRequest.getParameter("fileId");
-    if (v)
-      fileIdStr = *v;
-
-    v = theRequest.getParameter("messageIndex");
-    if (v)
-      messageIndexStr = *v;
-
-
-    v = theRequest.getParameter("hue");
-    if (v)
-      hueStr = *v;
-
-    v = theRequest.getParameter("saturation");
-    if (v)
-      saturationStr = *v;
-
-    v = theRequest.getParameter("blur");
-    if (v)
-      blurStr = *v;
-
-    v = theRequest.getParameter("coordinateLines");
-    if (v)
-      coordinateLinesStr = *v;
-
-    v = theRequest.getParameter("landBorder");
-    if (v)
-      landBorderStr = *v;
-
-    v = theRequest.getParameter("landMask");
-    if (v)
-      landMaskStr = *v;
-
-    v = theRequest.getParameter("seaMask");
-    if (v)
-      seaMaskStr = *v;
-
-    v = theRequest.getParameter("colorMap");
-    if (v)
-      colorMap = *v;
-
-    v = theRequest.getParameter("missing");
-    if (v)
-      missingStr = *v;
+    std::string producerIdStr = session.getAttribute(ATTR_PRODUCER_ID);
+    std::string generationIdStr = session.getAttribute(ATTR_GENERATION_ID);
+    std::string parameterIdStr = session.getAttribute(ATTR_PARAMETER_ID);
+    std::string levelIdStr = session.getAttribute(ATTR_LEVEL_ID);
+    std::string levelStr = session.getAttribute(ATTR_LEVEL);
+    std::string geometryIdStr = session.getAttribute(ATTR_GEOMETRY_ID);
+    std::string producerNameStr = session.getAttribute(ATTR_PRODUCER_NAME);
+    std::string forecastTypeStr = session.getAttribute(ATTR_FORECAST_TYPE);
+    std::string forecastNumberStr = session.getAttribute(ATTR_FORECAST_NUMBER);
+    std::string presentation = session.getAttribute(ATTR_PRESENTATION);
+    std::string projectionIdStr = session.getAttribute(ATTR_PROJECTION_ID);
+    std::string fileIdStr = session.getAttribute(ATTR_FILE_ID);
+    std::string messageIndexStr = session.getAttribute(ATTR_MESSAGE_INDEX);
+    std::string timeStr = session.getAttribute(ATTR_TIME);
+    std::string hueStr = session.getAttribute(ATTR_HUE);
+    std::string saturationStr = session.getAttribute(ATTR_SATURATION);
+    std::string blurStr = session.getAttribute(ATTR_BLUR);
+    std::string coordinateLinesStr = session.getAttribute(ATTR_COORDINATE_LINES);
+    std::string isolinesStr = session.getAttribute(ATTR_ISOLINES);
+    std::string isolineValuesStr = session.getAttribute(ATTR_ISOLINE_VALUES);
+    std::string landBorderStr = session.getAttribute(ATTR_LAND_BORDER);
+    std::string landMaskStr = session.getAttribute(ATTR_LAND_MASK);
+    std::string seaMaskStr = session.getAttribute(ATTR_SEA_MASK);
+    std::string colorMap = session.getAttribute(ATTR_COLOR_MAP);
+    std::string locations = session.getAttribute(ATTR_LOCATIONS);
+    std::string symbolMap = session.getAttribute(ATTR_SYMBOL_MAP);
+    std::string missingStr = session.getAttribute(ATTR_MISSING);
+    std::string stepStr = session.getAttribute(ATTR_STEP);
+    std::string minLengthStr = session.getAttribute(ATTR_MIN_LENGTH);
+    std::string maxLengthStr = session.getAttribute(ATTR_MAX_LENGTH);
+    std::string backgroundStr = session.getAttribute(ATTR_BACKGROUND);
+    //std::string daliIdStr = session.getAttribute(ATTR_DALI_ID);
+    std::string unitStr = session.getAttribute(ATTR_UNIT);
+    std::string fmiKeyStr = session.getAttribute(ATTR_FMI_KEY);
 
     std::string colorMapFileName = "";
     std::string colorMapModificationTime = "";
@@ -3406,169 +3681,186 @@ void Plugin::getGenerations(T::GenerationInfoList& generationInfoList,std::set<s
 
 
 
-int Plugin::page_main(Spine::Reactor &theReactor,
-                            const HTTP::Request &theRequest,
-                            HTTP::Response &theResponse)
+void Plugin::initSession(Session& session)
 {
   FUNCTION_TRACE
   try
   {
     auto contentServer = itsGridEngine->getContentServer_sptr();
 
-    std::string producerIdStr = "";
-    std::string generationIdStr = "";
-    std::string geometryIdStr = "";
-    std::string projectionIdStr = "";
-    std::string parameterIdStr = "";
-    std::string parameterLevelStr = "";
-    std::string fileIdStr = "";
-    std::string messageIndexStr = "0";
-    std::string parameterLevelIdStr;
-    std::string hueStr = "128";
-    std::string forecastTypeStr = "";
-    std::string forecastNumberStr = "";
-    std::string saturationStr = "60";
-    std::string blurStr = "1";
-    std::string coordinateLinesStr = "Grey";
-    std::string isolinesStr = "DarkGrey";
-    std::string isolineValuesStr = "Generated";
-    std::string landBorderStr = "Grey";
-    std::string landMaskStr = "LightGrey";
-    std::string seaMaskStr = "LightCyan";
-    std::string colorMap = "None";
-    std::string startTime = "";
-    std::string unitStr = "";
-    std::string presentation = "Image";
-    std::string symbolMap = "None";
-    std::string locations = "None";
-    std::string producerName = "";
-    std::string fmiKey = "";
-    std::string daliIdStr = "";
-    std::string missingStr = "Default";
-    uint daliId = 0;
-    time_t requiredAccessTime = time(nullptr) + 120;
+    session.setAttribute(ATTR_PAGE,"main");
+    session.setAttribute(ATTR_PRODUCER_ID,"");
+    session.setAttribute(ATTR_PRODUCER_NAME,"");
+    session.setAttribute(ATTR_GENERATION_ID,"");
+    session.setAttribute(ATTR_PARAMETER_ID,"");
+    session.setAttribute(ATTR_LEVEL_ID,"");
+    session.setAttribute(ATTR_LEVEL,"");
+    session.setAttribute(ATTR_FORECAST_TYPE,"");
+    session.setAttribute(ATTR_FORECAST_NUMBER,"");
+    session.setAttribute(ATTR_GEOMETRY_ID,"");
+    session.setAttribute(ATTR_PRESENTATION,"Image");
+    session.setAttribute(ATTR_PROJECTION_ID,"");
+    session.setAttribute(ATTR_FILE_ID,"");
+    session.setAttribute(ATTR_MESSAGE_INDEX,"0");
+    session.setAttribute(ATTR_TIME,"");
+    session.setAttribute(ATTR_HUE,"128");
+    session.setAttribute(ATTR_SATURATION,"60");
+    session.setAttribute(ATTR_BLUR,"1");
+    session.setAttribute(ATTR_COORDINATE_LINES,"Grey");
+    session.setAttribute(ATTR_ISOLINES,"DarkGrey");
+    session.setAttribute(ATTR_ISOLINE_VALUES,"Generated");
+    session.setAttribute(ATTR_LAND_BORDER,"Grey");
+    session.setAttribute(ATTR_LAND_MASK,"LightGrey");
+    session.setAttribute(ATTR_SEA_MASK,"LightCyan");
+    session.setAttribute(ATTR_COLOR_MAP,"None");
+    session.setAttribute(ATTR_LOCATIONS,"None");
+    session.setAttribute(ATTR_SYMBOL_MAP,"None");
+    session.setAttribute(ATTR_MISSING,"Default");
+    session.setAttribute(ATTR_STEP,"10");
+    session.setAttribute(ATTR_MIN_LENGTH,"6");
+    session.setAttribute(ATTR_MAX_LENGTH,"16");
+    session.setAttribute(ATTR_BACKGROUND,"light");
+    //session.setAttribute(ATTR_DALI_ID,"");
+    session.setAttribute(ATTR_UNIT,"");
+    session.setAttribute(ATTR_FMI_KEY,"");
+    session.setAttribute(ATTR_X,"");
+    session.setAttribute(ATTR_Y,"");
+  }
+  catch (...)
+  {
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
+    exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
+    throw exception;
+  }
+}
 
-    boost::optional<std::string> v;
-    v = theRequest.getParameter("producerId");
-    if (v)
-      producerIdStr = *v;
 
-    v = theRequest.getParameter("generationId");
-    if (v)
-      generationIdStr = *v;
 
-    v = theRequest.getParameter("geometryId");
-    if (v)
-      geometryIdStr = *v;
 
-    v = theRequest.getParameter("projectionId");
-    if (v)
-      projectionIdStr = *v;
+int Plugin::page_main(Spine::Reactor &theReactor,
+                            const HTTP::Request &theRequest,
+                            HTTP::Response &theResponse,
+                            Session& session)
+{
+  FUNCTION_TRACE
+  try
+  {
 
-    v = theRequest.getParameter("parameterId");
-    if (v)
-      parameterIdStr = *v;
+    //session.print(std::cout,0,0);
 
-    v = theRequest.getParameter("levelId");
-    if (v)
-      parameterLevelIdStr = *v;
+    auto contentServer = itsGridEngine->getContentServer_sptr();
 
-    v = theRequest.getParameter("forecastType");
-    if (v)
-      forecastTypeStr = *v;
+    std::string producerIdStr = session.getAttribute(ATTR_PRODUCER_ID);
+    std::string generationIdStr = session.getAttribute(ATTR_GENERATION_ID);
+    std::string parameterIdStr = session.getAttribute(ATTR_PARAMETER_ID);
+    std::string levelIdStr = session.getAttribute(ATTR_LEVEL_ID);
+    std::string levelStr = session.getAttribute(ATTR_LEVEL);
+    std::string geometryIdStr = session.getAttribute(ATTR_GEOMETRY_ID);
+    std::string producerNameStr = session.getAttribute(ATTR_PRODUCER_NAME);
+    std::string forecastTypeStr = session.getAttribute(ATTR_FORECAST_TYPE);
+    std::string forecastNumberStr = session.getAttribute(ATTR_FORECAST_NUMBER);
+    std::string presentation = session.getAttribute(ATTR_PRESENTATION);
+    std::string projectionIdStr = session.getAttribute(ATTR_PROJECTION_ID);
+    std::string fileIdStr = session.getAttribute(ATTR_FILE_ID);
+    std::string messageIndexStr = session.getAttribute(ATTR_MESSAGE_INDEX);
+    std::string timeStr = session.getAttribute(ATTR_TIME);
+    std::string hueStr = session.getAttribute(ATTR_HUE);
+    std::string saturationStr = session.getAttribute(ATTR_SATURATION);
+    std::string blurStr = session.getAttribute(ATTR_BLUR);
+    std::string coordinateLinesStr = session.getAttribute(ATTR_COORDINATE_LINES);
+    std::string isolinesStr = session.getAttribute(ATTR_ISOLINES);
+    std::string isolineValuesStr = session.getAttribute(ATTR_ISOLINE_VALUES);
+    std::string landBorderStr = session.getAttribute(ATTR_LAND_BORDER);
+    std::string landMaskStr = session.getAttribute(ATTR_LAND_MASK);
+    std::string seaMaskStr = session.getAttribute(ATTR_SEA_MASK);
+    std::string colorMap = session.getAttribute(ATTR_COLOR_MAP);
+    std::string locations = session.getAttribute(ATTR_LOCATIONS);
+    std::string symbolMap = session.getAttribute(ATTR_SYMBOL_MAP);
+    std::string missingStr = session.getAttribute(ATTR_MISSING);
+    std::string stepStr = session.getAttribute(ATTR_STEP);
+    std::string minLengthStr = session.getAttribute(ATTR_MIN_LENGTH);
+    std::string maxLengthStr = session.getAttribute(ATTR_MAX_LENGTH);
+    std::string backgroundStr = session.getAttribute(ATTR_BACKGROUND);
+    //std::string daliIdStr = session.getAttribute(ATTR_DALI_ID);
+    std::string unitStr = session.getAttribute(ATTR_UNIT);
+    std::string fmiKeyStr = session.getAttribute(ATTR_FMI_KEY);
 
-    v = theRequest.getParameter("forecastNumber");
-    if (v)
-      forecastNumberStr = *v;
-
-    v = theRequest.getParameter("level");
-    if (v)
-      parameterLevelStr = *v;
-
-    v = theRequest.getParameter("presentation");
-    if (v)
-      presentation = *v;
-
-    v = theRequest.getParameter("fileId");
-    if (v)
-      fileIdStr = *v;
-
-    v = theRequest.getParameter("messageIndex");
-    if (v)
-      messageIndexStr = *v;
-
-    v = theRequest.getParameter("start");
-    if (v)
-      startTime = *v;
-
-    v = theRequest.getParameter("hue");
-    if (v)
-      hueStr = *v;
-
-    v = theRequest.getParameter("saturation");
-    if (v)
-      saturationStr = *v;
-
-    v = theRequest.getParameter("blur");
-    if (v)
-      blurStr = *v;
-
-    v = theRequest.getParameter("coordinateLines");
-    if (v)
-      coordinateLinesStr = *v;
-
-    v = theRequest.getParameter("isolines");
-    if (v)
-      isolinesStr = *v;
-
-    v = theRequest.getParameter("isolineValues");
-    if (v)
-      isolineValuesStr = *v;
-
-    v = theRequest.getParameter("landBorder");
-    if (v)
-      landBorderStr = *v;
-
-    v = theRequest.getParameter("landMask");
-    if (v)
-      landMaskStr = *v;
-
-    v = theRequest.getParameter("seaMask");
-    if (v)
-      seaMaskStr = *v;
-
-    v = theRequest.getParameter("colorMap");
-    if (v)
-      colorMap = *v;
-
-    v = theRequest.getParameter("locations");
-    if (v)
-      locations = *v;
-
-    v = theRequest.getParameter("symbolMap");
-    if (v)
-      symbolMap = *v;
-
-    v = theRequest.getParameter("missing");
-    if (v)
-      missingStr = *v;
-
-    v = theRequest.getParameter("daliId");
-    if (v)
+    if (session.findAttribute("#",ATTR_PRODUCER_ID))
     {
-      daliIdStr = *v;
-      daliId = toUInt32(daliIdStr);
+      generationIdStr = "";
+      session.setAttribute(ATTR_GENERATION_ID,"");
     }
+
+    if (generationIdStr.empty() || session.findAttribute("#",ATTR_GENERATION_ID))
+    {
+      parameterIdStr = "";
+      session.setAttribute(ATTR_PARAMETER_ID,"");
+    }
+
+    if (parameterIdStr.empty() || session.findAttribute("#",ATTR_PARAMETER_ID))
+    {
+      levelIdStr = "";
+      session.setAttribute(ATTR_LEVEL_ID,"");
+    }
+
+    if (levelIdStr.empty() || session.findAttribute("#",ATTR_LEVEL_ID))
+    {
+      levelStr = "";
+      session.setAttribute(ATTR_LEVEL,"");
+    }
+
+    if (levelStr.empty() || session.findAttribute("#",ATTR_LEVEL))
+    {
+      forecastTypeStr = "";
+      session.setAttribute(ATTR_FORECAST_TYPE,"");
+    }
+
+    if (forecastTypeStr.empty() || session.findAttribute("#",ATTR_FORECAST_TYPE))
+    {
+      forecastNumberStr = "";
+      session.setAttribute(ATTR_FORECAST_NUMBER,"");
+    }
+
+    if (forecastNumberStr.empty() || session.findAttribute("#",ATTR_FORECAST_NUMBER))
+    {
+      geometryIdStr = "";
+      session.setAttribute(ATTR_GEOMETRY_ID,"");
+    }
+
+    if (geometryIdStr.empty() || session.findAttribute("#",ATTR_GEOMETRY_ID))
+    {
+      timeStr = "";
+      session.setAttribute(ATTR_TIME,"");
+      projectionIdStr = "";
+      session.setAttribute(ATTR_PROJECTION_ID,"");
+      fileIdStr = "";
+      session.setAttribute(ATTR_FILE_ID,"");
+      messageIndexStr = "0";
+      session.setAttribute(ATTR_MESSAGE_INDEX,"0");
+    }
+/*
+    if (timeStr.empty() || session.findAttribute("#time"))
+    {
+      fileIdStr = "";
+      messageIndexStr = "0";
+      projectionIdStr = "";
+    }
+*/
+
+    //uint daliId = toUInt32(daliIdStr);
+    time_t requiredAccessTime = time(nullptr) + 120;
 
     if (getFileModificationTime(itsColorFile.c_str()) != itsColors_lastModified)
     {
       loadColorFile();
     }
 
+    /*
     if (getFileModificationTime(itsDaliFile.c_str()) != itsDaliFile_lastModified)
     {
       loadDaliFile();
     }
+    */
 
     std::ostringstream output;
     std::ostringstream ostr1;
@@ -3639,8 +3931,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     output << "  var posY = event.offsetY?(event.offsetY):event.pageY-img.offsetTop;\n";
     output << "  var prosX = posX / img.width;\n";
     output << "  var prosY = posY / img.height;\n";
-    output << "  var url = \"/grid-gui?page=value&presentation=\" + presentation + \"&fileId=\" + fileId + \"&messageIndex=\" + messageIndex + \"&x=\" + prosX + \"&y=\" + prosY;\n";
-
+    output << "  var url = \"/grid-gui?page=value&" << ATTR_PRESENTATION << "=\" + presentation + \"&" << ATTR_FILE_ID << "=\" + fileId + \"&" << ATTR_MESSAGE_INDEX << "=\" + messageIndex + \"&" << ATTR_X << "=\" + prosX + \"&" << ATTR_Y << "=\" + prosY;\n";
     output << "  var txt = httpGet(url);\n";
     output << "  document.getElementById('gridValue').value = txt;\n";
 
@@ -3649,6 +3940,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
 
 
+    /*
     string_vec daliNames;
     std::map<uint,std::string> daliUrls;
     std::vector<uint> daliIds;
@@ -3657,9 +3949,9 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     {
       if ((*it)[0] ==  parameterIdStr)
       {
-        if ((*it)[1] == parameterLevelIdStr  ||  (*it)[1] == "")
+        if ((*it)[1] == levelIdStr  ||  (*it)[1] == "")
         {
-          if ((*it)[2] == parameterLevelStr  ||  (*it)[2] == "")
+          if ((*it)[2] == levelStr  ||  (*it)[2] == "")
           {
             uint id = toUInt32((*it)[3]);
             if (daliId == 0)
@@ -3679,6 +3971,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
       presentation = "Image";
       daliId = 0;
     }
+    */
 
     ostr1 << "<TABLE width=\"100%\" height=\"100%\">\n";
 
@@ -3689,27 +3982,30 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     contentServer->getProducerInfoList(0,producerInfoList);
     uint len = producerInfoList.getLength();
     producerInfoList.sortByName();
-    uint pid = toUInt32(producerIdStr);
+    uint producerId = toUInt32(producerIdStr);
 
     ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Producer:</TD></TR>\n";
     ostr1 << "<TR height=\"30\"><TD>\n";
 
     if (len > 0)
     {
-      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&missing=" + missingStr << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&producerId=' + this.options[this.selectedIndex].value)\">\n";
+      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_PRODUCER_ID << "=' + this.options[this.selectedIndex].value)\">\n";
       for (uint t=0; t<len; t++)
       {
         T::ProducerInfo *p = producerInfoList.getProducerInfoByIndex(t);
 
-        if (pid == 0)
+        if (producerId == 0)
         {
-          pid = p->mProducerId;
-          producerIdStr = std::to_string(pid);
+          producerId = p->mProducerId;
+          producerIdStr = std::to_string(producerId);
+          //printf("EMPTY => PRODUCER %s\n",producerIdStr.c_str());
         }
 
-        if (pid == p->mProducerId)
+        if (producerId == p->mProducerId)
         {
-          producerName = p->mName;
+          producerNameStr = p->mName;
+          session.setAttribute(ATTR_PRODUCER_ID,producerId);
+          session.setAttribute(ATTR_PRODUCER_NAME,producerNameStr);
           ostr1 << "<OPTION selected value=\"" <<  p->mProducerId << "\">" <<  p->mName << "</OPTION>\n";
         }
         else
@@ -3726,14 +4022,14 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
     T::GenerationInfoList generationInfoList;
     T::GenerationInfoList generationInfoList2;
-    contentServer->getGenerationInfoListByProducerId(0,pid,generationInfoList2);
-    generationInfoList2.getGenerationInfoListByProducerId(pid,generationInfoList);
-    //generationInfoList2.getGenerationInfoListByProducerIdAndStatus(pid,generationInfoList,T::GenerationInfo::Status::Ready);
+    contentServer->getGenerationInfoListByProducerId(0,producerId,generationInfoList2);
+    generationInfoList2.getGenerationInfoListByProducerId(producerId,generationInfoList);
+    //generationInfoList2.getGenerationInfoListByProducerIdAndStatus(producerId,generationInfoList,T::GenerationInfo::Status::Ready);
 
-    uint gid = toUInt32(generationIdStr);
+    uint generationId = toUInt32(generationIdStr);
 
-    if (generationInfoList.getGenerationInfoById(gid) == nullptr)
-      gid = 0;
+    if (generationInfoList.getGenerationInfoById(generationId) == nullptr)
+      generationId = 0;
 
     std::set<std::string> generations;
     getGenerations(generationInfoList,generations);
@@ -3749,7 +4045,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
       if (generations.size() == 1)
         disabled = "disabled";
 
-      ostr1 << "<SELECT style=\"width:250px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&missing=" + missingStr << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&producerId=" + producerIdStr + "&geometryId=" + geometryIdStr + "&locations=" + locations + "&generationId=' + this.options[this.selectedIndex].value)\">\n";
+      ostr1 << "<SELECT style=\"width:250px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_GENERATION_ID << "=' + this.options[this.selectedIndex].value)\">\n";
 
       for (auto it = generations.rbegin(); it != generations.rend(); ++it)
       {
@@ -3757,16 +4053,18 @@ int Plugin::page_main(Spine::Reactor &theReactor,
         T::GenerationInfo *g = generationInfoList.getGenerationInfoByName(name);
         if (g != nullptr && (g->mDeletionTime == 0 || g->mDeletionTime > requiredAccessTime))
         {
-          if (gid == 0)
+          if (generationId == 0)
           {
-            gid = g->mGenerationId;
-            generationIdStr = std::to_string(gid);
+            generationId = g->mGenerationId;
+            generationIdStr = std::to_string(generationId);
+            //printf("EMPTY => GENERATION %s\n",generationIdStr.c_str());
           }
 
-          if (gid == g->mGenerationId)
+          if (generationId == g->mGenerationId)
           {
             originTime = g->mAnalysisTime;
             ostr1 << "<OPTION selected value=\"" <<  g->mGenerationId << "\">" <<  g->mName << "</OPTION>\n";
+            session.setAttribute(ATTR_GENERATION_ID,generationId);
           }
           else
             ostr1 << "<OPTION value=\"" <<  g->mGenerationId << "\">" <<  g->mName << "</OPTION>\n";
@@ -3781,17 +4079,17 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
     std::string paramDescription;
     std::set<std::string> paramKeyList;
-    contentServer->getContentParamKeyListByGenerationId(0,gid,T::ParamKeyTypeValue::FMI_NAME,paramKeyList);
+    contentServer->getContentParamKeyListByGenerationId(0,generationId,T::ParamKeyTypeValue::FMI_NAME,paramKeyList);
 
     ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Parameter:</TD></TR>\n";
     ostr1 << "<TR height=\"30\"><TD>\n";
 
     if (paramKeyList.size() > 0)
     {
-      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&missing=" + missingStr << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr +  + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&locations=" + locations + "&parameterId=' + this.options[this.selectedIndex].value)\">\n";
+      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_PARAMETER_ID << "=' + this.options[this.selectedIndex].value)\">\n";
       for (auto it=paramKeyList.begin(); it!=paramKeyList.end(); ++it)
       {
-        std::string pId = *it;
+        std::string parameterId = *it;
         std::string pName = *it;
 
         char st[100];
@@ -3826,9 +4124,9 @@ int Plugin::page_main(Spine::Reactor &theReactor,
           Identification::FmiParameterDef def;
           if (Identification::gridDef.getFmiParameterDefById(toUInt32(key),def))
           {
-            pId = def.mParameterName;
+            parameterId = def.mParameterName;
             pName = def.mParameterName + " (" + def.mParameterDescription + ")";
-            if (parameterIdStr == pId || parameterIdStr.empty())
+            if (parameterIdStr == parameterId || parameterIdStr.empty())
               unitStr = def.mParameterUnits;
           }
         }
@@ -3837,25 +4135,29 @@ int Plugin::page_main(Spine::Reactor &theReactor,
           Identification::FmiParameterDef def;
           if (Identification::gridDef.getFmiParameterDefByName(*it,def))
           {
-            pId = def.mParameterName;
+            parameterId = def.mParameterName;
             pName = def.mParameterName + " (" + def.mParameterDescription + ")";
-            if (parameterIdStr == pId || parameterIdStr.empty())
+            if (parameterIdStr == parameterId || parameterIdStr.empty())
               unitStr = def.mParameterUnits;
           }
         }
 
 
         if (parameterIdStr.empty())
-          parameterIdStr = pId;
-
-        if (parameterIdStr == pId)
         {
-          ostr1 << "<OPTION selected value=\"" <<  pId << "\">" <<  pName << "</OPTION>\n";
+          parameterIdStr = parameterId;
+          //printf("EMPTY => PARAMETER %s\n",parameterIdStr.c_str());
+        }
+
+        if (parameterIdStr == parameterId)
+        {
+          ostr1 << "<OPTION selected value=\"" <<  parameterId << "\">" <<  pName << "</OPTION>\n";
+          session.setAttribute(ATTR_PARAMETER_ID,parameterId);
           paramDescription = pName;
         }
         else
         {
-          ostr1 << "<OPTION value=\"" <<  pId << "\">" <<  pName << "</OPTION>\n";
+          ostr1 << "<OPTION value=\"" <<  parameterId << "\">" <<  pName << "</OPTION>\n";
         }
       }
       ostr1 << "</SELECT>\n";
@@ -3866,9 +4168,9 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     // ### Level identifiers:
 
     T::ContentInfoList contentInfoList;
-    contentServer->getContentListByParameterAndGenerationId(0,gid,T::ParamKeyTypeValue::FMI_NAME,parameterIdStr,-1,0,0,-2,-2,-2,"14000101T000000","30000101T000000",0,contentInfoList);
+    contentServer->getContentListByParameterAndGenerationId(0,generationId,T::ParamKeyTypeValue::FMI_NAME,parameterIdStr,-1,0,0,-2,-2,-2,"14000101T000000","30000101T000000",0,contentInfoList);
     len = contentInfoList.getLength();
-    int levelId = toInt32(parameterLevelIdStr);
+    int levelId = toInt32(levelIdStr);
 
     ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Level type:</TD></TR>\n";
     ostr1 << "<TR height=\"30\"><TD>\n";
@@ -3885,13 +4187,14 @@ int Plugin::page_main(Spine::Reactor &theReactor,
       if (levelIds.size() == 1)
         disabled = "disabled";
 
-      ostr1 << "<SELECT style=\"width:250px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&missing=" + missingStr << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr +  + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&locations=" + locations + "&parameterId=" + parameterIdStr + "&levelId=' + this.options[this.selectedIndex].value)\">\n";
+      ostr1 << "<SELECT style=\"width:250px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_LEVEL_ID << "=' + this.options[this.selectedIndex].value) \">\n";
       for (auto it = levelIds.begin(); it != levelIds.end(); ++it)
       {
-        if (parameterLevelIdStr.empty())
+        if (levelIdStr.empty())
         {
-          parameterLevelIdStr = std::to_string(*it);
+          levelIdStr = std::to_string(*it);
           levelId = *it;
+          //printf("EMPTY => LEVEL ID %s\n",levelIdStr.c_str());
         }
 
         std::string lStr = std::to_string(*it);
@@ -3923,9 +4226,12 @@ int Plugin::page_main(Spine::Reactor &theReactor,
         if (levelId == *it)
         {
           ostr1 << "<OPTION selected value=\"" <<  *it << "\">" <<  lStr << "</OPTION>\n";
+          session.setAttribute(ATTR_LEVEL_ID,levelId);
         }
         else
+        {
           ostr1 << "<OPTION value=\"" <<  *it << "\">" <<  lStr << "</OPTION>\n";
+        }
       }
       ostr1 << "</SELECT>\n";
     }
@@ -3935,9 +4241,9 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     // ### Levels:
 
     contentInfoList.clear();
-    contentServer->getContentListByParameterAndGenerationId(0,gid,T::ParamKeyTypeValue::FMI_NAME,parameterIdStr,levelId,0,0x7FFFFFFF,-2,-2,-2,"14000101T000000","30000101T000000",0,contentInfoList);
+    contentServer->getContentListByParameterAndGenerationId(0,generationId,T::ParamKeyTypeValue::FMI_NAME,parameterIdStr,levelId,0,0x7FFFFFFF,-2,-2,-2,"14000101T000000","30000101T000000",0,contentInfoList);
     len = contentInfoList.getLength();
-    T::ParamLevel level = toInt32(parameterLevelStr);
+    T::ParamLevel level = toInt32(levelStr);
 
     ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Level:</TD></TR>\n";
     ostr1 << "<TR height=\"30\"><TD>\n";
@@ -3954,19 +4260,25 @@ int Plugin::page_main(Spine::Reactor &theReactor,
       if (levels.size() == 1)
         disabled = "disabled";
 
-      ostr1 << "<SELECT " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&missing=" + missingStr << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&locations=" + locations + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=' + this.options[this.selectedIndex].value)\">\n";
+      ostr1 << "<SELECT " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_LEVEL << "=' + this.options[this.selectedIndex].value)\">\n";
       for (auto it = levels.begin(); it != levels.end(); ++it)
       {
-        if (parameterLevelStr.empty())
+        if (levelStr.empty())
         {
-          parameterLevelStr = std::to_string(*it);
+          levelStr = std::to_string(*it);
           level = *it;
+          //printf("EMPTY => LEVEL %s\n",levelStr.c_str());
         }
 
         if (level == *it)
+        {
           ostr1 << "<OPTION selected value=\"" <<  *it << "\">" <<  *it << "</OPTION>\n";
+          session.setAttribute(ATTR_LEVEL,level);
+        }
         else
+        {
           ostr1 << "<OPTION value=\"" <<  *it << "\">" <<  *it << "</OPTION>\n";
+        }
       }
       ostr1 << "</SELECT>\n";
     }
@@ -3992,13 +4304,14 @@ int Plugin::page_main(Spine::Reactor &theReactor,
       if (forecastTypes.size() == 1)
         disabled = "disabled";
 
-      ostr1 << "<SELECT " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&missing=" + missingStr << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&locations=" + locations + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&forecastType=' + this.options[this.selectedIndex].value)\">\n";
+      ostr1 << "<SELECT " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_FORECAST_TYPE << "=' + this.options[this.selectedIndex].value)\">\n";
       for (auto it = forecastTypes.begin(); it != forecastTypes.end(); ++it)
       {
         if (forecastTypeStr.empty())
         {
           forecastTypeStr = std::to_string(*it);
           forecastType = *it;
+          //printf("EMPTY => FORECAST TYPE %s\n",forecastTypeStr.c_str());
         }
 
         std::string lStr = std::to_string(*it);
@@ -4009,9 +4322,14 @@ int Plugin::page_main(Spine::Reactor &theReactor,
           lStr = std::to_string(*it) + " : ";
 
         if (forecastType == *it)
+        {
           ostr1 << "<OPTION selected value=\"" <<  *it << "\">" <<  lStr << "</OPTION>\n";
+          session.setAttribute(ATTR_FORECAST_TYPE,forecastType);
+        }
         else
+        {
           ostr1 << "<OPTION value=\"" <<  *it << "\">" << lStr << "</OPTION>\n";
+        }
       }
       ostr1 << "</SELECT>\n";
     }
@@ -4037,19 +4355,25 @@ int Plugin::page_main(Spine::Reactor &theReactor,
       if (forecastNumbers.size() == 1)
         disabled = "disabled";
 
-      ostr1 << "<SELECT " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&missing=" + missingStr << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&locations=" + locations + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=' + this.options[this.selectedIndex].value)\">\n";
+      ostr1 << "<SELECT " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_FORECAST_NUMBER << "=' + this.options[this.selectedIndex].value)\">\n";
       for (auto it = forecastNumbers.begin(); it != forecastNumbers.end(); ++it)
       {
         if (forecastNumberStr.empty())
         {
           forecastNumberStr = std::to_string(*it);
           forecastNumber = *it;
+          //printf("EMPTY => FORECAST NUMBER %s\n",forecastNumberStr.c_str());
         }
 
         if (*it == forecastNumber)
+        {
           ostr1 << "<OPTION selected value=\"" <<  *it << "\">" <<  *it << "</OPTION>\n";
+          session.setAttribute(ATTR_FORECAST_NUMBER,forecastNumber);
+        }
         else
+        {
           ostr1 << "<OPTION value=\"" <<  *it << "\">" <<  *it << "</OPTION>\n";
+        }
       }
       ostr1 << "</SELECT>\n";
     }
@@ -4074,7 +4398,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
       if (geometries.size() == 1)
         disabled = "disabled";
 
-      ostr1 << "<SELECT style=\"width:250px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&missing=" + missingStr << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&locations=" + locations + "&geometryId=' + this.options[this.selectedIndex].value)\">\n";
+      ostr1 << "<SELECT style=\"width:250px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_GEOMETRY_ID << "=' + this.options[this.selectedIndex].value)\">\n";
 
       for (auto it=geometries.begin(); it!=geometries.end(); ++it)
       {
@@ -4095,12 +4419,18 @@ int Plugin::page_main(Spine::Reactor &theReactor,
         {
           geometryId = *it;
           geometryIdStr = std::to_string(geometryId);
+          //printf("EMPTY => GEOMETRY %s\n",geometryIdStr.c_str());
         }
 
         if (geometryId == *it)
+        {
           ostr1 << "<OPTION selected value=\"" <<  *it << "\">" <<  st << "</OPTION>\n";
+          session.setAttribute(ATTR_GEOMETRY_ID,geometryId);
+        }
         else
+        {
           ostr1 << "<OPTION value=\"" <<  *it << "\">" <<  st << "</OPTION>\n";
+        }
       }
       ostr1 << "</SELECT>\n";
     }
@@ -4108,13 +4438,16 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
 
     if (projectionIdStr.empty())
+    {
       projectionIdStr = geometryIdStr;
+      session.setAttribute(ATTR_PROJECTION_ID,projectionIdStr);
+    }
 
 
     // ### Times:
 
     contentInfoList.clear();
-    contentServer->getContentListByParameterAndGenerationId(0,gid,T::ParamKeyTypeValue::FMI_NAME,parameterIdStr,levelId,level,level,-2,-2,-2,"14000101T000000","30000101T000000",0,contentInfoList);
+    contentServer->getContentListByParameterAndGenerationId(0,generationId,T::ParamKeyTypeValue::FMI_NAME,parameterIdStr,levelId,level,level,-2,-2,-2,"14000101T000000","30000101T000000",0,contentInfoList);
     len = contentInfoList.getLength();
     std::string prevTime = "14000101T0000";
 
@@ -4131,25 +4464,26 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     {
       contentInfoList.sort(T::ContentInfo::ComparisonMethod::fmiName_producer_generation_level_time);
 
-      ostr1 << "<SELECT id=\"timeselect\" onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" + presentation << "&missing=" + missingStr + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&locations=" + locations + "&symbolMap=" + symbolMap + "' + this.options[this.selectedIndex].value)\"";
+      ostr1 << "<SELECT id=\"timeselect\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() + "' + this.options[this.selectedIndex].value)\"";
 
       std::string u;
-      if (presentation == "Image" ||  presentation == "Map"  ||  presentation == "Symbols"  ||  presentation == "Isolines")
+      if (presentation == "Image" ||  presentation == "Map"  ||  presentation == "Symbols"  ||  presentation == "Isolines"  ||  presentation == "Streams")
       {
-        ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&missing=" + missingStr << "&geometryId=" << geometryIdStr << "&projectionId=" << projectionIdStr << "&locations=" << locations << "&symbolMap=" << symbolMap << "&daliId=" << daliId << "')\"";
-        u = "/grid-gui?page=" + presentation + "&missing=" + missingStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&locations=" + locations + "&symbolMap=" + symbolMap  + "&daliId=" + std::to_string(daliId);
+        u = "/grid-gui?session=" + session.getUrlParameter() + "&" + ATTR_PAGE + "=" + presentation;
       }
 
+      /*
       if (presentation == "Dali"  &&  daliId > 0)
       {
         auto dUrl = daliUrls.find(daliId);
         if (dUrl != daliUrls.end())
         {
-          u = dUrl->second + "&producer="+producerName+"&origintime=" + originTime + "&geometryId=" + std::to_string(geometryId)+ "&levelId=" + std::to_string(levelId)+ "&level=" + std::to_string(level)   + "&forecastType=" + std::to_string(forecastType) + "&forecastNumber=" + std::to_string(forecastNumber)+"&type=png";
+          u = dUrl->second + "&producer="+producerNameStr+"&origintime=" + originTime + "&geometryId=" + std::to_string(geometryId)+ "&levelId=" + std::to_string(levelId)+ "&level=" + std::to_string(level)   + "&forecastType=" + std::to_string(forecastType) + "&forecastNumber=" + std::to_string(forecastNumber)+"&type=png";
           u = stringReplaceAll(u,"$(PARAMETER)",parameterIdStr);
           daliUrl = u;
         }
       }
+      */
 
       ostr1 << " >\n";
 
@@ -4174,13 +4508,15 @@ int Plugin::page_main(Spine::Reactor &theReactor,
       }
 
 
-      std::string pTime = startTime;
+      std::string pTime = timeStr;
 
       uint daySwitch = 0;
       uint cc = 0;
       for (uint a=0; a<len; a++)
       {
         T::ContentInfo *g = contentInfoList.getContentInfoByIndex(a);
+
+        //printf("**** TIME %s (%s)  geom=%u %u  ft=%u %u   fn=%d %d \n",g->getForecastTime(),prevTime.c_str(),g->mGeometryId,geometryId,forecastType,g->mForecastType,forecastNumber,g->mForecastNumber);
 
         if (g->mGeometryId == geometryId)
         {
@@ -4190,19 +4526,23 @@ int Plugin::page_main(Spine::Reactor &theReactor,
             {
               if (forecastNumber == g->mForecastNumber)
               {
-                std::string url = "&start=" + std::string(g->getForecastTime()) + "&fileId=" + std::to_string(g->mFileId) + "&messageIndex=" + std::to_string(g->mMessageIndex) + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&daliId=" + std::to_string(daliId);
+                std::ostringstream out;
+
+                out << "&" << ATTR_TIME << "=" << g->getForecastTime() << "&" << ATTR_FILE_ID << "=" << g->mFileId << "&" << ATTR_MESSAGE_INDEX << "=" << g->mMessageIndex << "&" << ATTR_FORECAST_TYPE << "=" << forecastTypeStr << "&" << ATTR_FORECAST_NUMBER << "=" << forecastNumberStr;
+                std::string url = out.str();
                 std::string uu = url;
 
-                if (presentation == "Dali")
-                  uu = "&time=" + std::string(g->getForecastTime());
+                //if (presentation == "Dali")
+                //  uu = "&start=" + std::string(g->getForecastTime());
 
                 if (currentCont != nullptr  &&  nextCont == nullptr)
                   nextCont = g;
 
-                if (startTime.empty())
+                if (timeStr.empty())
                 {
-                  startTime = g->getForecastTime();
-                  prevTime = startTime;
+                  timeStr = g->getForecastTime();
+                  prevTime = timeStr;
+                  //printf("EMPTY => TIME %s\n",timeStr.c_str());
                 }
 
                 std::string bg = "#E0E0E0";
@@ -4213,13 +4553,13 @@ int Plugin::page_main(Spine::Reactor &theReactor,
                 if ((daySwitch % 2) == 1)
                   bg = "#D0D0D0";
 
-                if (startTime == g->getForecastTime())
+                if (timeStr == g->getForecastTime())
                   bg = "#0000FF";
 
-                if (tCount < 124  ||  (g->getForecastTime() >= startTime  &&  cc < 124))
+                if (tCount < 124  ||  (g->getForecastTime() >= timeStr  &&  cc < 124))
                 {
                   if (cc == 0)
-                    ostr3 << "<TD style=\"text-align:center; font-size:12;width:120;background:#F0F0F0;\" id=\"ftime\">" + startTime + "</TD><TD style=\"width:1;\"> </TD>\n";
+                    ostr3 << "<TD style=\"text-align:center; font-size:12;width:120;background:#F0F0F0;\" id=\"ftime\">" + timeStr + "</TD><TD style=\"width:1;\"> </TD>\n";
 
                   if (u > " ")
                     ostr3 << "<TD style=\"width:5; background:"+bg+";\" onmouseout=\"this.style='width:5;background:"+bg+";'\" onmouseover=\"this.style='width:5;height:30;background:#FF0000;'; setText('ftime','" + g->getForecastTime() + "');setImage(document.getElementById('myimage'),'" + u + uu + "');\" > </TD>\n";
@@ -4230,13 +4570,20 @@ int Plugin::page_main(Spine::Reactor &theReactor,
                   cc++;
                 }
 
-                if (startTime == g->getForecastTime())
+                if (timeStr == g->getForecastTime())
                 {
-                  currentCont = g;
-                  fmiKey = getFmiKey(producerName,*g);
+                  //printf("## SELECTED TIME  [%s][%s]\n",timeStr.c_str(),g->getForecastTime());
                   ostr1 << "<OPTION selected value=\"" <<  url << "\">" <<  g->getForecastTime() << "</OPTION>\n";
+                  currentCont = g;
+                  fmiKeyStr = getFmiKey(producerNameStr,*g);
                   fileIdStr = std::to_string(g->mFileId);
                   messageIndexStr = std::to_string(g->mMessageIndex);
+
+                  session.setAttribute(ATTR_FMI_KEY,fmiKeyStr);
+                  session.setAttribute(ATTR_FILE_ID,g->mFileId);
+                  session.setAttribute(ATTR_MESSAGE_INDEX,g->mMessageIndex);
+                  session.setAttribute(ATTR_TIME,g->getForecastTime());
+
                 }
                 else
                 {
@@ -4257,12 +4604,12 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     ostr1 << "</TD>\n";
 
     if (prevCont != nullptr)
-      ostr1 << "<TD width=\"20\" > <button type=\"button\" onClick=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&missing=" + missingStr << "&producerId=" << producerIdStr << "&generationId=" << generationIdStr << "&geometryId=" << geometryIdStr << "&projectionId=" << projectionIdStr << "&parameterId=" << parameterIdStr << "&levelId=" << parameterLevelIdStr << "&level=" << parameterLevelStr << "&start=" << prevCont->getForecastTime() << "&fileId=" << prevCont->mFileId << "&messageIndex=" << prevCont->mMessageIndex << "&forecastType=" << forecastTypeStr << "&forecastNumber=" << forecastNumberStr << "&hue=" << hueStr << "&saturation=" << saturationStr << "&blur=" << blurStr << "&coordinateLines=" << coordinateLinesStr << "&isolines=" << isolinesStr  << "&isolineValues=" << isolineValuesStr << "&landBorder=" << landBorderStr << "&landMask=" << landMaskStr << "&seaMask=" << seaMaskStr << "&colorMap=" << colorMap << "&locations=" << locations << "&symbolMap=" << symbolMap << "&daliId=" << daliId << "');\">&lt;</button></TD>\n";
+      ostr1 << "<TD width=\"20\" > <button type=\"button\" onClick=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_TIME << "=" << prevCont->getForecastTime() << "&" << ATTR_FILE_ID << "=" << prevCont->mFileId << "&" << ATTR_MESSAGE_INDEX << "=" << prevCont->mMessageIndex << "&" << ATTR_FORECAST_TYPE << "=" << forecastTypeStr << "&" << ATTR_FORECAST_NUMBER << "=" << forecastNumberStr << "');\">&lt;</button></TD>\n";
     else
       ostr1 << "<TD width=\"20\"><button type=\"button\">&lt;</button></TD></TD>\n";
 
     if (nextCont != nullptr)
-      ostr1 << "<TD width=\"20\"><button type=\"button\" onClick=\"getPage(this,parent,'/grid-gui?page=main&presentation=" + presentation << "&missing=" + missingStr + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + nextCont->getForecastTime() + "&fileId=" + std::to_string(nextCont->mFileId) + "&messageIndex=" + std::to_string(nextCont->mMessageIndex) + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&daliId=" + std::to_string(daliId) + "');\">&gt;</button></TD>\n";
+      ostr1 << "<TD width=\"20\"><button type=\"button\" onClick=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_TIME << "=" << nextCont->getForecastTime() << "&" << ATTR_FILE_ID << "=" << nextCont->mFileId << "&" << ATTR_MESSAGE_INDEX << "=" << nextCont->mMessageIndex << "&" << ATTR_FORECAST_TYPE << "=" << forecastTypeStr << "&" << ATTR_FORECAST_NUMBER << "=" << forecastNumberStr + "');\">&gt;</button></TD>\n";
     else
       ostr1 << "<TD width=\"20\"><button type=\"button\">&gt;</button></TD></TD>\n";
 
@@ -4272,33 +4619,48 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
     // ### Presentation:
 
-    const char *modes[] = {"Image","Map","Symbols","Isolines","Locations","Info","Table(sample)","Coordinates(sample)","Message",nullptr};
+    const char *modes[] = {"Image","Map","Isolines","Streams","StreamsAnimation","Symbols","Locations","Info","Table(sample)","Coordinates(sample)","Message",nullptr};
 
     ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Presentation:</TD></TR>\n";
     ostr1 << "<TR height=\"30\"><TD>\n";
-    ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&missing=" + missingStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=None&locations=None&symbolMap=None" + "&presentation=' + this.options[this.selectedIndex].value)\">\n";
+    ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_TIME << "=" << timeStr << "&" << ATTR_FILE_ID << "=" << fileIdStr << "&" << ATTR_MESSAGE_INDEX << "=" << messageIndexStr << "&" << ATTR_FORECAST_TYPE << "=" << forecastTypeStr << "&" << ATTR_FORECAST_NUMBER << "=" << forecastNumberStr << "&" << ATTR_PRESENTATION << "=' + this.options[this.selectedIndex].value)\">\n";
 
     uint a = 0;
     while (modes[a] != nullptr)
     {
       if (presentation.empty())
+      {
         presentation = modes[a];
+        //printf("EMPTY => PRESENTATION %s\n",presentation.c_str());
+      }
 
       if (presentation == modes[a])
+      {
         ostr1 << "<OPTION selected value=\"" <<  modes[a] << "\">" <<  modes[a] << "</OPTION>\n";
+        session.setAttribute(ATTR_PRESENTATION,presentation);
+      }
       else
+      {
         ostr1 << "<OPTION value=\"" <<  modes[a] << "\">" <<  modes[a] << "</OPTION>\n";
+      }
 
       a++;
     }
 
+    /*
     if (daliIds.size() > 0)
     {
       if (presentation == "Dali")
+      {
         ostr1 << "<OPTION selected value=\"Dali\">Dali</OPTION>\n";
+        session.setAttribute(ATTR_PRESENTATION,presentation);
+      }
       else
+      {
         ostr1 << "<OPTION value=\"Dali\">Dali</OPTION>\n";
+      }
     }
+    */
 
     ostr1 << "</SELECT>\n";
     ostr1 << "</TD></TR>\n";
@@ -4318,14 +4680,16 @@ int Plugin::page_main(Spine::Reactor &theReactor,
       ostr1 << "<TR height=\"30\"><TD>\n";
 
       if (projectionId == 0)
+      {
         projectionId = geometryId;
+      }
 
       if (projections.find(projectionId) == geometries.end())
         projectionId = geometryId;
 
       if (projections.size() > 0)
       {
-        ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&presentation=" << presentation << "&missing=" + missingStr << "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&symbolMap=" + symbolMap + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&locations=" + locations + "&geometryId=" + geometryIdStr + "&projectionId=' + this.options[this.selectedIndex].value)\">\n";
+        ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_PROJECTION_ID << "=' + this.options[this.selectedIndex].value)\">\n";
 
         for (auto it=projections.begin(); it!=projections.end(); ++it)
         {
@@ -4346,12 +4710,18 @@ int Plugin::page_main(Spine::Reactor &theReactor,
           {
             projectionId = *it;
             projectionIdStr = std::to_string(projectionId);
+            //printf("EMPTY => PROJECTION %s\n",projectionIdStr.c_str());
           }
 
           if (projectionId == *it)
+          {
             ostr1 << "<OPTION selected value=\"" <<  *it << "\">" <<  st << "</OPTION>\n";
+            session.setAttribute(ATTR_PROJECTION_ID,projectionId);
+          }
           else
+          {
             ostr1 << "<OPTION value=\"" <<  *it << "\">" <<  st << "</OPTION>\n";
+          }
         }
         ostr1 << "</SELECT>\n";
       }
@@ -4374,21 +4744,29 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
       ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Color map:</TD></TR>\n";
       ostr1 << "<TR height=\"30\"><TD>\n";
-      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&missing=" + missingStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&colorMap=' + this.options[this.selectedIndex].value)\"";
-      ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&missing=" + missingStr << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&colorMap=')\"";
-      ostr1 << " >\n";
+      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_COLOR_MAP << "=' + this.options[this.selectedIndex].value)\">\n";
 
       if (colorMap.empty() ||  colorMap == "None")
+      {
         ostr1 << "<OPTION selected value=\"None\">None</OPTION>\n";
+        session.setAttribute(ATTR_COLOR_MAP,"None");
+      }
       else
+      {
         ostr1 << "<OPTION value=\"None\">None</OPTION>\n";
+      }
 
       for (auto it = names.begin(); it != names.end(); ++it)
       {
         if (colorMap == *it)
+        {
           ostr1 << "<OPTION selected value=\"" << *it << "\">" <<  *it << "</OPTION>\n";
+          session.setAttribute(ATTR_COLOR_MAP,colorMap);
+        }
         else
+        {
           ostr1 << "<OPTION value=\"" <<  *it << "\">" <<  *it << "</OPTION>\n";
+        }
       }
       ostr1 << "</SELECT>\n";
       ostr1 << "</TD></TR>\n";
@@ -4409,34 +4787,39 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
       ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Symbol group:</TD></TR>\n";
       ostr1 << "<TR height=\"30\"><TD>\n";
-      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&missing=" + missingStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&locations=" + locations + "&symbolMap=' + this.options[this.selectedIndex].value)\"";
-      ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&missing=" + missingStr << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&locations=" + locations + "&symbolMap=')\"";
-      ostr1 << " >\n";
+      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_SYMBOL_MAP << "=' + this.options[this.selectedIndex].value)\">\n";
 
       if (symbolMap.empty() || symbolMap == "None")
+      {
         ostr1 << "<OPTION selected value=\"None\">None</OPTION>\n";
+        session.setAttribute(ATTR_SYMBOL_MAP,"None");
+      }
       else
         ostr1 << "<OPTION value=\"None\">None</OPTION>\n";
 
       for (auto it = groups.begin(); it != groups.end(); ++it)
       {
         if (symbolMap == *it)
+        {
           ostr1 << "<OPTION selected value=\"" << *it << "\">" <<  *it << "</OPTION>\n";
+          session.setAttribute(ATTR_SYMBOL_MAP,symbolMap);
+        }
         else
+        {
           ostr1 << "<OPTION value=\"" <<  *it << "\">" <<  *it << "</OPTION>\n";
+        }
       }
       ostr1 << "</SELECT>\n";
       ostr1 << "</TD></TR>\n";
 
     }
 
+    /*
     if (presentation == "Dali")
     {
       ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Products:</TD></TR>\n";
       ostr1 << "<TR height=\"30\"><TD>\n";
-      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&missing=" + missingStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&symbolMap=" + symbolMap + "&daliId=' + this.options[this.selectedIndex].value)\"";
-      ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&missing=" + missingStr << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&daliId=')\"";
-      ostr1 << " >\n";
+      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_DALI_ID << "=' + this.options[this.selectedIndex].value)\">\n";
 
       uint dlen = daliIds.size();
       for (uint t=0; t<dlen; t++)
@@ -4447,13 +4830,17 @@ int Plugin::page_main(Spine::Reactor &theReactor,
         if (daliIds[t] == daliId)
         {
           ostr1 << "<OPTION selected value=\"" << daliIds[t] << "\">" <<  daliNames[t] << "</OPTION>\n";
+          session.setAttribute(ATTR_DALI_ID,daliId);
         }
         else
+        {
           ostr1 << "<OPTION value=\"" <<  daliIds[t] << "\">" <<  daliNames[t] << "</OPTION>\n";
+        }
       }
       ostr1 << "</SELECT>\n";
       ostr1 << "</TD></TR>\n";
     }
+    */
 
 
     if (presentation == "Symbols" ||  presentation == "Locations")
@@ -4471,16 +4858,19 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
       ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Locations:</TD></TR>\n";
       ostr1 << "<TR height=\"30\"><TD>\n";
-      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation << "&missing=" + missingStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&symbolMap=" + symbolMap + "&locations=' + this.options[this.selectedIndex].value)\"";
-      ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&missing=" + missingStr << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&locations=')\"";
-      ostr1 << " >\n";
+      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_LOCATIONS << "=' + this.options[this.selectedIndex].value)\">\n";
 
       if (presentation == "Symbols")
       {
         if (locations.empty() ||  locations == "None")
+        {
           ostr1 << "<OPTION selected value=\"None\">None</OPTION>\n";
+          session.setAttribute(ATTR_LOCATIONS,"None");
+        }
         else
+        {
           ostr1 << "<OPTION value=\"None\">None</OPTION>\n";
+        }
       }
 
       for (auto it = names.begin(); it != names.end(); ++it)
@@ -4489,71 +4879,174 @@ int Plugin::page_main(Spine::Reactor &theReactor,
           locations = *it;
 
         if (locations == *it)
+        {
           ostr1 << "<OPTION selected value=\"" << *it << "\">" <<  *it << "</OPTION>\n";
+          session.setAttribute(ATTR_LOCATIONS,locations);
+        }
         else
+        {
           ostr1 << "<OPTION value=\"" <<  *it << "\">" <<  *it << "</OPTION>\n";
+        }
       }
       ostr1 << "</SELECT>\n";
       ostr1 << "</TD></TR>\n";
     }
 
 
-    if (presentation == "Image" || presentation == "Map" || presentation == "Symbols" || presentation == "Isolines")
+    if (presentation == "Image" || presentation == "Map" || presentation == "Symbols" || presentation == "Isolines" || presentation == "Streams" || presentation == "StreamsAnimation")
     {
-      if ((colorMap.empty() || colorMap == "None") &&  presentation != "Symbols"  &&  presentation != "Isolines")
+      if ((colorMap.empty() || colorMap == "None") &&  presentation != "Symbols"  &&  presentation != "Isolines"  &&   presentation != "Streams" && presentation != "StreamsAnimation")
       {
         // ### Hue, saturation, blur
 
         ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Hue, saturation and blur</TD></TR>\n";
         ostr1 << "<TR height=\"30\"><TD>\n";
-        ostr1 << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&missing=" + missingStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&hue=' + this.options[this.selectedIndex].value)\"";
-        ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&missing=" + missingStr << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&hue=')\"";
-        ostr1 << " >\n";
+        ostr1 << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_HUE << "=' + this.options[this.selectedIndex].value)\">\n";
 
 
         uint hue = toUInt32(hueStr);
         for (uint a=0; a<256; a++)
         {
           if (a == hue)
+          {
             ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+            session.setAttribute(ATTR_HUE,a);
+          }
           else
+          {
             ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+          }
         }
         ostr1 << "</SELECT>\n";
 
 
         uint saturation = toUInt32(saturationStr);
-        ostr1 << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&generationId=" + generationIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&missing=" + missingStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&landBorder=" + landBorderStr + "&seaMask=" + seaMaskStr + "&landMask=" + landMaskStr + "&saturation=' + this.options[this.selectedIndex].value)\"";
-        ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&missing=" + missingStr << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&saturation=')\"";
-        ostr1 << " >\n";
+        ostr1 << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_SATURATION << "=' + this.options[this.selectedIndex].value)\">\n";
 
 
         for (uint a=0; a<256; a++)
         {
           if (a == saturation)
+          {
             ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+            session.setAttribute(ATTR_SATURATION,a);
+          }
           else
+          {
             ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+          }
         }
         ostr1 << "</SELECT>\n";
 
 
-        ostr1 << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&missing=" + missingStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&blur=' + this.options[this.selectedIndex].value)\"";
-        ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&missing=" + missingStr << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&blur=')\"";
-        ostr1 << " >\n";
-
+        ostr1 << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_BLUR << "=' + this.options[this.selectedIndex].value)\">\n";
 
         uint blur = toUInt32(blurStr);
         for (uint a=1; a<=200; a++)
         {
           if (a == blur)
+          {
             ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+            session.setAttribute(ATTR_BLUR,a);
+          }
           else
+          {
             ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+          }
         }
         ostr1 << "</SELECT>\n";
         ostr1 << "</TD></TR>\n";
       }
+
+
+
+
+      if (presentation == "Streams" || presentation == "StreamsAnimation")
+      {
+        // ### step, minLength, maxLength, background
+
+        ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Step, min and max length, background</TD></TR>\n";
+        ostr1 << "<TR height=\"30\"><TD>\n";
+        ostr1 << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_STEP << "=' + this.options[this.selectedIndex].value)\">\n";
+
+        uint step = toUInt32(stepStr);
+        for (uint a=2; a<100; a = a + 2)
+        {
+          if (a == step)
+          {
+            ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+            session.setAttribute(ATTR_STEP,a);
+          }
+          else
+          {
+            ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+          }
+        }
+        ostr1 << "</SELECT>\n";
+
+
+        uint minLength = toUInt32(minLengthStr);
+        ostr1 << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_MIN_LENGTH << "=' + this.options[this.selectedIndex].value)\">\n";
+
+        for (uint a=2; a<200; a=a+2)
+        {
+          if (a == minLength)
+          {
+            ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+            session.setAttribute(ATTR_MIN_LENGTH,a);
+          }
+          else
+          {
+            ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+          }
+        }
+        ostr1 << "</SELECT>\n";
+
+
+        ostr1 << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_MAX_LENGTH << "=' + this.options[this.selectedIndex].value)\">\n";
+
+        uint maxLength = toUInt32(maxLengthStr);
+        for (uint a=8; a<=512; a=a+4)
+        {
+          if (a == maxLength)
+          {
+            ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+            session.setAttribute(ATTR_MAX_LENGTH,a);
+          }
+          else
+          {
+            ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+          }
+        }
+        ostr1 << "</SELECT>\n";
+
+
+        ostr1 << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_BACKGROUND << "=' + this.options[this.selectedIndex].value)\">\n";
+
+        if (backgroundStr == "dark")
+        {
+          ostr1 << "<OPTION selected value=\"dark\">dark</OPTION>\n";
+          session.setAttribute(ATTR_BACKGROUND,"dark");
+        }
+        else
+        {
+          ostr1 << "<OPTION value=\"dark\">dark</OPTION>\n";
+        }
+
+        if (backgroundStr == "light")
+        {
+          ostr1 << "<OPTION selected value=\"light\">light</OPTION>\n";
+          session.setAttribute(ATTR_BACKGROUND,"light");
+        }
+        else
+        {
+          ostr1 << "<OPTION value=\"light\">light</OPTION>\n";
+        }
+
+        ostr1 << "</SELECT>\n";
+        ostr1 << "</TD></TR>\n";
+      }
+
 
 
       if (presentation == "Isolines")
@@ -4562,23 +5055,29 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
         ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Isoline values:</TD></TR>\n";
         ostr1 << "<TR height=\"30\"><TD>\n";
-        ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&missing=" + missingStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&landBorder=" + landBorderStr +"&isolineValues=' + this.options[this.selectedIndex].value)\"";
-
-        ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&missing=" + missingStr << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&landBorder=" + landBorderStr + "&isolineValues=')\"";
-
-        ostr1 << " >\n";
+        ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_ISOLINE_VALUES << "=' + this.options[this.selectedIndex].value)\">\n";
 
         if (isolinesStr == "Generated")
+        {
           ostr1 << "<OPTION selected value=\"Generated\">Generated</OPTION>\n";
+          session.setAttribute(ATTR_ISOLINES,"Generated");
+        }
         else
+        {
           ostr1 << "<OPTION value=\"Simple\">Generated</OPTION>\n";
+        }
 
         for (auto it = itsIsolines.begin(); it != itsIsolines.end(); ++it)
         {
           if (isolineValuesStr == it->first)
+          {
             ostr1 << "<OPTION selected value=\"" << it->first << "\">" <<  it->first << "</OPTION>\n";
+            session.setAttribute(ATTR_ISOLINE_VALUES,isolineValuesStr);
+          }
           else
+          {
             ostr1 << "<OPTION value=\"" <<  it->first << "\">" <<  it->first << "</OPTION>\n";
+          }
 
           a++;
         }
@@ -4590,19 +5089,19 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
         ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Isoline color:</TD></TR>\n";
         ostr1 << "<TR height=\"30\"><TD>\n";
-        ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&missing=" + missingStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&isolines=' + this.options[this.selectedIndex].value)\"";
-
-        ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=isolines&fileId=" + fileIdStr + "&missing=" + missingStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&isolines=')\"";
-
-        ostr1 << " >\n";
+        ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_ISOLINES << "=' + this.options[this.selectedIndex].value)\"";
 
         for (auto it = itsColors.begin(); it != itsColors.end(); ++it)
         {
           if (isolinesStr == it->first)
+          {
             ostr1 << "<OPTION selected value=\"" << it->first << "\">" <<  it->first << "</OPTION>\n";
+            session.setAttribute(ATTR_ISOLINES,isolinesStr);
+          }
           else
+          {
             ostr1 << "<OPTION value=\"" <<  it->first << "\">" <<  it->first << "</OPTION>\n";
-
+          }
           a++;
         }
         ostr1 << "</SELECT>\n";
@@ -4614,25 +5113,19 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
       ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Coordinate lines:</TD></TR>\n";
       ostr1 << "<TR height=\"30\"><TD>\n";
-      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&missing=" + missingStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&coordinateLines=' + this.options[this.selectedIndex].value)\"";
-
-      if (presentation == "Image")
-        ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=image&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&missing=" + missingStr + "&coordinateLines=')\"";
-
-      if (presentation == "Map")
-        ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=map&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&missing=" + missingStr + "&coordinateLines=')\"";
-
-      if (presentation == "Isolines")
-        ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=isolines&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&landBorder=" + landBorderStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&missing=" + missingStr + "&coordinateLines=')\"";
-
-      ostr1 << " >\n";
+      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_COORDINATE_LINES << "=' + this.options[this.selectedIndex].value)\">\n";
 
       for (auto it = itsColors.begin(); it != itsColors.end(); ++it)
       {
         if (coordinateLinesStr == it->first)
+        {
           ostr1 << "<OPTION selected value=\"" << it->first << "\">" <<  it->first << "</OPTION>\n";
+          session.setAttribute(ATTR_COORDINATE_LINES,coordinateLinesStr);
+        }
         else
+        {
           ostr1 << "<OPTION value=\"" <<  it->first << "\">" <<  it->first << "</OPTION>\n";
+        }
 
         a++;
       }
@@ -4644,20 +5137,19 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
       ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Land border:</TD></TR>\n";
       ostr1 << "<TR height=\"30\"><TD>\n";
-      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&missing=" + missingStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&landBorder=' + this.options[this.selectedIndex].value)\"";
-
-      if (presentation == "Image" || presentation == "Map" || presentation == "Symbols")
-        ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&missing=" + missingStr << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&landBorder=')\"";
-
-      ostr1 << " >\n";
+      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_LAND_BORDER << "=' + this.options[this.selectedIndex].value)\">\n";
 
       for (auto it = itsColors.begin(); it != itsColors.end(); ++it)
       {
         if (landBorderStr == it->first)
+        {
           ostr1 << "<OPTION selected value=\"" << it->first << "\">" <<  it->first << "</OPTION>\n";
+          session.setAttribute(ATTR_LAND_BORDER,landBorderStr);
+        }
         else
+        {
           ostr1 << "<OPTION value=\"" <<  it->first << "\">" <<  it->first << "</OPTION>\n";
-
+        }
         a++;
       }
       ostr1 << "</SELECT>\n";
@@ -4668,40 +5160,40 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
       ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Land and sea colors:</TD></TR>\n";
       ostr1 << "<TR height=\"30\"><TD>\n";
-      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&missing=" + missingStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&landBorder=" + landBorderStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&landMask=' + this.options[this.selectedIndex].value)\"";
-
-      if (presentation == "Image" || presentation == "Map" || presentation == "Symbols" || presentation == "Isolines")
-        ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&missing=" + missingStr << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&landBorder=" + landBorderStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&landMask=')\"";
-
-      ostr1 << " >\n";
+      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_LAND_MASK << "=' + this.options[this.selectedIndex].value)\">\n";
 
       a = 0;
       for (auto it = itsColors.begin(); it != itsColors.end(); ++it)
       {
         if (landMaskStr == it->first)
+        {
           ostr1 << "<OPTION selected value=\"" << it->first << "\">" <<  it->first << "</OPTION>\n";
+          session.setAttribute(ATTR_LAND_MASK,landMaskStr);
+        }
         else
+        {
           ostr1 << "<OPTION value=\"" <<  it->first << "\">" <<  it->first << "</OPTION>\n";
+        }
 
         a++;
       }
       ostr1 << "</SELECT>\n";
 
 
-      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&missing=" + missingStr + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&seaMask=' + this.options[this.selectedIndex].value)\"";
-
-      if (presentation == "Image" || presentation == "Map" || presentation == "Symbols" ||  presentation == "Isolines")
-        ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&missing=" + missingStr << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&landBorder=" + landBorderStr + "&landMask=" + landMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&seaMask=')\"";
-
-      ostr1 << " >\n";
+      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_SEA_MASK << "=' + this.options[this.selectedIndex].value)\">\n";
 
       a = 0;
       for (auto it = itsColors.begin(); it != itsColors.end(); ++it)
       {
         if (seaMaskStr == it->first)
+        {
           ostr1 << "<OPTION selected value=\"" << it->first << "\">" <<  it->first << "</OPTION>\n";
+          session.setAttribute(ATTR_SEA_MASK,seaMaskStr);
+        }
         else
+        {
           ostr1 << "<OPTION value=\"" <<  it->first << "\">" <<  it->first << "</OPTION>\n";
+        }
 
         a++;
       }
@@ -4714,12 +5206,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
       ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Missing Value:</TD></TR>\n";
       ostr1 << "<TR height=\"30\"><TD>\n";
-      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?page=main&producerId=" + producerIdStr + "&generationId=" + generationIdStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&parameterId=" + parameterIdStr + "&levelId=" + parameterLevelIdStr + "&level=" + parameterLevelStr + "&start=" + startTime + "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&presentation=" + presentation + "&forecastType=" + forecastTypeStr + "&forecastNumber=" + forecastNumberStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&missing=' + this.options[this.selectedIndex].value)\"";
-
-      if (presentation == "Image" || presentation == "Map" || presentation == "Symbols")
-        ostr1 << " onkeydown=\"keyDown(event,this,document.getElementById('myimage'),'/grid-gui?page=" << presentation << "&fileId=" + fileIdStr + "&messageIndex=" + messageIndexStr + "&forecastType=" + forecastTypeStr + "&geometryId=" + geometryIdStr + "&projectionId=" + projectionIdStr + "&hue=" + hueStr + "&saturation=" + saturationStr + "&blur=" + blurStr + "&coordinateLines=" + coordinateLinesStr + "&isolines=" + isolinesStr  + "&isolineValues=" + isolineValuesStr + "&landMask=" + landMaskStr + "&seaMask=" + seaMaskStr + "&colorMap=" + colorMap + "&locations=" + locations + "&symbolMap=" + symbolMap + "&missing=')\"";
-
-      ostr1 << " >\n";
+      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_MISSING << "=' + this.options[this.selectedIndex].value)\">\n";
 
       const char *missingValues[] = {"Default","Zero",nullptr};
 
@@ -4727,10 +5214,14 @@ int Plugin::page_main(Spine::Reactor &theReactor,
       while (missingValues[a] != nullptr)
       {
         if (missingStr == missingValues[a])
+        {
           ostr1 << "<OPTION selected value=\"" << missingValues[a] << "\">" <<  missingValues[a] << "</OPTION>\n";
+          session.setAttribute(ATTR_MISSING,missingStr);
+        }
         else
+        {
           ostr1 << "<OPTION value=\"" <<  missingValues[a] << "\">" <<  missingValues[a] << "</OPTION>\n";
-
+        }
         a++;
       }
       ostr1 << "</SELECT>\n";
@@ -4741,7 +5232,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
       // ## FMI key:
 
       ostr1 << "<TR height=\"15\" style=\"font-size:12; width:250px;\"><TD>FMI Key:</TD></TR>\n";
-      ostr1 << "<TR height=\"30\"><TD><INPUT type=\"text\" value=\"" << fmiKey << "\"></TD></TR>\n";
+      ostr1 << "<TR height=\"30\"><TD><INPUT type=\"text\" value=\"" << fmiKeyStr << "\"></TD></TR>\n";
 
       // ### Units:
 
@@ -4759,73 +5250,80 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     ostr1 << "<TR height=\"50%\"><TD></TD></TR>\n";
 
     // ## Download
-    ostr1 << "<TR height=\"30\" style=\"font-size:16; font-weight:bold; width:250px; color:#000000; background:#D0D0D0; vertical-align:middle; text-align:center; \"><TD><a href=\"grid-gui?page=download&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "\">Download</a></TD></TR>\n";
+    ostr1 << "<TR height=\"30\" style=\"font-size:16; font-weight:bold; width:250px; color:#000000; background:#D0D0D0; vertical-align:middle; text-align:center; \"><TD><a href=\"grid-gui?" << ATTR_PAGE << "=download&" << ATTR_FILE_ID << "=" << fileIdStr << "&" << ATTR_MESSAGE_INDEX << "=" << messageIndexStr << "\">Download</a></TD></TR>\n";
     ostr1 << "</TABLE>\n";
 
     ostr2 << "<TABLE width=\"100%\" height=\"100%\">\n";
 
-    if (itsAnimationEnabled  &&  (presentation == "Image" || presentation == "Map" || presentation == "Symbols" ||  presentation == "Isolines"  ||  presentation == "Dali"))
+    if (itsAnimationEnabled  &&  (presentation == "Image" || presentation == "Map" || presentation == "Symbols" ||  presentation == "Isolines"  || /* presentation == "Dali" ||*/ presentation == "Streams"))
       ostr2 << "<TR><TD style=\"height:35; width:100%; vertical-align:middle; text-align:left; font-size:12;\">" << ostr3.str() << "</TD></TR>\n";
 
     if (presentation == "Image")
     {
-      ostr2 << "<TR><TD><IMG id=\"myimage\" style=\"background:#000000; max-width:1800; height:100%; max-height:1000;\" src=\"/grid-gui?page=" << presentation << "&missing=" + missingStr << "&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "&geometryId=" << geometryIdStr << "&projectionId=" << projectionIdStr << "&hue=" << hueStr << "&saturation=" << saturationStr << "&blur=" << blurStr <<  "&coordinateLines=" << coordinateLinesStr << "&isolines=" << isolinesStr << "&isolineValues=" << isolineValuesStr << "&landBorder=" << landBorderStr << "&landMask=" << landMaskStr <<  "&seaMask=" << seaMaskStr << "&colorMap=" << colorMap <<  "&locations= \" onclick=\"getImageCoords(event,this," << fileIdStr << "," << messageIndexStr << ",'" << presentation << "');\"/></TD></TR>";
+      ostr2 << "<TR><TD><IMG id=\"myimage\" style=\"background:#000000; max-width:1800; height:100%; max-height:1000;\" src=\"/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_PAGE << "=" << presentation << "\" onclick=\"getImageCoords(event,this," << fileIdStr << "," << messageIndexStr << ",'" << presentation << "');\"/></TD></TR>";
     }
     else
     if (presentation == "Symbols")
     {
-      ostr2 << "<TR><TD><IMG id=\"myimage\" style=\"background:#000000; max-width:1800; height:100%; max-height:100%;\" src=\"/grid-gui?page=" << presentation << "&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "&geometryId=" << geometryIdStr << "&projectionId=" << projectionIdStr << "&hue=" << hueStr << "&saturation=" << saturationStr << "&blur=" << blurStr <<  "&coordinateLines=" << coordinateLinesStr << "&isolines=" << isolinesStr << "&isolineValues=" << isolineValuesStr << "&landBorder=" << landBorderStr << "&landMask=" << landMaskStr <<  "&seaMask=" << seaMaskStr << "&colorMap=" << colorMap << "&locations=" << locations << "&symbolMap=" << symbolMap << "\" onclick=\"getImageCoords(event,this," << fileIdStr << "," << messageIndexStr << ",'" << presentation << "');\"/></TD></TR>";
+      ostr2 << "<TR><TD><IMG id=\"myimage\" style=\"background:#000000; max-width:1800; height:100%; max-height:100%;\" src=\"/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_PAGE << "=" << presentation << "\" onclick=\"getImageCoords(event,this," << fileIdStr << "," << messageIndexStr << ",'" << presentation << "');\"/></TD></TR>";
     }
     else
     if (presentation == "Isolines")
     {
-      ostr2 << "<TR><TD><IMG id=\"myimage\" style=\"background:#000000; max-width:1800; height:100%; max-height:1000;\" src=\"/grid-gui?page=" << presentation << "&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "&geometryId=" << geometryIdStr << "&projectionId=" << projectionIdStr << "&hue=" << hueStr << "&saturation=" << saturationStr << "&blur=" << blurStr <<  "&coordinateLines=" << coordinateLinesStr << "&isolines=" << isolinesStr << "&isolineValues=" << isolineValuesStr << "&landBorder=" << landBorderStr << "&landMask=" << landMaskStr <<  "&seaMask=" << seaMaskStr << "&colorMap=" << colorMap <<  "&locations= \" onclick=\"getImageCoords(event,this," << fileIdStr << "," << messageIndexStr << ",'" << presentation << "');\"/></TD></TR>";
+      ostr2 << "<TR><TD><IMG id=\"myimage\" style=\"background:#000000; max-width:1800; height:100%; max-height:1000;\" src=\"/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_PAGE << "=" << presentation << "\" onclick=\"getImageCoords(event,this," << fileIdStr << "," << messageIndexStr << ",'" << presentation << "');\"/></TD></TR>";
     }
     else
     if (presentation == "Map")
     {
-      ostr2 << "<TR><TD><IMG id=\"myimage\" style=\"background:#000000; max-width:100%; height:100%;\" src=\"/grid-gui?page=map&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "&missing=" + missingStr << "&hue=" << hueStr << "&saturation=" << saturationStr << "&blur=" << blurStr << "&coordinateLines=" << coordinateLinesStr << "&isolines=" << isolinesStr << "&isolineValues=" << isolineValuesStr << "&landBorder=" << landBorderStr << "&landMask=" << landMaskStr << "&seaMask=" << seaMaskStr << "&colorMap=" << colorMap <<  "\"/></TD></TR>";
+      ostr2 << "<TR><TD><IMG id=\"myimage\" style=\"background:#000000; max-width:100%; height:100%;\" src=\"/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_PAGE << "=" << presentation << "\"/></TD></TR>";
     }
     else
     if (presentation == "Table(sample)" /* || presentation == "table(full)"*/)
     {
-      ostr2 << "<TR><TD><IFRAME width=\"100%\" height=\"100%\" src=\"grid-gui?page=table&presentation=" + presentation + "&fileId=" << fileIdStr << "&geometryId=" << geometryIdStr << "&messageIndex=" << messageIndexStr << "\">";
+      ostr2 << "<TR><TD><IFRAME width=\"100%\" height=\"100%\" src=\"grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_PAGE << "=table\">";
       ostr2 << "<p>Your browser does not support iframes.</p>\n";
       ostr2 << "</IFRAME></TD></TR>";
     }
     else
     if (presentation == "Coordinates(sample)" /* || presentation == "coordinates(full)"*/)
     {
-      ostr2 << "<TR><TD><IFRAME width=\"100%\" height=\"100%\" src=\"grid-gui?page=coordinates&presentation=" + presentation + "&fileId=" << fileIdStr << "&geometryId=" << geometryIdStr << "&messageIndex=" << messageIndexStr << "\">";
+      ostr2 << "<TR><TD><IFRAME width=\"100%\" height=\"100%\" src=\"grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_PAGE << "=coordinates\">";
       ostr2 << "<p>Your browser does not support iframes.</p>\n";
       ostr2 << "</IFRAME></TD></TR>";
     }
     else
     if (presentation == "Info")
     {
-      ostr2 << "<TR><TD><IFRAME width=\"100%\" height=\"100%\" src=\"grid-gui?page=info&presentation=" + presentation + "&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "\">";
+      ostr2 << "<TR><TD><IFRAME width=\"100%\" height=\"100%\" src=\"grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_PAGE << "=" << presentation << "\">";
       ostr2 << "<p>Your browser does not support iframes.</p>\n";
       ostr2 << "</IFRAME></TD></TR>";
     }
     else
+    if (presentation == "Streams" || presentation == "StreamsAnimation")
+    {
+      ostr2 << "<TR><TD><IMG id=\"myimage\" style=\"background:#000000; max-width:1800; height:100%; max-height:1000;\" src=\"/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_PAGE << "=" << presentation << "\" onclick=\"getImageCoords(event,this," << fileIdStr << "," << messageIndexStr << ",'" << presentation << "');\"/></TD></TR>";
+    }
+    else
     if (presentation == "Message")
     {
-      ostr2 << "<TR><TD><IFRAME width=\"100%\" height=\"100%\" src=\"grid-gui?page=message&presentation=" + presentation + "&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "\">";
+      ostr2 << "<TR><TD><IFRAME width=\"100%\" height=\"100%\" src=\"grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_PAGE << "=" << presentation << "\">";
       ostr2 << "<p>Your browser does not support iframes.</p>\n";
       ostr2 << "</IFRAME></TD></TR>";
     }
     else
     if (presentation == "Locations")
     {
-      ostr2 << "<TR><TD><IFRAME width=\"100%\" height=\"100%\" src=\"grid-gui?page=locations&presentation=" + presentation + "&fileId=" << fileIdStr << "&messageIndex=" << messageIndexStr << "&locations=" << locations << "\">";
+      ostr2 << "<TR><TD><IFRAME width=\"100%\" height=\"100%\" src=\"grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_PAGE << "=" << presentation << "\">";
       ostr2 << "<p>Your browser does not support iframes.</p>\n";
       ostr2 << "</IFRAME></TD></TR>";
     }
+    /*
     else
     if (presentation == "Dali")
     {
-      ostr2 << "<TR><TD><IMG id=\"myimage\" style=\"background:#000000; max-width:1800; height:100%; max-height:1000;\" src=\"" + daliUrl << "&time=" << startTime << "\" /></TD></TR>";
+      ostr2 << "<TR><TD><IMG id=\"myimage\" style=\"background:#000000; max-width:1800; height:100%; max-height:1000;\" src=\"" + daliUrl << "&start=" << timeStr << "\" /></TD></TR>";
     }
+    */
 
     ostr2 << "<TR><TD style=\"height:25; vertical-align:middle; text-align:left; font-size:12;\">" << paramDescription << "</TD></TR>\n";
 
@@ -4873,6 +5371,35 @@ int Plugin::request(Spine::Reactor &theReactor,
     int result = HTTP::Status::ok;
     int expires_seconds = 1;
 
+    Session session;
+
+    boost::optional<std::string> v;
+    v = theRequest.getParameter("session");
+    if (v)
+    {
+      //printf("**** SESSION FOUND\n");
+      session.setAttributes(*v);
+    }
+    else
+      initSession(session);
+
+    Spine::HTTP::ParamMap map = theRequest.getParameterMap();
+    for (auto it = map.begin(); it != map.end(); it++)
+    {
+      //printf("SEARCH [%s][%s]\n",it->first.c_str(),it->second.c_str());
+      std::string value;
+      if (strcasecmp(it->first.c_str(),"session") != 0  &&  session.getAttribute(it->first.c_str(),value))
+      {
+        if (value != it->second)
+        {
+          session.setAttribute(it->first.c_str(),it->second.c_str());
+          std::string name = std::string("#") + it->first;
+          session.setAttribute(name.c_str(),value.c_str());
+        }
+      }
+    }
+
+
     if (!itsGridEngine->isEnabled())
     {
       std::ostringstream output;
@@ -4886,79 +5413,89 @@ int Plugin::request(Spine::Reactor &theReactor,
     }
 
     std::string page = "main";
-    boost::optional<std::string> v = theRequest.getParameter("page");
-    if (v)
-      page = *v;
+    session.getAttribute(ATTR_PAGE,page);
 
     if (strcasecmp(page.c_str(),"main") == 0)
     {
-      result = page_main(theReactor,theRequest,theResponse);
+      result = page_main(theReactor,theRequest,theResponse,session);
     }
     else
     if (strcasecmp(page.c_str(),"image") == 0)
     {
-      result = page_image(theReactor,theRequest,theResponse);
+      result = page_image(theReactor,theRequest,theResponse,session);
       expires_seconds = 600;
     }
     else
     if (strcasecmp(page.c_str(),"symbols") == 0)
     {
-      result = page_symbols(theReactor,theRequest,theResponse);
+      result = page_symbols(theReactor,theRequest,theResponse,session);
       expires_seconds = 600;
     }
     else
     if (strcasecmp(page.c_str(),"isolines") == 0)
     {
-      result = page_isolines(theReactor,theRequest,theResponse);
+      result = page_isolines(theReactor,theRequest,theResponse,session);
+      expires_seconds = 600;
+    }
+    else
+    if (strcasecmp(page.c_str(),"streams") == 0)
+    {
+      result = page_streams(theReactor,theRequest,theResponse,session);
+      expires_seconds = 600;
+    }
+    else
+    if (strcasecmp(page.c_str(),"streamsAnimation") == 0)
+    {
+      result = page_streamsAnimation(theReactor,theRequest,theResponse,session);
       expires_seconds = 600;
     }
     else
     if (strcasecmp(page.c_str(),"map") == 0)
     {
-      result = page_map(theReactor,theRequest,theResponse);
+      result = page_map(theReactor,theRequest,theResponse,session);
       expires_seconds = 600;
     }
     else
     if (strcasecmp(page.c_str(),"info") == 0)
     {
-      result = page_info(theReactor,theRequest,theResponse);
+      result = page_info(theReactor,theRequest,theResponse,session);
     }
     else
     if (strcasecmp(page.c_str(),"message") == 0)
     {
-      result = page_message(theReactor,theRequest,theResponse);
+      result = page_message(theReactor,theRequest,theResponse,session);
     }
     else
     if (strcasecmp(page.c_str(),"download") == 0)
     {
-      result = page_download(theReactor,theRequest,theResponse);
+      result = page_download(theReactor,theRequest,theResponse,session);
     }
     else
     if (strcasecmp(page.c_str(),"locations") == 0)
     {
-      result = page_locations(theReactor,theRequest,theResponse);
+      result = page_locations(theReactor,theRequest,theResponse,session);
     }
     else
     if (strcasecmp(page.c_str(),"table") == 0)
     {
-      result = page_table(theReactor,theRequest,theResponse);
+      result = page_table(theReactor,theRequest,theResponse,session);
       expires_seconds = 600;
     }
     else
     if (strcasecmp(page.c_str(),"coordinates") == 0)
     {
-      result = page_coordinates(theReactor,theRequest,theResponse);
+      result = page_coordinates(theReactor,theRequest,theResponse,session);
       expires_seconds = 600;
     }
     else
     if (strcasecmp(page.c_str(),"value") == 0)
     {
-      result = page_value(theReactor,theRequest,theResponse);
+      result = page_value(theReactor,theRequest,theResponse,session);
     }
     else
     if (strcasecmp(page.c_str(),"timeseries") == 0)
     {
-      result = page_timeseries(theReactor,theRequest,theResponse);
+      result = page_timeseries(theReactor,theRequest,theResponse,session);
     }
 
     boost::posix_time::ptime t_now = boost::posix_time::second_clock::universal_time();

@@ -14,6 +14,7 @@
 #include <spine/HTTP.h>
 #include <engines/grid/Engine.h>
 #include <grid-files/common/ImageFunctions.h>
+#include <grid-files/common/Session.h>
 
 
 namespace SmartMet
@@ -23,8 +24,8 @@ namespace Plugin
 namespace GridGui
 {
 
-
 typedef std::vector<std::pair<std::string,unsigned int>> Colors;
+
 
 
 class Plugin : public SmartMetPlugin
@@ -59,55 +60,78 @@ class Plugin : public SmartMetPlugin
 
     int page_info(Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
-                      Spine::HTTP::Response& theResponse);
+                      Spine::HTTP::Response& theResponse,
+                      Session& session);
 
     int page_message(Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
-                      Spine::HTTP::Response& theResponse);
+                      Spine::HTTP::Response& theResponse,
+                      Session& session);
 
     int page_download(Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
-                      Spine::HTTP::Response& theResponse);
+                      Spine::HTTP::Response& theResponse,
+                      Session& session);
 
     int page_value(Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
-                      Spine::HTTP::Response& theResponse);
+                      Spine::HTTP::Response& theResponse,
+                      Session& session);
 
     int page_timeseries(Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
-                      Spine::HTTP::Response& theResponse);
+                      Spine::HTTP::Response& theResponse,
+                      Session& session);
 
     int page_table(Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
-                      Spine::HTTP::Response& theResponse);
+                      Spine::HTTP::Response& theResponse,
+                      Session& session);
 
     int page_coordinates(Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
-                      Spine::HTTP::Response& theResponse);
+                      Spine::HTTP::Response& theResponse,
+                      Session& session);
 
     int page_image(Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
-                      Spine::HTTP::Response& theResponse);
+                      Spine::HTTP::Response& theResponse,
+                      Session& session);
 
     int page_isolines(Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
-                      Spine::HTTP::Response& theResponse);
+                      Spine::HTTP::Response& theResponse,
+                      Session& session);
+
+    int page_streams(Spine::Reactor& theReactor,
+                      const Spine::HTTP::Request& theRequest,
+                      Spine::HTTP::Response& theResponse,
+                      Session& session);
+
+    int page_streamsAnimation(Spine::Reactor& theReactor,
+                      const Spine::HTTP::Request& theRequest,
+                      Spine::HTTP::Response& theResponse,
+                      Session& session);
 
     int page_locations(Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
-                      Spine::HTTP::Response& theResponse);
+                      Spine::HTTP::Response& theResponse,
+                      Session& session);
 
     int page_symbols(Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
-                      Spine::HTTP::Response& theResponse);
+                      Spine::HTTP::Response& theResponse,
+                      Session& session);
 
     int page_map(Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
-                      Spine::HTTP::Response& theResponse);
+                      Spine::HTTP::Response& theResponse,
+                      Session& session);
 
     int page_main(Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
-                      Spine::HTTP::Response& theResponse);
+                      Spine::HTTP::Response& theResponse,
+                      Session& session);
 
 
     void saveImage(const char *imageFile,
@@ -130,7 +154,12 @@ class Plugin : public SmartMetPlugin
                       T::GeometryId geometryId,
                       std::string symbolMap,
                       std::string locations,
-                      bool showSymbols);
+                      bool showSymbols,
+                      int pstep,
+                      int minLength,
+                      int maxLength,
+                      bool lightBackground,
+                      bool animation);
 
     void saveImage(const char *imageFile,
                       uint fileId,
@@ -150,7 +179,12 @@ class Plugin : public SmartMetPlugin
                       T::GeometryId projectionId,
                       std::string symbolMap,
                       std::string locations,
-                      bool showSymbols);
+                      bool showSymbols,
+                      int pstep,
+                      int minLength,
+                      int maxLength,
+                      bool lightBackground,
+                      bool animation);
 
     void saveMap(const char *imageFile,
                       uint columns,
@@ -184,9 +218,10 @@ class Plugin : public SmartMetPlugin
     uint getColorValue(std::string& colorName);
     T::ParamValue_vec getIsolineValues(std::string& isolineValues);
     void loadColorFile();
-    void loadDaliFile();
+    //void loadDaliFile();
     void loadIsolineFile();
     bool loadImage(const char *fname,Spine::HTTP::Response &theResponse);
+    void initSession(Session& session);
 
 
     Engine::Grid::Engine*     itsGridEngine;
@@ -194,7 +229,7 @@ class Plugin : public SmartMetPlugin
     Spine::Reactor*           itsReactor;
     ConfigurationFile         itsConfigurationFile;
     std::string               itsGridConfigFile;
-    std::string               itsDaliFile;
+    //std::string               itsDaliFile;
     std::string               itsLandSeaMaskFile;
     CImage                    itsLandSeaMask;
     string_vec                itsColorMapFileNames;
@@ -218,7 +253,7 @@ class Plugin : public SmartMetPlugin
 
     std::map<std::string,T::ParamValue_vec> itsIsolines;
     std::map<std::string,std::string>       itsImages;
-    std::vector<string_vec>                 itsDaliProducts;
+    //std::vector<string_vec>                 itsDaliProducts;
 };  // class Plugin
 
 }  // namespace GridGui
