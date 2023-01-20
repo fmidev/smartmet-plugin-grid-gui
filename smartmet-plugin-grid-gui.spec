@@ -24,6 +24,7 @@ BuildRequires: gcc-c++
 BuildRequires: make
 BuildRequires: %{smartmet_boost}-devel
 BuildRequires: libconfig17-devel
+BuildRequires: smartmet-utils-devel >= 23.1.19
 BuildRequires: smartmet-library-spine-devel >= 22.12.2
 BuildRequires: smartmet-library-grid-files-devel >= 22.12.12
 BuildRequires: smartmet-library-grid-content-devel >= 22.12.12
