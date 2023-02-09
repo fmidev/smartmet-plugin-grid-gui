@@ -2,7 +2,7 @@ SUBNAME = grid-gui
 SPEC = smartmet-plugin-$(SUBNAME)
 INCDIR = smartmet/plugins/$(SUBNAME)
 
-REQUIRES = gdal configpp
+REQUIRES = gdal configpp webp
 
 include $(shell echo $${PREFIX-/usr})/share/smartmet/devel/makefile.inc
 
