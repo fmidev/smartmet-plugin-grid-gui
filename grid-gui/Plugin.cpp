@@ -1304,23 +1304,23 @@ void Plugin::saveImage(
       uint *img = imagePaint.getImage();
       uint *image = new uint[size];
 
+      getStreamlineImage(direction,nullptr,image,width,height,pstep,pstep,minLength,maxLength);
+
+      uint color[16];
+      for (uint t=0; t<16; t++)
+      {
+        uint cc = t * 0x10;
+        if (!lightBackground)
+          cc = (15-t) * 0x10 + 0x0F;
+
+        color[t] = (cc << 16) + (cc << 8) + cc;
+      }
+
       if (animation)
       {
         uint *wimage[16];
         for (uint t=0; t<16; t++)
           wimage[t] = new uint[size];
-
-        getStreamlineImage(direction,nullptr,image,width,height,pstep,pstep,minLength,maxLength);
-
-        uint color[16];
-        for (uint t=0; t<16; t++)
-        {
-          uint cc = t * 0x10 + 0x0F;
-          if (lightBackground)
-            cc = (16-t) * 0x10 + 0x0F;
-
-          color[t] = (cc << 16) + (cc << 8) + cc;
-        }
 
         uint idx = 0;
         for (int y = 0; y < height; y++)
@@ -1333,7 +1333,7 @@ void Plugin::saveImage(
               uint newCol = img[idx];
               if (col != 0)
               {
-                newCol = color[15-((col+t) % 16)];
+                newCol = color[(col-1+t) % 16];
               }
               wimage[t][idx] = newCol;
             }
@@ -1352,15 +1352,13 @@ void Plugin::saveImage(
       }
       else
       {
-        if (lightBackground)
-          getStreamlineImage(direction,nullptr,image,width,height,pstep,pstep,minLength,maxLength,0,1000000,0,255,0xFFFFFFFF);
-        else
-          getStreamlineImage(direction,nullptr,image,width,height,pstep,pstep,minLength,maxLength,0,1000000,255,0,0xFFFFFFFF);
-
         for (uint t=0; t<size; t++)
         {
-          if (image[t] != 0xFFFFFFFF)
-            img[t] = image[t];
+          uint col = image[t];
+          if (col != 0)
+          {
+            img[t] = color[(col-1) % 16];
+          }
         }
       }
       delete [] direction;
@@ -3931,7 +3929,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     output << "  var posY = event.offsetY?(event.offsetY):event.pageY-img.offsetTop;\n";
     output << "  var prosX = posX / img.width;\n";
     output << "  var prosY = posY / img.height;\n";
-    output << "  var url = \"/grid-gui?page=value&" << ATTR_PRESENTATION << "=\" + presentation + \"&" << ATTR_FILE_ID << "=\" + fileId + \"&" << ATTR_MESSAGE_INDEX << "=\" + messageIndex + \"&" << ATTR_X << "=\" + prosX + \"&" << ATTR_Y << "=\" + prosY;\n";
+    output << "  var url = \"/grid-gui?session=" << ATTR_PAGE << "=value;" << ATTR_PRESENTATION << "=\" + presentation + \";" << ATTR_FILE_ID << "=\" + fileId + \";" << ATTR_MESSAGE_INDEX << "=\" + messageIndex + \";" << ATTR_X << "=\" + prosX + \";" << ATTR_Y << "=\" + prosY;\n";
     output << "  var txt = httpGet(url);\n";
     output << "  document.getElementById('gridValue').value = txt;\n";
 
@@ -4988,7 +4986,19 @@ int Plugin::page_main(Spine::Reactor &theReactor,
         uint minLength = toUInt32(minLengthStr);
         ostr1 << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_MIN_LENGTH << "=' + this.options[this.selectedIndex].value)\">\n";
 
-        for (uint a=2; a<200; a=a+2)
+        for (uint a=2; a<128; a=a+2)
+        {
+          if (a == minLength)
+          {
+            ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+            session.setAttribute(ATTR_MIN_LENGTH,a);
+          }
+          else
+          {
+            ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+          }
+        }
+        for (uint a=128; a<=2048; a=a+64)
         {
           if (a == minLength)
           {
@@ -5006,7 +5016,19 @@ int Plugin::page_main(Spine::Reactor &theReactor,
         ostr1 << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_MAX_LENGTH << "=' + this.options[this.selectedIndex].value)\">\n";
 
         uint maxLength = toUInt32(maxLengthStr);
-        for (uint a=8; a<=512; a=a+4)
+        for (uint a=8; a<128; a=a+4)
+        {
+          if (a == maxLength)
+          {
+            ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+            session.setAttribute(ATTR_MAX_LENGTH,a);
+          }
+          else
+          {
+            ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+          }
+        }
+        for (uint a=128; a<=2048; a=a+64)
         {
           if (a == maxLength)
           {
@@ -5379,6 +5401,7 @@ int Plugin::request(Spine::Reactor &theReactor,
     {
       //printf("**** SESSION FOUND\n");
       session.setAttributes(*v);
+      //session.print(std::cout,0,0);
     }
     else
       initSession(session);

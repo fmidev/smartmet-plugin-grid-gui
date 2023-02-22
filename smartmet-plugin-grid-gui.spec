@@ -24,10 +24,12 @@ BuildRequires: gcc-c++
 BuildRequires: make
 BuildRequires: %{smartmet_boost}-devel
 BuildRequires: libconfig17-devel
-BuildRequires: smartmet-library-spine-devel >= 23.1.16
-BuildRequires: smartmet-library-grid-files-devel >= 23.1.19
-BuildRequires: smartmet-library-grid-content-devel >= 23.1.19
-BuildRequires: smartmet-engine-grid-devel >= 23.1.19
+BuildRequires: libwebp13-devel
+BuildRequires: smartmet-utils-devel >= 23.1.19
+BuildRequires: smartmet-library-spine-devel >= 22.12.2
+BuildRequires: smartmet-library-grid-files-devel >= 22.12.12
+BuildRequires: smartmet-library-grid-content-devel >= 22.12.12
+BuildRequires: smartmet-engine-grid-devel >= 22.12.12
 BuildRequires: gdal34-devel
 Requires: libconfig17
 Requires: smartmet-library-macgyver >= 22.12.16
