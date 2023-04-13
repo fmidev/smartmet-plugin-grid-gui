@@ -4682,7 +4682,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
         projectionId = geometryId;
       }
 
-      if (projections.find(projectionId) == geometries.end())
+      if (projections.find(projectionId) == projections.end())
         projectionId = geometryId;
 
       if (projections.size() > 0)
