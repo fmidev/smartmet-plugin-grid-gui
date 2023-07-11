@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-plugin-%{DIRNAME}
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
-Version: 23.4.17
+Version: 23.6.6
 Release: 1%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
@@ -32,7 +32,7 @@ BuildRequires: smartmet-library-grid-content-devel >= 23.7.10
 BuildRequires: smartmet-engine-grid-devel >= 23.7.11
 BuildRequires: gdal35-devel
 Requires: libconfig17
-Requires: smartmet-library-macgyver >= 23.3.3
+Requires: smartmet-library-macgyver >= 23.6.2
 Requires: smartmet-library-spine >= 23.7.10
 Requires: smartmet-server >= 23.3.21
 Requires: smartmet-engine-grid >= 23.7.11
@@ -61,6 +61,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/plugins/%{DIRNAME}.so
 
 %changelog
+* Tue Jun  6 2023 Mika Heiskanen <mika.heiskanen@fmi.fi> - 23.6.6-1.fmi
+- Repackaged due to GRID ABI changes
+
 * Mon Apr 17 2023 Mika Heiskanen <mika.heiskanen@fmi.fi> - 23.4.17-1.fmi
 - Minor fixes
 
