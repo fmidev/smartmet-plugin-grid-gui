@@ -145,6 +145,8 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
     itsImageCache_minImages = 500;
     itsAnimationEnabled = true;
     itsImageCounter = 0;
+    itsLandSeaMask_width = 0;
+    itsLandSeaMask_height = 0;
 
     if (theReactor->getRequiredAPIVersion() != SMARTMET_API_VERSION)
       throw Fmi::Exception(BCP, "GridGui plugin and Server API version mismatch");
@@ -186,7 +188,14 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
 
     Identification::gridDef.init(itsGridConfigFile.c_str());
 
-    jpg_load(itsLandSeaMaskFile.c_str(),itsLandSeaMask);
+    FILE *file = fopen(itsLandSeaMaskFile.c_str(),"r");
+    if (file)
+    {
+      if (fread(&itsLandSeaMask_width,4,1,file) > 0  && fread(&itsLandSeaMask_height,4,1,file) > 0)
+        itsLandSeaMask.readFromFile(file);
+
+      fclose(file);
+    }
 
 
     for (auto it = itsColorMapFileNames.begin(); it != itsColorMapFileNames.end(); ++it)
@@ -669,7 +678,7 @@ bool Plugin::isLand(double lon,double lat)
   //FUNCTION_TRACE
   try
   {
-    if (itsLandSeaMask.pixel == nullptr)
+    if (itsLandSeaMask_width == 0 || itsLandSeaMask_height == 0)
       return false;
 
     if (lon >= 180)
@@ -678,16 +687,17 @@ bool Plugin::isLand(double lon,double lat)
     if (lat >= 90)
       lat = lat - 90;
 
-    int x = C_INT(round((lon+180)*10));
-    int y = C_INT(round((lat+90)*10));
+    double dx = (double)itsLandSeaMask_width/360.0;
+    double dy = (double)itsLandSeaMask_height/180.0;
 
-    if (x >= 0  &&  x < itsLandSeaMask.width  &&  y >= 0  &&  y < itsLandSeaMask.height)
-    {
-      int pos = ((itsLandSeaMask.height-y-1)*itsLandSeaMask.width + x);
+    int x = C_INT(round((lon+180)*dx));
+    int y = C_INT(round((lat+90)*dy));
 
-      if (pos >= 0  &&  pos < (itsLandSeaMask.height*itsLandSeaMask.width)  &&  itsLandSeaMask.pixel[pos] < 0x808080)
-        return true;
-    }
+    uint pos = y*itsLandSeaMask_width + x;
+
+    if (itsLandSeaMask.getBit(pos))
+      return true;
+
     return false;
   }
   catch (...)

@@ -14,6 +14,7 @@
 #include <spine/HTTP.h>
 #include <engines/grid/Engine.h>
 #include <grid-files/common/ImageFunctions.h>
+#include <grid-files/common/BitLine.h>
 #include <grid-files/common/Session.h>
 
 
@@ -231,7 +232,9 @@ class Plugin : public SmartMetPlugin
     std::string               itsGridConfigFile;
     //std::string               itsDaliFile;
     std::string               itsLandSeaMaskFile;
-    CImage                    itsLandSeaMask;
+    BitLine                   itsLandSeaMask;
+    uint                      itsLandSeaMask_width;
+    uint                      itsLandSeaMask_height;
     string_vec                itsColorMapFileNames;
     string_vec                itsLocationFileNames;
     string_vec                itsSymbolMapFileNames;
