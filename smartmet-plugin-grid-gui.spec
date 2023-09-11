@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-plugin-%{DIRNAME}
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
-Version: 23.7.28
+Version: 23.9.11
 Release: 1%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
@@ -25,17 +25,17 @@ BuildRequires: make
 BuildRequires: %{smartmet_boost}-devel
 BuildRequires: libconfig17-devel
 BuildRequires: libwebp13-devel
-BuildRequires: smartmet-utils-devel >= 23.4.17
-BuildRequires: smartmet-library-spine-devel >= 23.7.28
-BuildRequires: smartmet-library-grid-files-devel >= 23.7.10
-BuildRequires: smartmet-library-grid-content-devel >= 23.7.10
-BuildRequires: smartmet-engine-grid-devel >= 23.7.11
+BuildRequires: smartmet-utils-devel >= 23.9.6
+BuildRequires: smartmet-library-spine-devel >= 23.8.31
+BuildRequires: smartmet-library-grid-files-devel >= 23.8.21
+BuildRequires: smartmet-library-grid-content-devel >= 23.7.28
+BuildRequires: smartmet-engine-grid-devel >= 23.9.11
 BuildRequires: gdal35-devel
 Requires: libconfig17
-Requires: smartmet-library-macgyver >= 23.7.28
-Requires: smartmet-library-spine >= 23.7.28
-Requires: smartmet-server >= 23.3.21
-Requires: smartmet-engine-grid >= 23.7.11
+Requires: smartmet-library-macgyver >= 23.8.31
+Requires: smartmet-library-spine >= 23.8.31
+Requires: smartmet-server >= 23.8.30
+Requires: smartmet-engine-grid >= 23.9.11
 Requires: %{smartmet_boost}-date-time
 Provides: %{SPECNAME}
 
@@ -61,6 +61,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/plugins/%{DIRNAME}.so
 
 %changelog
+* Mon Sep 11 2023 Mika Heiskanen <mika.heiskanen@fmi.fi> - 23.9.11-1.fmi
+- Added new land-sea mask processing
+
 * Fri Jul 28 2023 Andris Pavēnis <andris.pavenis@fmi.fi> 23.7.28-1.fmi
 - Repackage due to bulk ABI changes in macgyver/newbase/spine
 
