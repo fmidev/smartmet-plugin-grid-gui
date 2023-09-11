@@ -27,8 +27,8 @@ BuildRequires: libconfig17-devel
 BuildRequires: libwebp13-devel
 BuildRequires: smartmet-utils-devel >= 23.9.6
 BuildRequires: smartmet-library-spine-devel >= 23.8.31
-BuildRequires: smartmet-library-grid-files-devel >= 23.8.21
-BuildRequires: smartmet-library-grid-content-devel >= 23.7.28
+BuildRequires: smartmet-library-grid-files-devel >= 23.9.11
+BuildRequires: smartmet-library-grid-content-devel >= 23.9.11
 BuildRequires: smartmet-engine-grid-devel >= 23.9.11
 BuildRequires: gdal35-devel
 Requires: libconfig17
