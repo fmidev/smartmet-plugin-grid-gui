@@ -70,44 +70,45 @@ using namespace SmartMet::Spine;
 #define ATTR_Y                  "y"
 */
 
-#define ATTR_BACKGROUND         "a"
-#define ATTR_BLUR               "b"
-#define ATTR_COLOR_MAP          "c"
-#define ATTR_COORDINATE_LINES   "d"
+#define ATTR_BACKGROUND         "bg"
+#define ATTR_BLUR               "bl"
+#define ATTR_COLOR_MAP          "cm"
+#define ATTR_COORDINATE_LINES   "cl"
 //#define ATTR_DALI_ID            "e"
 #define ATTR_FILE_ID            "f"
-#define ATTR_FMI_KEY            "g"
-#define ATTR_FORECAST_NUMBER    "h"
-#define ATTR_FORECAST_TYPE      "i"
-#define ATTR_GENERATION_ID      "j"
-#define ATTR_GEOMETRY_ID        "k"
-#define ATTR_HUE                "l"
-#define ATTR_ISOLINES           "m"
-#define ATTR_ISOLINE_VALUES     "n"
-#define ATTR_LAND_BORDER        "o"
-#define ATTR_LAND_MASK          "p"
-#define ATTR_LEVEL              "q"
-#define ATTR_LEVEL_ID           "r"
-#define ATTR_LOCATIONS          "s"
-#define ATTR_MAX_LENGTH         "t"
-#define ATTR_MESSAGE_INDEX      "u"
-#define ATTR_MIN_LENGTH         "v"
-#define ATTR_MISSING            "w"
-#define ATTR_PAGE               "x"
-#define ATTR_PARAMETER_ID       "y"
-#define ATTR_PRESENTATION       "z"
-#define ATTR_PRODUCER_ID        "a0"
-#define ATTR_PRODUCER_NAME      "a1"
-#define ATTR_PROJECTION_ID      "a2"
-#define ATTR_SATURATION         "a3"
-#define ATTR_SEA_MASK           "a4"
-#define ATTR_STEP               "a5"
-#define ATTR_SYMBOL_MAP         "a6"
-#define ATTR_TIME               "a7"
-#define ATTR_UNIT               "a8"
+#define ATTR_FMI_KEY            "k"
+#define ATTR_FORECAST_NUMBER    "fn"
+#define ATTR_FORECAST_TYPE      "ft"
+#define ATTR_GENERATION_ID      "g"
+#define ATTR_GEOMETRY_ID        "gm"
+#define ATTR_HUE                "hu"
+#define ATTR_ISOLINES           "is"
+#define ATTR_ISOLINE_VALUES     "iv"
+#define ATTR_LAND_BORDER        "lb"
+#define ATTR_LAND_MASK          "lm"
+#define ATTR_LEVEL              "l"
+#define ATTR_LEVEL_ID           "lt"
+#define ATTR_LOCATIONS          "lo"
+#define ATTR_MAX_LENGTH         "max"
+#define ATTR_MESSAGE_INDEX      "m"
+#define ATTR_MIN_LENGTH         "min"
+#define ATTR_MISSING            "mi"
+#define ATTR_PAGE               "pg"
+#define ATTR_PARAMETER_ID       "p"
+#define ATTR_PRESENTATION       "pre"
+#define ATTR_PRODUCER_ID        "pi"
+#define ATTR_PRODUCER_NAME      "pn"
+#define ATTR_PROJECTION_ID      "pro"
+#define ATTR_SATURATION         "sa"
+#define ATTR_SEA_MASK           "sm"
+#define ATTR_STEP               "st"
+#define ATTR_SYMBOL_MAP         "sy"
+#define ATTR_TIME               "t"
+#define ATTR_UNIT               "u"
 #define ATTR_X                  "xx"
 #define ATTR_Y                  "yy"
-
+#define ATTR_TIME_GROUP_TYPE    "tgt"
+#define ATTR_TIME_GROUP         "tg"
 
 // ----------------------------------------------------------------------
 /*!
@@ -1165,10 +1166,14 @@ void Plugin::saveImage(
     }
 
     uint c = 0;
+    //uint bgCol = 0xFFFFFF;
 
     bool yLand[width];
     for (int x=0; x<width; x++)
       yLand[x] = false;
+
+    //double t1 = 0.2;
+    //double t2 = 1.0 - t1;
 
     for (int y=0; y<height; y++)
     {
@@ -1198,13 +1203,39 @@ void Plugin::saveImage(
 
         bool land = false;
         if (landSeaMask && c < coordinates.size())
+        {
           land = isLand(coordinates[c].x(),coordinates[c].y());
+          /*
+          if (land)
+            bgCol = landColor;
+          else
+            bgCol = seaColor;
+          */
+        }
 
         if (land &&  (val == ParamValueMissing || (col & 0xFF000000) || !showValues))
           col = landColor;
-
+        else
         if (!land &&  (val == ParamValueMissing || (col & 0xFF000000) || !showValues))
           col = seaColor;
+        /*
+        else
+        {
+          uchar r1 = (bgCol & 0xFF0000) >> 16;
+          uchar g1 = (bgCol & 0x00FF00) >> 8;
+          uchar b1 = (bgCol & 0x0000FF);
+
+          uchar r2 = (col & 0xFF0000) >> 16;
+          uchar g2 = (col & 0x00FF00) >> 8;
+          uchar b2 = (col & 0x0000FF);
+
+          uint r3 = (uchar)(t1*r1) + (uchar)(t2*r2);
+          uint g3 = (uchar)(t1*g1) + (uchar)(t2*g2);
+          uint b3 = (uchar)(t1*b1) + (uchar)(t2*b2);
+
+          col = 0xFF000000 + (r3 << 16) + (g3 << 8) + b3;
+        }
+        */
 
         if (landBorder != 0xFFFFFFFF)
         {
@@ -3710,6 +3741,8 @@ void Plugin::initSession(Session& session)
     session.setAttribute(ATTR_PROJECTION_ID,"");
     session.setAttribute(ATTR_FILE_ID,"");
     session.setAttribute(ATTR_MESSAGE_INDEX,"0");
+    session.setAttribute(ATTR_TIME_GROUP_TYPE,"Month");
+    session.setAttribute(ATTR_TIME_GROUP,"");
     session.setAttribute(ATTR_TIME,"");
     session.setAttribute(ATTR_HUE,"128");
     session.setAttribute(ATTR_SATURATION,"60");
@@ -3792,6 +3825,8 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     //std::string daliIdStr = session.getAttribute(ATTR_DALI_ID);
     std::string unitStr = session.getAttribute(ATTR_UNIT);
     std::string fmiKeyStr = session.getAttribute(ATTR_FMI_KEY);
+    std::string timeGroupTypeStr = session.getAttribute(ATTR_TIME_GROUP_TYPE);
+    std::string timeGroupStr = session.getAttribute(ATTR_TIME_GROUP);
 
     if (session.findAttribute("#",ATTR_PRODUCER_ID))
     {
@@ -3837,6 +3872,8 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
     if (geometryIdStr.empty() || session.findAttribute("#",ATTR_GEOMETRY_ID))
     {
+      timeGroupStr = "";
+      session.setAttribute(ATTR_TIME_GROUP,"");
       timeStr = "";
       session.setAttribute(ATTR_TIME,"");
       projectionIdStr = "";
@@ -3846,6 +3883,15 @@ int Plugin::page_main(Spine::Reactor &theReactor,
       messageIndexStr = "0";
       session.setAttribute(ATTR_MESSAGE_INDEX,"0");
     }
+
+    if (timeGroupTypeStr.empty() || session.findAttribute("#",ATTR_TIME_GROUP_TYPE))
+    {
+      timeGroupStr = "";
+      session.setAttribute(ATTR_TIME_GROUP,"");
+      timeStr = "";
+      session.setAttribute(ATTR_TIME,"");
+    }
+
 /*
     if (timeStr.empty() || session.findAttribute("#time"))
     {
@@ -4457,7 +4503,106 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     contentInfoList.clear();
     contentServer->getContentListByParameterAndGenerationId(0,generationId,T::ParamKeyTypeValue::FMI_NAME,parameterIdStr,levelId,level,level,-2,-2,-2,"14000101T000000","30000101T000000",0,contentInfoList);
     len = contentInfoList.getLength();
+
+    std::string pTime = timeStr;
+    std::set<std::string> timeGroupStrList;
+
+    uint timeGroupType = 0;
+    bool useTimeGroup = false;
+    const char *timeGroupTypes[] = {"All","Day","Month","Year",nullptr};
+    int timeGroupLen[] = {15,8,6,4};
+
+    ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Time group:</TD></TR>\n";
+    ostr1 << "<TR height=\"30\"><TD><TABLE><TR><TD>\n";
+
+    ostr1 << "<SELECT style=\"width:80px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_TIME_GROUP << "=&" << ATTR_TIME_GROUP_TYPE << "=' + this.options[this.selectedIndex].value)\">\n";
+
+
+    //std::cout << "timeGroupTypeStr :" << timeGroupTypeStr << "\n";
+    //std::cout << "timeGroupStr :" << timeGroupStr << "\n";
+
+    uint a = 0;
+    while (timeGroupTypes[a] != nullptr)
+    {
+      if (timeGroupTypeStr == timeGroupTypes[a])
+      {
+        timeGroupType = a;
+        ostr1 << "<OPTION selected value=\"" << timeGroupTypes[a] << "\">" <<  timeGroupTypes[a] << "</OPTION>\n";
+        session.setAttribute(ATTR_TIME_GROUP_TYPE,timeGroupTypeStr);
+      }
+      else
+      {
+        ostr1 << "<OPTION value=\"" <<  timeGroupTypes[a] << "\">" <<  timeGroupTypes[a] << "</OPTION>\n";
+      }
+      a++;
+    }
+    ostr1 << "</SELECT></TD>\n";
+
+    if (timeStr.empty() &&  len > 0)
+    {
+      T::ContentInfo *g = contentInfoList.getContentInfoByIndex(0);
+      std::string ft = g->getForecastTime();
+      if (timeGroupStr.empty())
+        timeGroupStr = ft.substr(0,timeGroupLen[timeGroupType]);
+    }
+
     std::string prevTime = "14000101T0000";
+    uint tCount = 0;
+
+    if (timeGroupType > 0)
+    {
+      for (uint a=0; a<len; a++)
+      {
+        T::ContentInfo *g = contentInfoList.getContentInfoByIndex(a);
+
+        if (g->mGeometryId == geometryId)
+        {
+          if (prevTime < g->getForecastTime())
+          {
+            if (forecastType == g->mForecastType)
+            {
+              if (forecastNumber == g->mForecastNumber)
+              {
+                std::string ft = g->getForecastTime();
+                timeGroupStrList.insert(ft.substr(0,timeGroupLen[timeGroupType]));
+                tCount++;
+              }
+            }
+          }
+        }
+      }
+    }
+
+    if (timeGroupStrList.size() > 1)
+    {
+      useTimeGroup = true;
+
+      ostr1 << "<TD><SELECT id=\"yearselect\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() + "' + this.options[this.selectedIndex].value)\"";
+      ostr1 << " >\n";
+
+      for (auto it = timeGroupStrList.begin();it != timeGroupStrList.end(); ++it)
+      {
+        std::ostringstream out;
+        out << "&" << ATTR_TIME_GROUP << "=" << *it << "&" << ATTR_FORECAST_TYPE << "=" << forecastTypeStr << "&" << ATTR_FORECAST_NUMBER << "=" << forecastNumberStr;
+        std::string url = out.str();
+
+        if (*it == timeGroupStr)
+        {
+          ostr1 << "<OPTION selected value=\"" <<  url << "\">" <<  *it << "</OPTION>\n";
+          session.setAttribute(ATTR_TIME_GROUP,timeGroupStr);
+        }
+        else
+        {
+          ostr1 << "<OPTION value=\"" <<  url << "\">" <<  *it << "</OPTION>\n";
+        }
+      }
+      ostr1 << "</SELECT></TD>\n";
+    }
+    ostr1 << "</TR></TABLE></TD></TR></TD></TR>\n";
+
+
+
+    prevTime = "14000101T0000";
 
     ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Time (UTC):</TD></TR>\n";
     ostr1 << "<TR height=\"30\"><TD><TABLE><TR><TD>\n";
@@ -4480,43 +4625,8 @@ int Plugin::page_main(Spine::Reactor &theReactor,
         u = "/grid-gui?session=" + session.getUrlParameter() + "&" + ATTR_PAGE + "=" + presentation;
       }
 
-      /*
-      if (presentation == "Dali"  &&  daliId > 0)
-      {
-        auto dUrl = daliUrls.find(daliId);
-        if (dUrl != daliUrls.end())
-        {
-          u = dUrl->second + "&producer="+producerNameStr+"&origintime=" + originTime + "&geometryId=" + std::to_string(geometryId)+ "&levelId=" + std::to_string(levelId)+ "&level=" + std::to_string(level)   + "&forecastType=" + std::to_string(forecastType) + "&forecastNumber=" + std::to_string(forecastNumber)+"&type=png";
-          u = stringReplaceAll(u,"$(PARAMETER)",parameterIdStr);
-          daliUrl = u;
-        }
-      }
-      */
-
       ostr1 << " >\n";
 
-      uint tCount = 0;
-      for (uint a=0; a<len; a++)
-      {
-        T::ContentInfo *g = contentInfoList.getContentInfoByIndex(a);
-
-        if (g->mGeometryId == geometryId)
-        {
-          if (prevTime < g->getForecastTime())
-          {
-            if (forecastType == g->mForecastType)
-            {
-              if (forecastNumber == g->mForecastNumber)
-              {
-                tCount++;
-              }
-            }
-          }
-        }
-      }
-
-
-      std::string pTime = timeStr;
 
       uint daySwitch = 0;
       uint cc = 0;
@@ -4528,14 +4638,14 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
         if (g->mGeometryId == geometryId)
         {
-          if (prevTime < g->getForecastTime())
+          std::string ft = g->getForecastTime();
+          if (prevTime < ft  &&  (!useTimeGroup  || (useTimeGroup  &&  ft.substr(0,timeGroupLen[timeGroupType]) == timeGroupStr)))
           {
             if (forecastType == g->mForecastType)
             {
               if (forecastNumber == g->mForecastNumber)
               {
                 std::ostringstream out;
-
                 out << "&" << ATTR_TIME << "=" << g->getForecastTime() << "&" << ATTR_FILE_ID << "=" << g->mFileId << "&" << ATTR_MESSAGE_INDEX << "=" << g->mMessageIndex << "&" << ATTR_FORECAST_TYPE << "=" << forecastTypeStr << "&" << ATTR_FORECAST_NUMBER << "=" << forecastNumberStr;
                 std::string url = out.str();
                 std::string uu = url;
@@ -4591,7 +4701,6 @@ int Plugin::page_main(Spine::Reactor &theReactor,
                   session.setAttribute(ATTR_FILE_ID,g->mFileId);
                   session.setAttribute(ATTR_MESSAGE_INDEX,g->mMessageIndex);
                   session.setAttribute(ATTR_TIME,g->getForecastTime());
-
                 }
                 else
                 {
@@ -4633,7 +4742,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     ostr1 << "<TR height=\"30\"><TD>\n";
     ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_TIME << "=" << timeStr << "&" << ATTR_FILE_ID << "=" << fileIdStr << "&" << ATTR_MESSAGE_INDEX << "=" << messageIndexStr << "&" << ATTR_FORECAST_TYPE << "=" << forecastTypeStr << "&" << ATTR_FORECAST_NUMBER << "=" << forecastNumberStr << "&" << ATTR_PRESENTATION << "=' + this.options[this.selectedIndex].value)\">\n";
 
-    uint a = 0;
+    a = 0;
     while (modes[a] != nullptr)
     {
       if (presentation.empty())
