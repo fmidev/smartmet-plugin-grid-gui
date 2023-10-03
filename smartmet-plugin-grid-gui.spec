@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-plugin-%{DIRNAME}
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
-Version: 23.10.2
+Version: 23.10.3
 Release: 1%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
@@ -61,6 +61,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/plugins/%{DIRNAME}.so
 
 %changelog
+* Tue Oct  3 2023 Mika Heiskanen <mika.heiskanen@fmi.fi> - 23.10.3-1.fmi
+- Improved error checking on the land-sea mask file
+
 * Mon Oct  2 2023 Mika Heiskanen <mika.heiskanen@fmi.fi> - 23.10.2-1.fmi
 - Improved browser selection forms for very long lists of timestamps
 
