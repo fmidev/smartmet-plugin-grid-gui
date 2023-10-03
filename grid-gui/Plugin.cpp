@@ -192,8 +192,25 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
     FILE *file = fopen(itsLandSeaMaskFile.c_str(),"r");
     if (file)
     {
-      if (fread(&itsLandSeaMask_width,4,1,file) > 0  && fread(&itsLandSeaMask_height,4,1,file) > 0)
-        itsLandSeaMask.readFromFile(file);
+      uint length = 0;
+      if (fread(&itsLandSeaMask_width,4,1,file) > 0  && fread(&itsLandSeaMask_height,4,1,file) > 0 && fread(&length,4,1,file) > 0)
+      {
+        if ((itsLandSeaMask_width * itsLandSeaMask_height) == length)
+        {
+          fseek(file,8,SEEK_SET);
+          itsLandSeaMask.readFromFile(file);
+        }
+        else
+        {
+          Fmi::Exception exception(BCP, "Land-sea mask file has wrong format!");
+          exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
+          exception.addParameter("land-sea-mask-file",itsLandSeaMaskFile);
+          exception.printError();
+
+          itsLandSeaMask_width = 0;
+          itsLandSeaMask_height = 0;
+        }
+      }
 
       fclose(file);
     }
