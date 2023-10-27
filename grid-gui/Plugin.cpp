@@ -187,6 +187,11 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
     itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.imageCache.minImages",itsImageCache_minImages);
 
 
+    std::vector<std::string> projVec;
+    itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.blockedProjections",projVec);
+    for (auto it=projVec.begin(); it != projVec.end(); ++it)
+      itsBlockedProjections.insert(std::stoi(*it));
+
     Identification::gridDef.init(itsGridConfigFile.c_str());
 
     FILE *file = fopen(itsLandSeaMaskFile.c_str(),"r");
@@ -4829,32 +4834,35 @@ int Plugin::page_main(Spine::Reactor &theReactor,
         {
           std::string st = std::to_string(*it);
 
-          std::string gName;
-          uint cols = 0;
-          uint rows = 0;
-
-          Identification::gridDef.getGeometryNameById(*it,gName);
-
-          if (Identification::gridDef.getGridDimensionsByGeometryId(*it,cols,rows))
-            st = std::to_string(*it) + ":" + gName + " (" + std::to_string(cols) + " x " + std::to_string(rows) + ")";
-          else
-            st = std::to_string(*it) + ":" + gName;
-
-          if (projectionId == 0)
+          if (projectionId == *it || itsBlockedProjections.find(*it) == itsBlockedProjections.end())
           {
-            projectionId = *it;
-            projectionIdStr = std::to_string(projectionId);
-            //printf("EMPTY => PROJECTION %s\n",projectionIdStr.c_str());
-          }
+            std::string gName;
+            uint cols = 0;
+            uint rows = 0;
 
-          if (projectionId == *it)
-          {
-            ostr1 << "<OPTION selected value=\"" <<  *it << "\">" <<  st << "</OPTION>\n";
-            session.setAttribute(ATTR_PROJECTION_ID,projectionId);
-          }
-          else
-          {
-            ostr1 << "<OPTION value=\"" <<  *it << "\">" <<  st << "</OPTION>\n";
+            Identification::gridDef.getGeometryNameById(*it,gName);
+
+            if (Identification::gridDef.getGridDimensionsByGeometryId(*it,cols,rows))
+              st = std::to_string(*it) + ":" + gName + " (" + std::to_string(cols) + " x " + std::to_string(rows) + ")";
+            else
+              st = std::to_string(*it) + ":" + gName;
+
+            if (projectionId == 0)
+            {
+              projectionId = *it;
+              projectionIdStr = std::to_string(projectionId);
+              //printf("EMPTY => PROJECTION %s\n",projectionIdStr.c_str());
+            }
+
+            if (projectionId == *it)
+            {
+              ostr1 << "<OPTION selected value=\"" <<  *it << "\">" <<  st << "</OPTION>\n";
+              session.setAttribute(ATTR_PROJECTION_ID,projectionId);
+            }
+            else
+            {
+              ostr1 << "<OPTION value=\"" <<  *it << "\">" <<  st << "</OPTION>\n";
+            }
           }
         }
         ostr1 << "</SELECT>\n";

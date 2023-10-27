@@ -256,6 +256,7 @@ class Plugin : public SmartMetPlugin
 
     std::map<std::string,T::ParamValue_vec> itsIsolines;
     std::map<std::string,std::string>       itsImages;
+    std::set<int>                           itsBlockedProjections;
     //std::vector<string_vec>                 itsDaliProducts;
 };  // class Plugin
 
