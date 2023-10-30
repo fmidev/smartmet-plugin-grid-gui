@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-plugin-%{DIRNAME}
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
-Version: 23.10.12
+Version: 23.10.30
 Release: 1%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
@@ -26,16 +26,16 @@ BuildRequires: %{smartmet_boost}-devel
 BuildRequires: libconfig17-devel
 BuildRequires: libwebp13-devel
 BuildRequires: smartmet-utils-devel >= 23.9.6
-BuildRequires: smartmet-library-spine-devel >= 23.8.31
-BuildRequires: smartmet-library-grid-files-devel >= 23.9.29
-BuildRequires: smartmet-library-grid-content-devel >= 23.9.29
-BuildRequires: smartmet-engine-grid-devel >= 23.9.29
+BuildRequires: smartmet-library-spine-devel >= 23.10.20
+BuildRequires: smartmet-library-grid-files-devel >= 23.10.30
+BuildRequires: smartmet-library-grid-content-devel >= 23.10.30
+BuildRequires: smartmet-engine-grid-devel >= 23.10.30
 BuildRequires: gdal35-devel
 Requires: libconfig17
-Requires: smartmet-library-macgyver >= 23.8.31
-Requires: smartmet-library-spine >= 23.8.31
+Requires: smartmet-library-macgyver >= 23.10.10
+Requires: smartmet-library-spine >= 23.10.20
 Requires: smartmet-server >= 23.8.30
-Requires: smartmet-engine-grid >= 23.9.29
+Requires: smartmet-engine-grid >= 23.10.30
 Requires: %{smartmet_boost}-date-time
 Provides: %{SPECNAME}
 
@@ -61,6 +61,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/plugins/%{DIRNAME}.so
 
 %changelog
+* Mon Oct 30 2023 Mika Heiskanen <mika.heiskanen@fmi.fi> - 23.10.30-1.fmi
+- Enabling ability to block big projections
+
 * Thu Oct 12 2023 Andris Pavēnis <andris.pavenis@fmi.fi> 23.10.12-1.fmi
 - Repackage due to smartmet-library-grid-files and smartmet-library-grid-files changes
 
