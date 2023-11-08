@@ -32,7 +32,7 @@ BuildRequires: smartmet-library-grid-content-devel >= 23.10.30
 BuildRequires: smartmet-engine-grid-devel >= 23.10.30
 BuildRequires: gdal35-devel
 Requires: libconfig17
-Requires: smartmet-library-macgyver >= 23.10.10
+Requires: smartmet-library-macgyver >= 23.11.8
 Requires: smartmet-library-spine >= 23.10.20
 Requires: smartmet-server >= 23.8.30
 Requires: smartmet-engine-grid >= 23.10.30

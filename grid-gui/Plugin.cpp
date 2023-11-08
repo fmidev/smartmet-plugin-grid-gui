@@ -14,7 +14,7 @@
 #include <macgyver/TimeFormatter.h>
 #include <macgyver/FastMath.h>
 #include <boost/bind/bind.hpp>
-#include <boost/date_time/posix_time/posix_time_types.hpp>
+#include <macgyver/DateTime.h>
 #include <webp/encode.h>
 #include <webp/mux.h>
 
@@ -5665,8 +5665,8 @@ int Plugin::request(Spine::Reactor &theReactor,
       result = page_timeseries(theReactor,theRequest,theResponse,session);
     }
 
-    boost::posix_time::ptime t_now = boost::posix_time::second_clock::universal_time();
-    boost::posix_time::ptime t_expires = t_now + boost::posix_time::seconds(expires_seconds);
+    Fmi::DateTime t_now = Fmi::SecondClock::universal_time();
+    Fmi::DateTime t_expires = t_now + Fmi::Seconds(expires_seconds);
     boost::shared_ptr<Fmi::TimeFormatter> tformat(Fmi::TimeFormatter::create("http"));
     std::string cachecontrol = "public, max-age=" + boost::lexical_cast<std::string>(expires_seconds);
     std::string expiration = tformat->format(t_expires);
