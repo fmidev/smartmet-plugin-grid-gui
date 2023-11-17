@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-plugin-%{DIRNAME}
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
-Version: 23.11.10
+Version: 23.11.17
 Release: 1%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
@@ -61,6 +61,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/plugins/%{DIRNAME}.so
 
 %changelog
+* Fri Nov 17 2023 Pertti Kinnia <pertti.kinnia@fmi.fi> - 23.11.17-1.fmi
+- Repackaged due to API changes in grid-files and grid-content
+
 * Fri Nov 10 2023 Mika Heiskanen <mika.heiskanen@fmi.fi> - 23.11.10-1.fmi
 - Repackaged due to API changes in grid-content
 
