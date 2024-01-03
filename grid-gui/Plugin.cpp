@@ -817,6 +817,12 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
     for (int x=0; x<width; x++)
       yLand[x] = false;
 
+    ModificationLock *modificationLock = NULL;
+    if (colorMapFile != nullptr)
+      modificationLock = colorMapFile->getModificationLock();
+
+    AutoReadLock lock(modificationLock);
+
     for (int y=0; y<height; y++)
     {
       bool prevLand = false;
@@ -837,7 +843,7 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
         uint col = hsv_to_rgb(hue,saturation,C_UCHAR(v));
 
         if (colorMapFile != nullptr)
-          col = colorMapFile->getColor(val);
+          col = colorMapFile->getSmoothColor(val);
 
         double xc = xd*(x-(dWidth/2));
         double yc = yd*((dHeight-y-1)-(dHeight/2));
@@ -1197,6 +1203,13 @@ void Plugin::saveImage(
     //double t1 = 0.2;
     //double t2 = 1.0 - t1;
 
+
+    ModificationLock *modificationLock = NULL;
+    if (colorMapFile != nullptr)
+      modificationLock = colorMapFile->getModificationLock();
+
+    AutoReadLock lock(modificationLock);
+
     for (int y=0; y<height; y++)
     {
       bool prevLand = false;
@@ -1221,7 +1234,7 @@ void Plugin::saveImage(
           col = 0xFFFFFFFF;
 
         if (colorMapFile != nullptr)
-          col = colorMapFile->getColor(val);
+          col = colorMapFile->getSmoothColor(val);
 
         bool land = false;
         if (landSeaMask && c < coordinates.size())
