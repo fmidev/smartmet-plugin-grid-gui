@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-plugin-%{DIRNAME}
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
-Version: 23.11.10
+Version: 23.12.22
 Release: 1%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
@@ -26,16 +26,16 @@ BuildRequires: %{smartmet_boost}-devel
 BuildRequires: libconfig17-devel
 BuildRequires: libwebp13-devel
 BuildRequires: smartmet-utils-devel >= 23.9.6
-BuildRequires: smartmet-library-spine-devel >= 23.10.20
-BuildRequires: smartmet-library-grid-files-devel >= 23.11.6
-BuildRequires: smartmet-library-grid-content-devel >= 23.11.10
-BuildRequires: smartmet-engine-grid-devel >= 23.11.10
+BuildRequires: smartmet-library-spine-devel >= 23.12.5
+BuildRequires: smartmet-library-grid-files-devel >= 23.12.22
+BuildRequires: smartmet-library-grid-content-devel >= 23.12.22
+BuildRequires: smartmet-engine-grid-devel >= 23.12.22
 BuildRequires: gdal35-devel
 Requires: libconfig17
-Requires: smartmet-library-macgyver >= 23.11.8
-Requires: smartmet-library-spine >= 23.10.20
-Requires: smartmet-server >= 23.8.30
-Requires: smartmet-engine-grid >= 23.11.10
+Requires: smartmet-library-macgyver >= 23.11.21
+Requires: smartmet-library-spine >= 23.12.5
+Requires: smartmet-server >= 23.12.5
+Requires: smartmet-engine-grid >= 23.12.22
 Requires: %{smartmet_boost}-date-time
 Provides: %{SPECNAME}
 
@@ -61,6 +61,15 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/plugins/%{DIRNAME}.so
 
 %changelog
+* Fri Dec 22 2023 Mika Heiskanen <mika.heiskanen@fmi.fi> - 23.12.22-1.fmi
+- Repackaged due to ThreadLock ABI changes
+
+* Tue Dec  5 2023 Mika Heiskanen <mika.heiskanen@fmi.fi> - 23.12.5-1.fmi
+- Indicate being an admin plugin to the server
+
+* Fri Nov 17 2023 Pertti Kinnia <pertti.kinnia@fmi.fi> - 23.11.17-1.fmi
+- Repackaged due to API changes in grid-files and grid-content
+
 * Fri Nov 10 2023 Mika Heiskanen <mika.heiskanen@fmi.fi> - 23.11.10-1.fmi
 - Repackaged due to API changes in grid-content
 

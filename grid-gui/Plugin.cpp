@@ -5794,13 +5794,11 @@ int Plugin::getRequiredAPIVersion() const
 
 // ----------------------------------------------------------------------
 /*!
- * \brief Performance query implementation.
- *
- * We want admin calls to always be processed ASAP
+ * \brief This is an admin plugin
  */
 // ----------------------------------------------------------------------
 
-bool Plugin::queryIsFast(const Spine::HTTP::Request & /* theRequest */) const
+bool Plugin::isAdminQuery(const Spine::HTTP::Request & /* theRequest */) const
 {
   return true;
 }

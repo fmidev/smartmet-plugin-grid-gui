@@ -41,7 +41,7 @@ class Plugin : public SmartMetPlugin
 
     const std::string& getPluginName() const;
     int getRequiredAPIVersion() const;
-    bool queryIsFast(const Spine::HTTP::Request& theRequest) const;
+    bool isAdminQuery(const Spine::HTTP::Request& theRequest) const;
 
   protected:
 
