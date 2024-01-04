@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-plugin-%{DIRNAME}
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
-Version: 23.12.22
+Version: 24.1.4
 Release: 1%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
@@ -27,15 +27,15 @@ BuildRequires: libconfig17-devel
 BuildRequires: libwebp13-devel
 BuildRequires: smartmet-utils-devel >= 23.9.6
 BuildRequires: smartmet-library-spine-devel >= 23.12.5
-BuildRequires: smartmet-library-grid-files-devel >= 23.12.22
+BuildRequires: smartmet-library-grid-files-devel >= 24.1.4
 BuildRequires: smartmet-library-grid-content-devel >= 23.12.22
-BuildRequires: smartmet-engine-grid-devel >= 23.12.22
+BuildRequires: smartmet-engine-grid-devel >= 24.1.4
 BuildRequires: gdal35-devel
 Requires: libconfig17
 Requires: smartmet-library-macgyver >= 23.11.21
 Requires: smartmet-library-spine >= 23.12.5
 Requires: smartmet-server >= 23.12.5
-Requires: smartmet-engine-grid >= 23.12.22
+Requires: smartmet-engine-grid >= 24.1.4
 Requires: %{smartmet_boost}-date-time
 Provides: %{SPECNAME}
 
@@ -61,6 +61,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/plugins/%{DIRNAME}.so
 
 %changelog
+* Thu Jan  4 2024 Mika Heiskanen <mika.heiskanen@fmi.fi> - 24.1.4-1.fmi
+- Added smooth contour colours
+
 * Fri Dec 22 2023 Mika Heiskanen <mika.heiskanen@fmi.fi> - 23.12.22-1.fmi
 - Repackaged due to ThreadLock ABI changes
 
