@@ -26,16 +26,16 @@ BuildRequires: %{smartmet_boost}-devel
 BuildRequires: libconfig17-devel
 BuildRequires: libwebp13-devel
 BuildRequires: smartmet-utils-devel >= 23.9.6
-BuildRequires: smartmet-library-spine-devel >= 23.12.5
-BuildRequires: smartmet-library-grid-files-devel >= 24.1.4
-BuildRequires: smartmet-library-grid-content-devel >= 23.12.22
-BuildRequires: smartmet-engine-grid-devel >= 24.1.4
+BuildRequires: smartmet-library-spine-devel >= 24.1.30
+BuildRequires: smartmet-library-grid-files-devel >= 24.2.5
+BuildRequires: smartmet-library-grid-content-devel >= 24.2.5
+BuildRequires: smartmet-engine-grid-devel >= 24.2.5
 BuildRequires: gdal35-devel
 Requires: libconfig17
-Requires: smartmet-library-macgyver >= 23.11.21
-Requires: smartmet-library-spine >= 23.12.5
-Requires: smartmet-server >= 23.12.5
-Requires: smartmet-engine-grid >= 24.1.4
+Requires: smartmet-library-macgyver >= 24.1.17
+Requires: smartmet-library-spine >= 24.1.30
+Requires: smartmet-server >= 24.1.29
+Requires: smartmet-engine-grid >= 24.2.5
 Requires: %{smartmet_boost}-date-time
 Provides: %{SPECNAME}
 
