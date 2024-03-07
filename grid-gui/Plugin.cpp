@@ -148,6 +148,7 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
     itsImageCounter = 0;
     itsLandSeaMask_width = 0;
     itsLandSeaMask_height = 0;
+    itsProducerFile_modificationTime = 0;
 
     if (theReactor->getRequiredAPIVersion() != SMARTMET_API_VERSION)
       throw Fmi::Exception(BCP, "GridGui plugin and Server API version mismatch");
@@ -244,6 +245,8 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
 
     loadColorFile();
     loadIsolineFile();
+    loadProducerFile();
+
 
     /*
     if (itsDaliFile > " ")
@@ -301,6 +304,7 @@ void Plugin::init()
 
     itsGridEngine = reinterpret_cast<Engine::Grid::Engine*>(engine);
 
+    itsProducerFile = itsGridEngine->getProducerFileName();
 
   }
   catch (...)
@@ -332,6 +336,78 @@ void Plugin::shutdown()
   }
 }
 
+
+
+
+
+void Plugin::loadProducerFile()
+{
+  FUNCTION_TRACE
+  try
+  {
+    if (itsProducerFile_modificationTime == getFileModificationTime(itsProducerFile.c_str()))
+      return;
+
+    AutoThreadLock lock(&itsThreadLock);
+    FILE* file = fopen(itsProducerFile.c_str(), "re");
+    if (file == nullptr)
+    {
+      Fmi::Exception exception(BCP, "Cannot open the producer file!");
+      exception.addParameter("Filename", itsProducerFile);
+      throw exception;
+    }
+
+    itsProducerList.clear();
+
+    char st[1000];
+
+    while (!feof(file))
+    {
+      if (fgets(st, 1000, file) != nullptr && st[0] != '#')
+      {
+        bool ind = false;
+        char* field[100];
+        uint c = 1;
+        field[0] = st;
+        char* p = st;
+        while (*p != '\0' && c < 100)
+        {
+          if (*p == '"')
+            ind = !ind;
+
+          if ((*p == ';' || *p == '\n') && !ind)
+          {
+            *p = '\0';
+            p++;
+            field[c] = p;
+            c++;
+          }
+          else
+          {
+            p++;
+          }
+        }
+        c--;
+
+        std::string key;
+        for (uint t=0; t<c; t++)
+        {
+          if (field[t][0] != '\0')
+          {
+            itsProducerList.insert(toUpperString(field[t]));
+          }
+        }
+      }
+    }
+    fclose(file);
+
+    itsProducerFile_modificationTime = getFileModificationTime(itsProducerFile.c_str());
+  }
+  catch (...)
+  {
+    throw Fmi::Exception(BCP, "Operation failed!", nullptr);
+  }
+}
 
 
 
@@ -3973,6 +4049,8 @@ int Plugin::page_main(Spine::Reactor &theReactor,
       loadColorFile();
     }
 
+    loadProducerFile();
+
     /*
     if (getFileModificationTime(itsDaliFile.c_str()) != itsDaliFile_lastModified)
     {
@@ -4145,6 +4223,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     //generationInfoList2.getGenerationInfoListByProducerIdAndStatus(producerId,generationInfoList,T::GenerationInfo::Status::Ready);
 
     uint generationId = toUInt32(generationIdStr);
+    bool generationNotReady = false;
 
     if (generationInfoList.getGenerationInfoById(generationId) == nullptr)
       generationId = 0;
@@ -4173,7 +4252,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
         {
           std::string status = "";
           if (g->mStatus != 1)
-            status = "(* not ready *) ";
+            status = " (* not ready *)";
 
           if (generationId == 0)
           {
@@ -4184,17 +4263,25 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
           if (generationId == g->mGenerationId)
           {
+            if (g->mStatus != 1)
+              generationNotReady = true;
+
             originTime = g->mAnalysisTime;
-            ostr1 << "<OPTION selected value=\"" <<  g->mGenerationId << "\">" << status <<  g->mName << "</OPTION>\n";
+            ostr1 << "<OPTION selected value=\"" <<  g->mGenerationId << "\">" <<  g->mName << status << "</OPTION>\n";
             session.setAttribute(ATTR_GENERATION_ID,generationId);
           }
           else
-            ostr1 << "<OPTION value=\"" <<  g->mGenerationId << "\">" << status << g->mName << "</OPTION>\n";
+            ostr1 << "<OPTION value=\"" <<  g->mGenerationId << "\">" << g->mName << status << "</OPTION>\n";
         }
       }
       ostr1 << "</SELECT>\n";
     }
     ostr1 << "</TD></TR>\n";
+
+    if (generationNotReady)
+    {
+      ostr1 << "<TR style=\"text-align:center; font-size:12; font-weight:bold;\"><TD>*** Generation not ready ***</TD></TR>\n";
+    }
 
 
     // ### Parameters:
@@ -4557,6 +4644,17 @@ int Plugin::page_main(Spine::Reactor &theReactor,
       ostr1 << "</SELECT>\n";
     }
     ostr1 << "</TD></TR>\n";
+
+
+    if (geometryId != 0)
+    {
+      char tmp[100];
+      sprintf(tmp,"%s:%u",producerNameStr.c_str(),geometryId);
+      if (itsProducerList.find(toUpperString(tmp)) == itsProducerList.end())
+      {
+        ostr1 << "<TR style=\"text-align:center; font-size:12; font-weight:bold;\"><TD >*** Search not configured ***</TD></TR>\n";
+      }
+    }
 
 
     if (projectionIdStr.empty())

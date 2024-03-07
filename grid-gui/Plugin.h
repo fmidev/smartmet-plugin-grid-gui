@@ -221,6 +221,7 @@ class Plugin : public SmartMetPlugin
     void loadColorFile();
     //void loadDaliFile();
     void loadIsolineFile();
+    void loadProducerFile();
     bool loadImage(const char *fname,Spine::HTTP::Response &theResponse);
     void initSession(Session& session);
 
@@ -253,6 +254,9 @@ class Plugin : public SmartMetPlugin
     std::string               itsImagesUnderConstruction[100];
     uint                      itsImageCounter;
     ThreadLock                itsThreadLock;
+    std::string               itsProducerFile;
+    time_t                    itsProducerFile_modificationTime;
+    std::set<std::string>     itsProducerList;
 
     std::map<std::string,T::ParamValue_vec> itsIsolines;
     std::map<std::string,std::string>       itsImages;
