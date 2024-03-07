@@ -1333,8 +1333,37 @@ void Plugin::saveImage(
                 for (int x=0; x<img.width; x++)
                 {
                   uint col = img.pixel[cc];
-                  if ((col & 0xFF000000) == 0)
-                    imagePaint.paintPixel(xx+x,yy+img.height/2-y,col);
+                  uint alpha = (col & 0xFF000000) >> 24;
+                  if (alpha > 0)
+                  {
+                    /*
+                    if (alpha != 0xFF)
+                    {
+                      float m2 = (float)alpha/255.0;
+                      float m1 = 1-m2;
+                      uint oc = imagePaint.getPixel(xx+x,yy+img.height/2-y);
+
+                      uint r1 = (oc & 0x00FF0000) >> 16;
+                      uint g1 = (oc & 0x0000FF00) >> 8;
+                      uint b1 = (oc & 0x000000FF);
+
+                      uint r2 = (col & 0x00FF0000) >> 16;
+                      uint g2 = (col & 0x0000FF00) >> 8;
+                      uint b2 = (col & 0x000000FF);
+
+                      uint r3 = r1*m1 + r2*m2;
+                      uint g3 = g1*m1 + g2*m2;
+                      uint b3 = b1*m1 + b2*m2;
+
+                      uint col = (r3 << 16) + (g3 << 8) + b3;
+                    }
+                    */
+
+                    if (rotate)
+                      imagePaint.paintPixel(xx+x,yy+img.height/2-y,col);
+                    else
+                      imagePaint.paintPixel(xx+x,yy+img.height/2+y,col);
+                  }
 
                   cc++;
                 }
@@ -4142,6 +4171,10 @@ int Plugin::page_main(Spine::Reactor &theReactor,
         T::GenerationInfo *g = generationInfoList.getGenerationInfoByName(name);
         if (g != nullptr && (g->mDeletionTime == 0 || g->mDeletionTime > requiredAccessTime))
         {
+          std::string status = "";
+          if (g->mStatus != 1)
+            status = "(* not ready *) ";
+
           if (generationId == 0)
           {
             generationId = g->mGenerationId;
@@ -4152,11 +4185,11 @@ int Plugin::page_main(Spine::Reactor &theReactor,
           if (generationId == g->mGenerationId)
           {
             originTime = g->mAnalysisTime;
-            ostr1 << "<OPTION selected value=\"" <<  g->mGenerationId << "\">" <<  g->mName << "</OPTION>\n";
+            ostr1 << "<OPTION selected value=\"" <<  g->mGenerationId << "\">" << status <<  g->mName << "</OPTION>\n";
             session.setAttribute(ATTR_GENERATION_ID,generationId);
           }
           else
-            ostr1 << "<OPTION value=\"" <<  g->mGenerationId << "\">" <<  g->mName << "</OPTION>\n";
+            ostr1 << "<OPTION value=\"" <<  g->mGenerationId << "\">" << status << g->mName << "</OPTION>\n";
         }
       }
       ostr1 << "</SELECT>\n";
