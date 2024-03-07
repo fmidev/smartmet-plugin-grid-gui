@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-plugin-%{DIRNAME}
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
-Version: 24.2.23
+Version: 24.3.7
 Release: 1%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
@@ -25,7 +25,7 @@ BuildRequires: make
 BuildRequires: %{smartmet_boost}-devel
 BuildRequires: libconfig17-devel
 BuildRequires: libwebp13-devel
-BuildRequires: smartmet-utils-devel >= 23.9.6
+BuildRequires: smartmet-utils-devel >= 24.2.29
 BuildRequires: smartmet-library-spine-devel >= 24.2.8
 BuildRequires: smartmet-library-grid-files-devel >= 24.2.23
 BuildRequires: smartmet-library-grid-content-devel >= 24.2.23
@@ -61,6 +61,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/plugins/%{DIRNAME}.so
 
 %changelog
+* Thu Mar  7 2024 Mika Heiskanen <mika.heiskanen@fmi.fi> - 24.3.7-1.fmi
+- Added a warning if the producer/geometry search is not configured
+
 * Fri Feb 23 2024 Mika Heiskanen <mika.heiskanen@fmi.fi> 24.2.23-1.fmi
 - Full repackaging
 
