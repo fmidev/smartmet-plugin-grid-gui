@@ -15,6 +15,7 @@
 #include <macgyver/FastMath.h>
 #include <boost/bind/bind.hpp>
 #include <macgyver/DateTime.h>
+#include <boost/lexical_cast.hpp>
 #include <webp/encode.h>
 #include <webp/mux.h>
 
