@@ -36,7 +36,6 @@ Requires: smartmet-library-macgyver >= 24.1.17
 Requires: smartmet-library-spine >= 24.4.23
 Requires: smartmet-server >= 24.2.22
 Requires: smartmet-engine-grid >= 24.5.3
-Requires: %{smartmet_boost}-date-time
 Provides: %{SPECNAME}
 
 %description
