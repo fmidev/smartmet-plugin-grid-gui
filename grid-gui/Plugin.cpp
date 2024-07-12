@@ -1981,7 +1981,7 @@ int Plugin::page_download(Spine::Reactor &theReactor,
       std::vector<char> *content = new std::vector<char>();
       content->reserve(sz);
 
-      boost::shared_ptr<std::vector<char>> sContent;
+      std::shared_ptr<std::vector<char>> sContent;
       sContent.reset(content);
 
       for (uint t=0; t<sz; t++)
@@ -2518,7 +2518,7 @@ int Plugin::page_timeseries(Spine::Reactor &theReactor,
       std::vector<char> *content = new std::vector<char>();
       content->reserve(sz);
 
-      boost::shared_ptr<std::vector<char> > sContent;
+      std::shared_ptr<std::vector<char> > sContent;
       sContent.reset(content);
 
       FILE *file = fopen(fname,"re");
@@ -2580,7 +2580,7 @@ bool Plugin::loadImage(const char *fname,Spine::HTTP::Response &theResponse)
       std::vector<char> *content = new std::vector<char>();
       content->reserve(sz);
 
-      boost::shared_ptr<std::vector<char>> sContent;
+      std::shared_ptr<std::vector<char>> sContent;
       sContent.reset(content);
 
       FILE *file = fopen(fname,"re");
@@ -5684,7 +5684,7 @@ int Plugin::request(Spine::Reactor &theReactor,
 
     Session session;
 
-    boost::optional<std::string> v;
+    std::optional<std::string> v;
     v = theRequest.getParameter("session");
     if (v)
     {
@@ -5812,7 +5812,7 @@ int Plugin::request(Spine::Reactor &theReactor,
 
     Fmi::DateTime t_now = Fmi::SecondClock::universal_time();
     Fmi::DateTime t_expires = t_now + Fmi::Seconds(expires_seconds);
-    boost::shared_ptr<Fmi::TimeFormatter> tformat(Fmi::TimeFormatter::create("http"));
+    std::shared_ptr<Fmi::TimeFormatter> tformat(Fmi::TimeFormatter::create("http"));
     std::string cachecontrol = "public, max-age=" + boost::lexical_cast<std::string>(expires_seconds);
     std::string expiration = tformat->format(t_expires);
     std::string modification = tformat->format(t_now);
