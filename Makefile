@@ -17,7 +17,7 @@ INCLUDES += \
 	-I$(includedir)/smartmet/grid-files \
 	-I$(includedir)/smartmet/grid-content
 
-LIBS += -L$(libdir) \
+LIBS += $(PREFIX_LDFLAGS) \
 	$(REQUIRED_LIBS) \
 	-lsmartmet-grid-files \
 	-lsmartmet-grid-content \
@@ -76,7 +76,7 @@ install:
 	$(INSTALL_PROG) $(LIBFILE) $(plugindir)/$(LIBFILE)
 
 test:
-	cd test && make test
+	@if [ -d test ] ; then $(MAKE) -C test $@; else echo "No tests available"; fi
 
 objdir:
 	@mkdir -p $(objdir)
