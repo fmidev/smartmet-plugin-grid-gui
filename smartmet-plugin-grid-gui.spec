@@ -3,8 +3,8 @@
 %define SPECNAME smartmet-plugin-%{DIRNAME}
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
-Version: 24.6.3
-Release: 2%{?dist}.fmi
+Version: 24.7.12
+Release: 1%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
 URL: https://github.com/fmidev/smartmet-plugin-grid-gui
@@ -16,9 +16,6 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 %define smartmet_boost boost
 %endif
 
-%define smartmet_fmt_min 8.1.1
-%define smartmet_fmt_max 8.2.0
-
 BuildRequires: rpm-build
 BuildRequires: gcc-c++
 BuildRequires: make
@@ -26,16 +23,16 @@ BuildRequires: %{smartmet_boost}-devel
 BuildRequires: libconfig17-devel
 BuildRequires: libwebp13-devel
 BuildRequires: smartmet-utils-devel >= 24.5.31
-BuildRequires: smartmet-library-spine-devel >= 24.5.27
-BuildRequires: smartmet-library-grid-files-devel >= 24.5.30
-BuildRequires: smartmet-library-grid-content-devel >= 24.6.3
-BuildRequires: smartmet-engine-grid-devel >= 24.6.3
+BuildRequires: smartmet-library-spine-devel >= 24.7.12
+BuildRequires: smartmet-library-grid-files-devel >= 24.7.12
+BuildRequires: smartmet-library-grid-content-devel >= 24.7.12
+BuildRequires: smartmet-engine-grid-devel >= 24.7.12
 BuildRequires: gdal38-devel
 Requires: libconfig17
-Requires: smartmet-library-macgyver >= 24.5.30
-Requires: smartmet-library-spine >= 24.5.27
-Requires: smartmet-server >= 24.5.16
-Requires: smartmet-engine-grid >= 24.6.3
+Requires: smartmet-library-macgyver >= 24.7.12
+Requires: smartmet-library-spine >= 24.7.12
+Requires: smartmet-server >= 24.7.12
+Requires: smartmet-engine-grid >= 24.7.12
 Provides: %{SPECNAME}
 
 %description
@@ -60,6 +57,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/plugins/%{DIRNAME}.so
 
 %changelog
+* Fri Jul 12 2024 Andris Pavēnis <andris.pavenis@fmi.fi> 24.7.12-1.fmi
+- Replace many boost library types with C++ standard library ones
+
 * Mon Jun  3 2024 Mika Heiskanen <mika.heiskanen@fmi.fi> - 24.6.3-2.fmi
 - Repackaged due to ABI changes
 
