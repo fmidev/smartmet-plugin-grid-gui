@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-plugin-%{DIRNAME}
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
-Version: 24.7.12
+Version: 24.8.7
 Release: 1%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
@@ -57,6 +57,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/plugins/%{DIRNAME}.so
 
 %changelog
+* Wed Aug  7 2024 Andris Pavēnis <andris.pavenis@fmi.fi> 24.8.7-1.fmi
+- Update to gdal-3.8, geos-3.12, proj-94 and fmt-11
+
 * Fri Jul 12 2024 Andris Pavēnis <andris.pavenis@fmi.fi> 24.7.12-1.fmi
 - Replace many boost library types with C++ standard library ones
 
