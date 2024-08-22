@@ -5813,7 +5813,7 @@ int Plugin::request(Spine::Reactor &theReactor,
     Fmi::DateTime t_now = Fmi::SecondClock::universal_time();
     Fmi::DateTime t_expires = t_now + Fmi::Seconds(expires_seconds);
     std::shared_ptr<Fmi::TimeFormatter> tformat(Fmi::TimeFormatter::create("http"));
-    std::string cachecontrol = "public, max-age=" + boost::lexical_cast<std::string>(expires_seconds);
+    std::string cachecontrol = "public, max-age=" + Fmi::to_string(expires_seconds);
     std::string expiration = tformat->format(t_expires);
     std::string modification = tformat->format(t_now);
 
