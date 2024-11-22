@@ -111,6 +111,8 @@ using namespace SmartMet::Spine;
 #define ATTR_TIME_GROUP_TYPE    "tgt"
 #define ATTR_TIME_GROUP         "tg"
 
+#define DEFAULT_COLOR            0xFF000000
+
 // ----------------------------------------------------------------------
 /*!
  * \brief Plugin constructor
@@ -677,6 +679,9 @@ uint Plugin::getColorValue(std::string& colorName)
   FUNCTION_TRACE
   try
   {
+    if (colorName == "Default")
+      return DEFAULT_COLOR;
+
     for (auto it = itsColors.begin(); it != itsColors.end(); ++it)
     {
       if (it->first == colorName)
@@ -811,6 +816,28 @@ bool Plugin::isLand(double lon,double lat)
 
 
 
+uint getDefaultBorderColor(uint col)
+{
+  FUNCTION_TRACE
+  try
+  {
+    uint r = (col & 0xFF0000) >> 16;
+    uint g = (col & 0x00FF00) >> 8;
+    uint b = col & 0x0000FF;
+
+    uint avg = (r + g + b)/3;
+    uchar mc = avg + 128;
+    return rgb(mc,mc,mc);
+  }
+  catch (...)
+  {
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
+    throw exception;
+  }
+}
+
+
+
 
 void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_vec&  values,unsigned char hue,unsigned char saturation,unsigned char blur,uint coordinateLines,uint landBorder,std::string landMask,std::string seaMask,std::string colorMapName,std::string missingStr)
 {
@@ -898,6 +925,8 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
     if (colorMapFile != nullptr)
       modificationLock = colorMapFile->getModificationLock();
 
+    uint lbcol = landBorder;
+
     AutoReadLock lock(modificationLock);
 
     for (int y=0; y<height; y++)
@@ -936,15 +965,26 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
         if (landBorder != 0xFFFFFFFF)
         {
           if (land & (!prevLand || !yLand[x]))
-            col = landBorder;
+          {
+            if (landBorder == DEFAULT_COLOR)
+            {
+              col = getDefaultBorderColor(col);
+              lbcol = col;
+            }
+            else
+            {
+              col = landBorder;
+              lbcol = col;
+            }
+          }
 
           if (!land)
           {
             if (prevLand  &&  x > 0  &&  image[y*width + x-1] != coordinateLines)
-              image[y*width + x-1] = landBorder;
+              image[y*width + x-1] = lbcol;
 
             if (yLand[x] &&  y > 0  && image[(y-1)*width + x] != coordinateLines)
-              image[(y-1)*width + x] = landBorder;
+              image[(y-1)*width + x] = lbcol;
           }
         }
 
@@ -1287,6 +1327,8 @@ void Plugin::saveImage(
 
     AutoReadLock lock(modificationLock);
 
+    uint lbcol = landBorder;
+
     for (int y=0; y<height; y++)
     {
       bool prevLand = false;
@@ -1352,15 +1394,26 @@ void Plugin::saveImage(
         if (landBorder != 0xFFFFFFFF)
         {
           if (land & (!prevLand || !yLand[x]))
-            col = landBorder;
+          {
+            if (landBorder == DEFAULT_COLOR)
+            {
+              col = getDefaultBorderColor(col);
+              lbcol = col;
+            }
+            else
+            {
+              col = landBorder;
+              lbcol = col;
+            }
+          }
 
           if (!land)
           {
             if (prevLand  &&  x > 0)
-              imagePaint.paintPixel(x-1,y,landBorder);
+              imagePaint.paintPixel(x-1,y,lbcol);
 
             if (yLand[x] &&  y > 0)
-              imagePaint.paintPixel(x,y-1,landBorder);
+              imagePaint.paintPixel(x,y-1,lbcol);
           }
         }
 
@@ -3891,7 +3944,7 @@ void Plugin::initSession(Session& session)
     session.setAttribute(ATTR_COORDINATE_LINES,"Grey");
     session.setAttribute(ATTR_ISOLINES,"DarkGrey");
     session.setAttribute(ATTR_ISOLINE_VALUES,"Generated");
-    session.setAttribute(ATTR_LAND_BORDER,"Grey");
+    session.setAttribute(ATTR_LAND_BORDER,"Default");
     session.setAttribute(ATTR_LAND_MASK,"LightGrey");
     session.setAttribute(ATTR_SEA_MASK,"LightCyan");
     session.setAttribute(ATTR_COLOR_MAP,"None");
@@ -4186,7 +4239,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
     if (len > 0)
     {
-      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_PRODUCER_ID << "=' + this.options[this.selectedIndex].value)\">\n";
+      ostr1 << "<SELECT style=\"width:280px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_PRODUCER_ID << "=' + this.options[this.selectedIndex].value)\">\n";
       for (uint t=0; t<len; t++)
       {
         T::ProducerInfo *p = producerInfoList.getProducerInfoByIndex(t);
@@ -4243,7 +4296,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
       if (generations.size() == 1)
         disabled = "disabled";
 
-      ostr1 << "<SELECT style=\"width:250px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_GENERATION_ID << "=' + this.options[this.selectedIndex].value)\">\n";
+      ostr1 << "<SELECT style=\"width:280px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_GENERATION_ID << "=' + this.options[this.selectedIndex].value)\">\n";
 
       for (auto it = generations.rbegin(); it != generations.rend(); ++it)
       {
@@ -4296,7 +4349,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
     if (paramKeyList.size() > 0)
     {
-      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_PARAMETER_ID << "=' + this.options[this.selectedIndex].value)\">\n";
+      ostr1 << "<SELECT style=\"width:280px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_PARAMETER_ID << "=' + this.options[this.selectedIndex].value)\">\n";
       for (auto it=paramKeyList.begin(); it!=paramKeyList.end(); ++it)
       {
         std::string parameterId = *it;
@@ -4382,7 +4435,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     len = contentInfoList.getLength();
     int levelId = toInt32(levelIdStr);
 
-    ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Level type:</TD></TR>\n";
+    ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Level type and value:</TD></TR>\n";
     ostr1 << "<TR height=\"30\"><TD>\n";
 
     std::set<int> levelIds;
@@ -4397,7 +4450,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
       if (levelIds.size() == 1)
         disabled = "disabled";
 
-      ostr1 << "<SELECT style=\"width:250px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_LEVEL_ID << "=' + this.options[this.selectedIndex].value) \">\n";
+      ostr1 << "<SELECT style=\"width:200px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_LEVEL_ID << "=' + this.options[this.selectedIndex].value) \">\n";
       for (auto it = levelIds.begin(); it != levelIds.end(); ++it)
       {
         if (levelIdStr.empty())
@@ -4416,23 +4469,6 @@ int Plugin::page_main(Spine::Reactor &theReactor,
           else
             lStr = "FMI-" + std::to_string(*it) + " : ";
         }
-        /*
-        else
-        if (*it < 2000)
-        {
-          if (Identification::gridDef.getGrib1LevelDef(*it % 1000,levelDef))
-            lStr = "GRIB1-" + std::to_string(*it % 1000) + " : " + levelDef.mDescription;
-          else
-            lStr = "GRIB1-" + std::to_string(*it % 1000) + " : ";
-        }
-        else
-        {
-          if (Identification::gridDef.getGrib2LevelDef(*it % 1000,levelDef))
-            lStr = "GRIB2-" + std::to_string(*it % 1000) + " : " + levelDef.mDescription;
-          else
-            lStr = "GRIB2-" + std::to_string(*it % 1000) + " : ";
-        }
-*/
         if (levelId == *it)
         {
           ostr1 << "<OPTION selected value=\"" <<  *it << "\">" <<  lStr << "</OPTION>\n";
@@ -4445,8 +4481,6 @@ int Plugin::page_main(Spine::Reactor &theReactor,
       }
       ostr1 << "</SELECT>\n";
     }
-    ostr1 << "</TD></TR>\n";
-
 
     // ### Levels:
 
@@ -4454,9 +4488,6 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     contentServer->getContentListByParameterAndGenerationId(0,generationId,T::ParamKeyTypeValue::FMI_NAME,parameterIdStr,levelId,0,0x7FFFFFFF,-2,-2,-2,"14000101T000000","30000101T000000",0,contentInfoList);
     len = contentInfoList.getLength();
     T::ParamLevel level = toInt32(levelStr);
-
-    ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Level:</TD></TR>\n";
-    ostr1 << "<TR height=\"30\"><TD>\n";
 
     std::set<int> levels;
     getLevels(contentInfoList,levelId,levels);
@@ -4470,7 +4501,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
       if (levels.size() == 1)
         disabled = "disabled";
 
-      ostr1 << "<SELECT " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_LEVEL << "=' + this.options[this.selectedIndex].value)\">\n";
+      ostr1 << "<SELECT style=\"width:70px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_LEVEL << "=' + this.options[this.selectedIndex].value)\">\n";
       for (auto it = levels.begin(); it != levels.end(); ++it)
       {
         if (levelStr.empty())
@@ -4499,7 +4530,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
     short forecastType = toInt16(forecastTypeStr);
 
-    ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Forecast type</TD></TR>\n";
+    ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Forecast type and number:</TD></TR>\n";
     ostr1 << "<TR height=\"30\"><TD>\n";
 
     std::set<int> forecastTypes;
@@ -4514,7 +4545,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
       if (forecastTypes.size() == 1)
         disabled = "disabled";
 
-      ostr1 << "<SELECT " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_FORECAST_TYPE << "=' + this.options[this.selectedIndex].value)\">\n";
+      ostr1 << "<SELECT style=\"width:200px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_FORECAST_TYPE << "=' + this.options[this.selectedIndex].value)\">\n";
       for (auto it = forecastTypes.begin(); it != forecastTypes.end(); ++it)
       {
         if (forecastTypeStr.empty())
@@ -4543,15 +4574,10 @@ int Plugin::page_main(Spine::Reactor &theReactor,
       }
       ostr1 << "</SELECT>\n";
     }
-    ostr1 << "</TD></TR>\n";
-
 
     // ### Forecast number:
 
     short forecastNumber = toInt16(forecastNumberStr);
-
-    ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Forecast number</TD></TR>\n";
-    ostr1 << "<TR height=\"30\"><TD>\n";
 
     std::set<int> forecastNumbers;
     getForecastNumbers(contentInfoList,levelId,level,forecastType,forecastNumbers);
@@ -4565,7 +4591,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
       if (forecastNumbers.size() == 1)
         disabled = "disabled";
 
-      ostr1 << "<SELECT " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_FORECAST_NUMBER << "=' + this.options[this.selectedIndex].value)\">\n";
+      ostr1 << "<SELECT style=\"width:70px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_FORECAST_NUMBER << "=' + this.options[this.selectedIndex].value)\">\n";
       for (auto it = forecastNumbers.begin(); it != forecastNumbers.end(); ++it)
       {
         if (forecastNumberStr.empty())
@@ -4608,7 +4634,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
       if (geometries.size() == 1)
         disabled = "disabled";
 
-      ostr1 << "<SELECT style=\"width:250px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_GEOMETRY_ID << "=' + this.options[this.selectedIndex].value)\">\n";
+      ostr1 << "<SELECT style=\"width:280px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_GEOMETRY_ID << "=' + this.options[this.selectedIndex].value)\">\n";
 
       for (auto it=geometries.begin(); it!=geometries.end(); ++it)
       {
@@ -4679,6 +4705,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     const char *timeGroupTypes[] = {"All","Day","Month","Year",nullptr};
     int timeGroupLen[] = {15,8,6,4};
 
+    ostr1 << "<TR height=\"15\"><TD><HR/></TD></TR>\n";
     ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Time group:</TD></TR>\n";
     ostr1 << "<TR height=\"30\"><TD><TABLE><TR><TD>\n";
 
@@ -4765,7 +4792,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
       }
       ostr1 << "</SELECT></TD>\n";
     }
-    ostr1 << "</TR></TABLE></TD></TR></TD></TR>\n";
+    ostr1 << "</TR></TABLE></TD></TR>\n";
 
 
 
@@ -4905,9 +4932,10 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
     const char *modes[] = {"Image","Map","Isolines","Streams","StreamsAnimation","Symbols","Locations","Info","Table(sample)","Coordinates(sample)","Message",nullptr};
 
+    ostr1 << "<TR height=\"15\"><TD><HR/></TD></TR>\n";
     ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Presentation:</TD></TR>\n";
     ostr1 << "<TR height=\"30\"><TD>\n";
-    ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_TIME << "=" << timeStr << "&" << ATTR_FILE_ID << "=" << fileIdStr << "&" << ATTR_MESSAGE_INDEX << "=" << messageIndexStr << "&" << ATTR_FORECAST_TYPE << "=" << forecastTypeStr << "&" << ATTR_FORECAST_NUMBER << "=" << forecastNumberStr << "&" << ATTR_PRESENTATION << "=' + this.options[this.selectedIndex].value)\">\n";
+    ostr1 << "<SELECT style=\"width:280px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_TIME << "=" << timeStr << "&" << ATTR_FILE_ID << "=" << fileIdStr << "&" << ATTR_MESSAGE_INDEX << "=" << messageIndexStr << "&" << ATTR_FORECAST_TYPE << "=" << forecastTypeStr << "&" << ATTR_FORECAST_NUMBER << "=" << forecastNumberStr << "&" << ATTR_PRESENTATION << "=' + this.options[this.selectedIndex].value)\">\n";
 
     a = 0;
     while (modes[a] != nullptr)
@@ -4973,7 +5001,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
       if (projections.size() > 0)
       {
-        ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_PROJECTION_ID << "=' + this.options[this.selectedIndex].value)\">\n";
+        ostr1 << "<SELECT style=\"width:280px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_PROJECTION_ID << "=' + this.options[this.selectedIndex].value)\">\n";
 
         for (auto it=projections.begin(); it!=projections.end(); ++it)
         {
@@ -5031,7 +5059,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
       ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Color map:</TD></TR>\n";
       ostr1 << "<TR height=\"30\"><TD>\n";
-      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_COLOR_MAP << "=' + this.options[this.selectedIndex].value)\">\n";
+      ostr1 << "<SELECT style=\"width:280px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_COLOR_MAP << "=' + this.options[this.selectedIndex].value)\">\n";
 
       if (colorMap.empty() ||  colorMap == "None")
       {
@@ -5074,7 +5102,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
       ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Symbol group:</TD></TR>\n";
       ostr1 << "<TR height=\"30\"><TD>\n";
-      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_SYMBOL_MAP << "=' + this.options[this.selectedIndex].value)\">\n";
+      ostr1 << "<SELECT style=\"width:280px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_SYMBOL_MAP << "=' + this.options[this.selectedIndex].value)\">\n";
 
       if (symbolMap.empty() || symbolMap == "None")
       {
@@ -5106,7 +5134,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     {
       ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Products:</TD></TR>\n";
       ostr1 << "<TR height=\"30\"><TD>\n";
-      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_DALI_ID << "=' + this.options[this.selectedIndex].value)\">\n";
+      ostr1 << "<SELECT style=\"width:280px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_DALI_ID << "=' + this.options[this.selectedIndex].value)\">\n";
 
       uint dlen = daliIds.size();
       for (uint t=0; t<dlen; t++)
@@ -5145,7 +5173,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
       ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Locations:</TD></TR>\n";
       ostr1 << "<TR height=\"30\"><TD>\n";
-      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_LOCATIONS << "=' + this.options[this.selectedIndex].value)\">\n";
+      ostr1 << "<SELECT style=\"width:280px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_LOCATIONS << "=' + this.options[this.selectedIndex].value)\">\n";
 
       if (presentation == "Symbols")
       {
@@ -5366,7 +5394,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
         ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Isoline values:</TD></TR>\n";
         ostr1 << "<TR height=\"30\"><TD>\n";
-        ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_ISOLINE_VALUES << "=' + this.options[this.selectedIndex].value)\">\n";
+        ostr1 << "<SELECT style=\"width:280px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_ISOLINE_VALUES << "=' + this.options[this.selectedIndex].value)\">\n";
 
         if (isolinesStr == "Generated")
         {
@@ -5400,7 +5428,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
         ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Isoline color:</TD></TR>\n";
         ostr1 << "<TR height=\"30\"><TD>\n";
-        ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_ISOLINES << "=' + this.options[this.selectedIndex].value)\"";
+        ostr1 << "<SELECT style=\"width:280px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_ISOLINES << "=' + this.options[this.selectedIndex].value)\"";
 
         for (auto it = itsColors.begin(); it != itsColors.end(); ++it)
         {
@@ -5422,9 +5450,9 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
       // ### Coordinate lines:
 
-      ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Coordinate lines:</TD></TR>\n";
+      ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Coordinate lines and land border:</TD></TR>\n";
       ostr1 << "<TR height=\"30\"><TD>\n";
-      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_COORDINATE_LINES << "=' + this.options[this.selectedIndex].value)\">\n";
+      ostr1 << "<SELECT style=\"width:280px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_COORDINATE_LINES << "=' + this.options[this.selectedIndex].value)\">\n";
 
       for (auto it = itsColors.begin(); it != itsColors.end(); ++it)
       {
@@ -5441,14 +5469,21 @@ int Plugin::page_main(Spine::Reactor &theReactor,
         a++;
       }
       ostr1 << "</SELECT>\n";
-      ostr1 << "</TD></TR>\n";
 
 
       // ### Land border:
 
-      ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Land border:</TD></TR>\n";
-      ostr1 << "<TR height=\"30\"><TD>\n";
-      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_LAND_BORDER << "=' + this.options[this.selectedIndex].value)\">\n";
+      ostr1 << "<SELECT style=\"width:280px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_LAND_BORDER << "=' + this.options[this.selectedIndex].value)\">\n";
+
+      if (landBorderStr.empty() ||  landBorderStr == "Default")
+      {
+        ostr1 << "<OPTION selected value=\"Default\">Default</OPTION>\n";
+        session.setAttribute(ATTR_LAND_BORDER,"Default");
+      }
+      else
+      {
+        ostr1 << "<OPTION value=\"Default\">Default</OPTION>\n";
+      }
 
       for (auto it = itsColors.begin(); it != itsColors.end(); ++it)
       {
@@ -5471,7 +5506,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
       ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Land and sea colors:</TD></TR>\n";
       ostr1 << "<TR height=\"30\"><TD>\n";
-      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_LAND_MASK << "=' + this.options[this.selectedIndex].value)\">\n";
+      ostr1 << "<SELECT style=\"width:280px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_LAND_MASK << "=' + this.options[this.selectedIndex].value)\">\n";
 
       a = 0;
       for (auto it = itsColors.begin(); it != itsColors.end(); ++it)
@@ -5491,7 +5526,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
       ostr1 << "</SELECT>\n";
 
 
-      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_SEA_MASK << "=' + this.options[this.selectedIndex].value)\">\n";
+      ostr1 << "<SELECT style=\"width:280px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_SEA_MASK << "=' + this.options[this.selectedIndex].value)\">\n";
 
       a = 0;
       for (auto it = itsColors.begin(); it != itsColors.end(); ++it)
@@ -5517,7 +5552,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
       ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Missing Value:</TD></TR>\n";
       ostr1 << "<TR height=\"30\"><TD>\n";
-      ostr1 << "<SELECT style=\"width:250px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_MISSING << "=' + this.options[this.selectedIndex].value)\">\n";
+      ostr1 << "<SELECT style=\"width:280px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_MISSING << "=' + this.options[this.selectedIndex].value)\">\n";
 
       const char *missingValues[] = {"Default","Zero",nullptr};
 
@@ -5539,29 +5574,25 @@ int Plugin::page_main(Spine::Reactor &theReactor,
       ostr1 << "</TD></TR>\n";
 
 
+      ostr1 << "<TR height=\"15\"><TD><HR/></TD></TR>\n";
 
-      // ## FMI key:
+      // ## Value and units:
 
-      ostr1 << "<TR height=\"15\" style=\"font-size:12; width:250px;\"><TD>FMI Key:</TD></TR>\n";
-      ostr1 << "<TR height=\"30\"><TD><INPUT type=\"text\" value=\"" << fmiKeyStr << "\"></TD></TR>\n";
-
-      // ### Units:
-
-      ostr1 << "<TR height=\"15\" style=\"font-size:12; width:250px;\"><TD>Units:</TD></TR>\n";
-      ostr1 << "<TR height=\"30\"><TD><INPUT type=\"text\" value=\"" << unitStr << "\"></TD></TR>\n";
-
-
-      // ## Value:
-
-      ostr1 << "<TR height=\"15\" style=\"font-size:12; width:250px;\"><TD>Value:</TD></TR>\n";
-      ostr1 << "<TR height=\"30\"><TD><INPUT type=\"text\" id=\"gridValue\"></TD></TR>\n";
-
+      ostr1 << "<TR height=\"15\" style=\"font-size:12; width:100%;\"><TD>Value and units:</TD></TR>\n";
+      ostr1 << "<TR height=\"30\"><TD><INPUT style=\"width:200px;\" type=\"text\" id=\"gridValue\"><INPUT style=\"width:80px;\"type=\"text\" value=\"" << unitStr << "\"></TD></TR>\n";
     }
+
+    // ## FMI key:
+
+    ostr1 << "<TR height=\"15\"><TD><HR/></TD></TR>\n";
+    ostr1 << "<TR height=\"15\" style=\"font-size:12; width:100%;\"><TD>FMI Key:</TD></TR>\n";
+    ostr1 << "<TR height=\"30\"><TD><INPUT type=\"text\" style=\"width:280px;\" value=\"" << fmiKeyStr << "\"></TD></TR>\n";
+
 
     ostr1 << "<TR height=\"50%\"><TD></TD></TR>\n";
 
     // ## Download
-    ostr1 << "<TR height=\"30\" style=\"font-size:16; font-weight:bold; width:250px; color:#000000; background:#D0D0D0; vertical-align:middle; text-align:center; \"><TD><a href=\"grid-gui?" << ATTR_PAGE << "=download&" << ATTR_FILE_ID << "=" << fileIdStr << "&" << ATTR_MESSAGE_INDEX << "=" << messageIndexStr << "\">Download</a></TD></TR>\n";
+    ostr1 << "<TR height=\"30\" style=\"font-size:16; font-weight:bold; width:280px; color:#000000; background:#D0D0D0; vertical-align:middle; text-align:center; \"><TD><a href=\"grid-gui?" << ATTR_PAGE << "=download&" << ATTR_FILE_ID << "=" << fileIdStr << "&" << ATTR_MESSAGE_INDEX << "=" << messageIndexStr << "\">Download</a></TD></TR>\n";
     ostr1 << "</TABLE>\n";
 
     ostr2 << "<TABLE width=\"100%\" height=\"100%\">\n";
@@ -5644,7 +5675,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     output << "<TABLE width=\"100%\" height=\"100%\">\n";
     output << "<TR>\n";
 
-    output << "<TD  bgcolor=\"#C0C0C0\" width=\"180\">\n";
+    output << "<TD  bgcolor=\"#C0C0C0\" width=\"290\">\n";
     output << ostr1.str();
     output << "</TD>\n";
 
