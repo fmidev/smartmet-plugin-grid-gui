@@ -5692,7 +5692,14 @@ int Plugin::page_main(Spine::Reactor &theReactor,
         Identification::ProcessingTypeDef processingTypeDef;
         if (Identification::gridDef.getFmiProcessingTypeDef(currentCont->mProcessingTypeId,processingTypeDef))
         {
-          processing = " / Processing: " + processingTypeDef.mDescription + " (" + std::to_string(currentCont->mProcessingTypeValue1) + ", " + std::to_string(currentCont->mProcessingTypeValue2) + ")";
+          processing = " / Processing: " + processingTypeDef.mDescription;
+          if (currentCont->mProcessingTypeValue1 != ParamValueMissing)
+          {
+            processing = processing  + " (" + std::to_string(currentCont->mProcessingTypeValue1);
+            if (currentCont->mProcessingTypeValue2 != ParamValueMissing)
+              processing = processing + ", " + std::to_string(currentCont->mProcessingTypeValue2) + ")";
+            processing = processing + ")";
+          }
         }
       }
     }
