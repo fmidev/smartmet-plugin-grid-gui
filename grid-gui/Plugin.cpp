@@ -1307,7 +1307,7 @@ void Plugin::saveImage(
         for (int t=0; t<10; t++)
           contourValues.emplace_back(minValue + t*stp);
       }
-      getIsolines(values,nullptr,width,height,contourValues,T::AreaInterpolationMethod::Linear,3,3,contours);
+      getIsolines(values,nullptr,width,height,contourValues,0,3,3,contours);
     }
 
     uint c = 0;
@@ -5667,7 +5667,44 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     }
     */
 
-    ostr2 << "<TR><TD style=\"height:25; vertical-align:middle; text-align:left; font-size:12;\">" << paramDescription << "</TD></TR>\n";
+    std::string aggregation;
+    std::string processing;
+    if (currentCont)
+    {
+      if (currentCont->mAggregationId > 0)
+      {
+        Identification::AggregationDef aggregationDef;
+        if (Identification::gridDef.getFmiAggregationDef(currentCont->mAggregationId,aggregationDef))
+        {
+          aggregation = " / Aggregation: " + aggregationDef.mDescription;
+          if (currentCont->mAggregationPeriod)
+          {
+            if ((currentCont->mAggregationPeriod % 60) == 0)
+              aggregation = aggregation + " (" + std::to_string(currentCont->mAggregationPeriod/60) + " hours)";
+            else
+              aggregation = aggregation + " (" + std::to_string(currentCont->mAggregationPeriod) + " minutes)";
+          }
+        }
+      }
+
+      if (currentCont->mProcessingTypeId > 0)
+      {
+        Identification::ProcessingTypeDef processingTypeDef;
+        if (Identification::gridDef.getFmiProcessingTypeDef(currentCont->mProcessingTypeId,processingTypeDef))
+        {
+          processing = " / Processing: " + processingTypeDef.mDescription;
+          if (currentCont->mProcessingTypeValue1 != ParamValueMissing)
+          {
+            processing = processing  + " (" + std::to_string(currentCont->mProcessingTypeValue1);
+            if (currentCont->mProcessingTypeValue2 != ParamValueMissing)
+              processing = processing + ", " + std::to_string(currentCont->mProcessingTypeValue2) + ")";
+            processing = processing + ")";
+          }
+        }
+      }
+    }
+
+    ostr2 << "<TR><TD style=\"height:25; vertical-align:middle; text-align:left; font-size:12;\">" << paramDescription << aggregation << processing << "</TD></TR>\n";
 
     ostr2 << "</TABLE>\n";
 
