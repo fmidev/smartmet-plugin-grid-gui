@@ -36,7 +36,6 @@ using namespace SmartMet::Spine;
 #define ATTR_BLUR               "blur"
 #define ATTR_COLOR_MAP          "colorMap"
 #define ATTR_COORDINATE_LINES   "coordinateLines"
-#define ATTR_DALI_ID            "daliId"
 #define ATTR_FILE_ID            "fileId"
 #define ATTR_FMI_KEY            "fmiKey"
 #define ATTR_FORECAST_NUMBER    "forecastNumber"
@@ -75,7 +74,6 @@ using namespace SmartMet::Spine;
 #define ATTR_BLUR               "bl"
 #define ATTR_COLOR_MAP          "cm"
 #define ATTR_COORDINATE_LINES   "cl"
-//#define ATTR_DALI_ID            "e"
 #define ATTR_FILE_ID            "f"
 #define ATTR_FMI_KEY            "k"
 #define ATTR_FORECAST_NUMBER    "fn"
@@ -133,7 +131,6 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
         "smartmet.plugin.grid-gui.symbolMapFiles",
         "smartmet.plugin.grid-gui.locationFiles",
         "smartmet.plugin.grid-gui.colorFile",
-        //"smartmet.plugin.grid-gui.daliFile",
         "smartmet.plugin.grid-gui.isolineFile",
         "smartmet.plugin.grid-gui.animationEnabled",
         "smartmet.plugin.grid-gui.imageCache.directory",
@@ -183,7 +180,6 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
     itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.symbolMapFiles",itsSymbolMapFileNames);
     itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.locationFiles",itsLocationFileNames);
     itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.colorFile",itsColorFile);
-    //itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.daliFile",itsDaliFile);
     itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.isolineFile",itsIsolineFile);
     itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.animationEnabled",itsAnimationEnabled);
     itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.imageCache.directory",itsImageCache_dir);
@@ -250,11 +246,6 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
     loadIsolineFile();
     loadProducerFile();
 
-
-    /*
-    if (itsDaliFile > " ")
-      loadDaliFile();
-    */
 
     // Removing files from the image cache.
 
@@ -508,87 +499,6 @@ void Plugin::loadColorFile()
     throw exception;
   }
 }
-
-
-
-
-/*
-void Plugin::loadDaliFile()
-{
-  FUNCTION_TRACE
-  try
-  {
-    FILE *file = fopen(itsDaliFile.c_str(),"re");
-    if (file == nullptr)
-    {
-      Fmi::Exception exception(BCP,"Cannot open file!");
-      exception.addParameter("Filename",itsDaliFile);
-      throw exception;
-    }
-
-    itsDaliProducts.clear();
-
-    char st[1000];
-
-    while (!feof(file))
-    {
-      if (fgets(st,1000,file) != nullptr  &&  st[0] != '#')
-      {
-        bool ind = false;
-        char *field[100];
-        uint c = 1;
-        field[0] = st;
-        char *p = st;
-        while (*p != '\0'  &&  c < 100)
-        {
-          if (*p == '"')
-            ind = !ind;
-
-          if ((*p == ';'  || *p == '\n') && !ind)
-          {
-            *p = '\0';
-            p++;
-            field[c] = p;
-            c++;
-          }
-          else
-          {
-            p++;
-          }
-        }
-
-        if (c > 5)
-        {
-          string_vec plist;
-
-          splitString(field[0],',',plist);
-          for (auto it=plist.begin(); it!=plist.end();++it)
-          {
-            string_vec vec;
-            vec.emplace_back(*it);
-            vec.emplace_back(field[1]);
-            vec.emplace_back(field[2]);
-            vec.emplace_back(field[3]);
-            vec.emplace_back(field[4]);
-            vec.emplace_back(field[5]);
-
-            itsDaliProducts.emplace_back(vec);
-          }
-        }
-      }
-    }
-    fclose(file);
-
-    itsDaliFile_lastModified = getFileModificationTime(itsDaliFile.c_str());
-  }
-  catch (...)
-  {
-    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
-    exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
-    throw exception;
-  }
-}
-*/
 
 
 
@@ -2722,7 +2632,6 @@ int Plugin::page_image(Spine::Reactor &theReactor,
     std::string minLengthStr = session.getAttribute(ATTR_MIN_LENGTH);
     std::string maxLengthStr = session.getAttribute(ATTR_MAX_LENGTH);
     std::string backgroundStr = session.getAttribute(ATTR_BACKGROUND);
-    //std::string daliIdStr = session.getAttribute(ATTR_DALI_ID);
     std::string unitStr = session.getAttribute(ATTR_UNIT);
     std::string fmiKeyStr = session.getAttribute(ATTR_FMI_KEY);
 
@@ -2891,7 +2800,6 @@ int Plugin::page_isolines(Spine::Reactor &theReactor,
     std::string minLengthStr = session.getAttribute(ATTR_MIN_LENGTH);
     std::string maxLengthStr = session.getAttribute(ATTR_MAX_LENGTH);
     std::string backgroundStr = session.getAttribute(ATTR_BACKGROUND);
-    //std::string daliIdStr = session.getAttribute(ATTR_DALI_ID);
     std::string unitStr = session.getAttribute(ATTR_UNIT);
     std::string fmiKeyStr = session.getAttribute(ATTR_FMI_KEY);
 
@@ -3035,7 +2943,6 @@ int Plugin::page_streams(Spine::Reactor &theReactor,
     std::string minLengthStr = session.getAttribute(ATTR_MIN_LENGTH);
     std::string maxLengthStr = session.getAttribute(ATTR_MAX_LENGTH);
     std::string backgroundStr = session.getAttribute(ATTR_BACKGROUND);
-    //std::string daliIdStr = session.getAttribute(ATTR_DALI_ID);
     std::string unitStr = session.getAttribute(ATTR_UNIT);
     std::string fmiKeyStr = session.getAttribute(ATTR_FMI_KEY);
 
@@ -3185,7 +3092,6 @@ int Plugin::page_streamsAnimation(Spine::Reactor &theReactor,
     std::string minLengthStr = session.getAttribute(ATTR_MIN_LENGTH);
     std::string maxLengthStr = session.getAttribute(ATTR_MAX_LENGTH);
     std::string backgroundStr = session.getAttribute(ATTR_BACKGROUND);
-    //std::string daliIdStr = session.getAttribute(ATTR_DALI_ID);
     std::string unitStr = session.getAttribute(ATTR_UNIT);
     std::string fmiKeyStr = session.getAttribute(ATTR_FMI_KEY);
 
@@ -3335,7 +3241,6 @@ int Plugin::page_symbols(Spine::Reactor &theReactor,
     std::string minLengthStr = session.getAttribute(ATTR_MIN_LENGTH);
     std::string maxLengthStr = session.getAttribute(ATTR_MAX_LENGTH);
     std::string backgroundStr = session.getAttribute(ATTR_BACKGROUND);
-    //std::string daliIdStr = session.getAttribute(ATTR_DALI_ID);
     std::string unitStr = session.getAttribute(ATTR_UNIT);
     std::string fmiKeyStr = session.getAttribute(ATTR_FMI_KEY);
 
@@ -3506,7 +3411,6 @@ int Plugin::page_map(Spine::Reactor &theReactor,
     std::string minLengthStr = session.getAttribute(ATTR_MIN_LENGTH);
     std::string maxLengthStr = session.getAttribute(ATTR_MAX_LENGTH);
     std::string backgroundStr = session.getAttribute(ATTR_BACKGROUND);
-    //std::string daliIdStr = session.getAttribute(ATTR_DALI_ID);
     std::string unitStr = session.getAttribute(ATTR_UNIT);
     std::string fmiKeyStr = session.getAttribute(ATTR_FMI_KEY);
 
@@ -3955,7 +3859,6 @@ void Plugin::initSession(Session& session)
     session.setAttribute(ATTR_MIN_LENGTH,"6");
     session.setAttribute(ATTR_MAX_LENGTH,"16");
     session.setAttribute(ATTR_BACKGROUND,"light");
-    //session.setAttribute(ATTR_DALI_ID,"");
     session.setAttribute(ATTR_UNIT,"");
     session.setAttribute(ATTR_FMI_KEY,"");
     session.setAttribute(ATTR_X,"");
@@ -4016,7 +3919,6 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     std::string minLengthStr = session.getAttribute(ATTR_MIN_LENGTH);
     std::string maxLengthStr = session.getAttribute(ATTR_MAX_LENGTH);
     std::string backgroundStr = session.getAttribute(ATTR_BACKGROUND);
-    //std::string daliIdStr = session.getAttribute(ATTR_DALI_ID);
     std::string unitStr = session.getAttribute(ATTR_UNIT);
     std::string fmiKeyStr = session.getAttribute(ATTR_FMI_KEY);
     std::string timeGroupTypeStr = session.getAttribute(ATTR_TIME_GROUP_TYPE);
@@ -4086,16 +3988,6 @@ int Plugin::page_main(Spine::Reactor &theReactor,
       session.setAttribute(ATTR_TIME,"");
     }
 
-/*
-    if (timeStr.empty() || session.findAttribute("#time"))
-    {
-      fileIdStr = "";
-      messageIndexStr = "0";
-      projectionIdStr = "";
-    }
-*/
-
-    //uint daliId = toUInt32(daliIdStr);
     time_t requiredAccessTime = time(nullptr) + 120;
 
     if (getFileModificationTime(itsColorFile.c_str()) != itsColors_lastModified)
@@ -4105,17 +3997,11 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
     loadProducerFile();
 
-    /*
-    if (getFileModificationTime(itsDaliFile.c_str()) != itsDaliFile_lastModified)
-    {
-      loadDaliFile();
-    }
-    */
-
     std::ostringstream output;
     std::ostringstream ostr1;
     std::ostringstream ostr2;
     std::ostringstream ostr3;
+    std::ostringstream ostr4;
 
     output << "<HTML>\n";
     output << "<BODY>\n";
@@ -4188,40 +4074,6 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     output << "}\n";
     output << "</SCRIPT>\n";
 
-
-
-    /*
-    string_vec daliNames;
-    std::map<uint,std::string> daliUrls;
-    std::vector<uint> daliIds;
-
-    for (auto it = itsDaliProducts.begin(); it != itsDaliProducts.end(); ++it)
-    {
-      if ((*it)[0] ==  parameterIdStr)
-      {
-        if ((*it)[1] == levelIdStr  ||  (*it)[1] == "")
-        {
-          if ((*it)[2] == levelStr  ||  (*it)[2] == "")
-          {
-            uint id = toUInt32((*it)[3]);
-            if (daliId == 0)
-              daliId = id;
-            daliIds.emplace_back(id);
-            daliNames.emplace_back((*it)[4]);
-            daliUrls.insert(std::pair<uint,std::string>(id,(*it)[5]));
-          }
-        }
-      }
-    }
-
-    std::string daliUrl;
-
-    if (presentation == "Dali"  &&  daliIds.size() == 0)
-    {
-      presentation = "Image";
-      daliId = 0;
-    }
-    */
 
     ostr1 << "<TABLE width=\"100%\" height=\"100%\">\n";
 
@@ -4803,6 +4655,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
     ostr3 << "<TABLE style=\"border-width:0;border-spacing:0;height:30;\"><TR>\n";
 
+
     T::ContentInfo *prevCont = nullptr;
     T::ContentInfo *currentCont = nullptr;
     T::ContentInfo *nextCont = nullptr;
@@ -4811,16 +4664,13 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     {
       contentInfoList.sort(T::ContentInfo::ComparisonMethod::fmiName_producer_generation_level_time);
 
-      ostr1 << "<SELECT id=\"timeselect\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() + "' + this.options[this.selectedIndex].value)\"";
+      ostr1 << "<SELECT id=\"timeselect\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() + "' + this.options[this.selectedIndex].value)\">\n";
 
       std::string u;
       if (presentation == "Image" ||  presentation == "Map"  ||  presentation == "Symbols"  ||  presentation == "Isolines"  ||  presentation == "Streams")
       {
         u = "/grid-gui?session=" + session.getUrlParameter() + "&" + ATTR_PAGE + "=" + presentation;
       }
-
-      ostr1 << " >\n";
-
 
       uint daySwitch = 0;
       uint cc = 0;
@@ -4843,9 +4693,6 @@ int Plugin::page_main(Spine::Reactor &theReactor,
                 out << "&" << ATTR_TIME << "=" << g->getForecastTime() << "&" << ATTR_FILE_ID << "=" << g->mFileId << "&" << ATTR_MESSAGE_INDEX << "=" << g->mMessageIndex << "&" << ATTR_FORECAST_TYPE << "=" << forecastTypeStr << "&" << ATTR_FORECAST_NUMBER << "=" << forecastNumberStr;
                 std::string url = out.str();
                 std::string uu = url;
-
-                //if (presentation == "Dali")
-                //  uu = "&start=" + std::string(g->getForecastTime());
 
                 if (currentCont != nullptr  &&  nextCont == nullptr)
                   nextCont = g;
@@ -4871,10 +4718,19 @@ int Plugin::page_main(Spine::Reactor &theReactor,
                 if (tCount < 124  ||  (g->getForecastTime() >= timeStr  &&  cc < 124))
                 {
                   if (cc == 0)
+                  {
+                    ostr3 << "<TD style=\"text-align:center; font-size:12;width:30;background:#000000;color:#FFFFFF;\">UTC</TD>\n";
                     ostr3 << "<TD style=\"text-align:center; font-size:12;width:120;background:#F0F0F0;\" id=\"ftime\">" + timeStr + "</TD><TD style=\"width:1;\"> </TD>\n";
+                  }
 
                   if (u > " ")
-                    ostr3 << "<TD style=\"width:5; background:"+bg+";\" onmouseout=\"this.style='width:5;background:"+bg+";'\" onmouseover=\"this.style='width:5;height:30;background:#FF0000;'; setText('ftime','" + g->getForecastTime() + "');setImage(document.getElementById('myimage'),'" + u + uu + "');\" > </TD>\n";
+                  {
+                    ostr3 << "<TD style=\"width:5; background:" << bg << ";\" ";
+                    ostr3 << " onmouseout=\"this.style='width:5;background:"<< bg << ";'\"";
+                    ostr3 << " onmouseover=\"this.style='width:5;height:30;background:#FF0000;'; setText('ftime','" << g->getForecastTime() << "');setText('flevel','" << g->mParameterLevel << "');setImage(document.getElementById('myimage'),'" << u << uu << "');\"";
+                    ostr3 << " onClick=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << ";" << ATTR_TIME << "=" << g->getForecastTime() << ";" << ATTR_FILE_ID << "=" << g->mFileId << ";" << ATTR_MESSAGE_INDEX << "=" << g->mMessageIndex << ";" << ATTR_FORECAST_TYPE << "=" << g->mForecastType << ";" << ATTR_FORECAST_NUMBER << "=" << g->mForecastNumber << "');\" > </TD>\n";
+
+                  }
                   else
                     ostr3 << "<TD style=\"width:5; background:"+bg+";\"> </TD>\n";
 
@@ -4917,16 +4773,64 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     if (prevCont != nullptr)
       ostr1 << "<TD width=\"20\" > <button type=\"button\" onClick=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_TIME << "=" << prevCont->getForecastTime() << "&" << ATTR_FILE_ID << "=" << prevCont->mFileId << "&" << ATTR_MESSAGE_INDEX << "=" << prevCont->mMessageIndex << "&" << ATTR_FORECAST_TYPE << "=" << forecastTypeStr << "&" << ATTR_FORECAST_NUMBER << "=" << forecastNumberStr << "');\">&lt;</button></TD>\n";
     else
-      ostr1 << "<TD width=\"20\"><button type=\"button\">&lt;</button></TD></TD>\n";
+      ostr1 << "<TD width=\"20\"><button type=\"button\">&lt;</button></TD>\n";
 
     if (nextCont != nullptr)
       ostr1 << "<TD width=\"20\"><button type=\"button\" onClick=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_TIME << "=" << nextCont->getForecastTime() << "&" << ATTR_FILE_ID << "=" << nextCont->mFileId << "&" << ATTR_MESSAGE_INDEX << "=" << nextCont->mMessageIndex << "&" << ATTR_FORECAST_TYPE << "=" << forecastTypeStr << "&" << ATTR_FORECAST_NUMBER << "=" << forecastNumberStr + "');\">&gt;</button></TD>\n";
     else
-      ostr1 << "<TD width=\"20\"><button type=\"button\">&gt;</button></TD></TD>\n";
+      ostr1 << "<TD width=\"20\"><button type=\"button\">&gt;</button></TD>\n";
 
     ostr1 << "</TR></TABLE></TD></TR>\n";
 
     ostr3 << "<TD></TD></TR></TABLE>\n";
+
+
+
+    T::ContentInfoList contentInfoListByLevels;
+    if (!timeStr.empty())
+      contentServer->getContentListByParameterAndGenerationId(0,generationId,T::ParamKeyTypeValue::FMI_NAME,parameterIdStr,levelId,0,1000000000,forecastType,forecastNumber,geometryId,timeStr,timeStr,0,contentInfoListByLevels);
+
+    uint lCount = contentInfoListByLevels.getLength();
+
+    std::string u;
+    if (presentation == "Image" ||  presentation == "Map"  ||  presentation == "Symbols"  ||  presentation == "Isolines"  ||  presentation == "Streams")
+    {
+      u = "/grid-gui?session=" + session.getUrlParameter() + "&" + ATTR_PAGE + "=" + presentation;
+    }
+
+    if (itsAnimationEnabled)
+    {
+      ostr4 << "<TABLE style=\"border-width:0;border-spacing:0;width:70;\">\n";
+      ostr4 << "<TR><TD style=\"height:35;\"> </TD></TR>\n";
+      ostr4 << "<TR><TD style=\"height:35;text-align:center; font-size:12;background:#000000;color:#FFFFFF;\">Level</TD></TR>\n";
+      ostr4 << "<TR><TD style=\"text-align:center; font-size:12;background:#F0F0F0;\" id=\"flevel\">" << levelStr << "</TD></TR>\n";
+
+      for (uint a=0; a<lCount; a++)
+      {
+        T::ContentInfo *g = contentInfoListByLevels.getContentInfoByIndex(a);
+
+        std::ostringstream out;
+        out << "&" << ATTR_TIME << "=" << timeStr << "&" << ATTR_FILE_ID << "=" << g->mFileId << "&" << ATTR_MESSAGE_INDEX << "=" << g->mMessageIndex << "&" << ATTR_FORECAST_TYPE << "=" << forecastTypeStr << "&" << ATTR_FORECAST_NUMBER << "=" << forecastNumberStr;
+        std::string url = out.str();
+        std::string uu = url;
+
+        std::string bg = "#E0E0E0";
+        if (g->mParameterLevel == level)
+          bg = "#0000FF";
+
+        if (u > " ")
+        {
+          ostr4 << "<TR style=\"height:5;\"><TD style=\" background:" << bg << ";\"";
+          ostr4 << " onmouseout=\"this.style='background:"+bg+";'\"";
+          ostr4 << " onmouseover=\"this.style='background:#FF0000;';setText('ftime','" << g->getForecastTime() << "');setText('flevel','" << g->mParameterLevel << "');setImage(document.getElementById('myimage'),'" << u << uu << "');\"";
+          ostr4 << " onClick=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << ";" << ATTR_TIME << "=" << g->getForecastTime() << ";" << ATTR_FILE_ID << "=" << g->mFileId << ";" << ATTR_MESSAGE_INDEX << "=" << g->mMessageIndex << ";" << ATTR_FORECAST_TYPE << "=" << g->mForecastType << ";" << ATTR_FORECAST_NUMBER << "=" << g->mForecastNumber << ";" << ATTR_LEVEL << "=" << g->mParameterLevel << "');\"> </TD></TR>\n";
+        }
+        else
+          ostr4 << "<TR style=\"height:5;\"><TD style=\" background:" << bg <<";\"> </TD></TR>\n";
+      }
+      ostr4 << "</TABLE>\n";
+    }
+
 
     // ### Presentation:
 
@@ -4959,20 +4863,6 @@ int Plugin::page_main(Spine::Reactor &theReactor,
       a++;
     }
 
-    /*
-    if (daliIds.size() > 0)
-    {
-      if (presentation == "Dali")
-      {
-        ostr1 << "<OPTION selected value=\"Dali\">Dali</OPTION>\n";
-        session.setAttribute(ATTR_PRESENTATION,presentation);
-      }
-      else
-      {
-        ostr1 << "<OPTION value=\"Dali\">Dali</OPTION>\n";
-      }
-    }
-    */
 
     ostr1 << "</SELECT>\n";
     ostr1 << "</TD></TR>\n";
@@ -5128,35 +5018,6 @@ int Plugin::page_main(Spine::Reactor &theReactor,
       ostr1 << "</TD></TR>\n";
 
     }
-
-    /*
-    if (presentation == "Dali")
-    {
-      ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Products:</TD></TR>\n";
-      ostr1 << "<TR height=\"30\"><TD>\n";
-      ostr1 << "<SELECT style=\"width:280px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_DALI_ID << "=' + this.options[this.selectedIndex].value)\">\n";
-
-      uint dlen = daliIds.size();
-      for (uint t=0; t<dlen; t++)
-      {
-        if (daliId == 0)
-          daliId = daliIds[t];
-
-        if (daliIds[t] == daliId)
-        {
-          ostr1 << "<OPTION selected value=\"" << daliIds[t] << "\">" <<  daliNames[t] << "</OPTION>\n";
-          session.setAttribute(ATTR_DALI_ID,daliId);
-        }
-        else
-        {
-          ostr1 << "<OPTION value=\"" <<  daliIds[t] << "\">" <<  daliNames[t] << "</OPTION>\n";
-        }
-      }
-      ostr1 << "</SELECT>\n";
-      ostr1 << "</TD></TR>\n";
-    }
-    */
-
 
     if (presentation == "Symbols" ||  presentation == "Locations")
     {
@@ -5589,20 +5450,27 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     ostr1 << "<TR height=\"30\"><TD><INPUT type=\"text\" style=\"width:280px;\" value=\"" << fmiKeyStr << "\"></TD></TR>\n";
 
 
-    ostr1 << "<TR height=\"50%\"><TD></TD></TR>\n";
+    ostr1 << "<TR height=\"50%\"><TD> </TD></TR>\n";
 
     // ## Download
     ostr1 << "<TR height=\"30\" style=\"font-size:16; font-weight:bold; width:280px; color:#000000; background:#D0D0D0; vertical-align:middle; text-align:center; \"><TD><a href=\"grid-gui?" << ATTR_PAGE << "=download&" << ATTR_FILE_ID << "=" << fileIdStr << "&" << ATTR_MESSAGE_INDEX << "=" << messageIndexStr << "\">Download</a></TD></TR>\n";
     ostr1 << "</TABLE>\n";
 
-    ostr2 << "<TABLE width=\"100%\" height=\"100%\">\n";
 
-    if (itsAnimationEnabled  &&  (presentation == "Image" || presentation == "Map" || presentation == "Symbols" ||  presentation == "Isolines"  || /* presentation == "Dali" ||*/ presentation == "Streams"))
+
+    if (itsAnimationEnabled  &&  (presentation == "Image" || presentation == "Map" || presentation == "Symbols" ||  presentation == "Isolines"  || presentation == "Streams"))
+    {
+      ostr2 << "<TABLE>\n";
       ostr2 << "<TR><TD style=\"height:35; width:100%; vertical-align:middle; text-align:left; font-size:12;\">" << ostr3.str() << "</TD></TR>\n";
+    }
+    else
+    {
+      ostr2 << "<TABLE width=\"100%\" height=\"100%\">\n";
+    }
 
     if (presentation == "Image")
     {
-      ostr2 << "<TR><TD><IMG id=\"myimage\" style=\"background:#000000; max-width:1800; height:100%; max-height:1000;\" src=\"/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_PAGE << "=" << presentation << "\" onclick=\"getImageCoords(event,this," << fileIdStr << "," << messageIndexStr << ",'" << presentation << "');\"/></TD></TR>";
+      ostr2 << "<TR><TD style=\"vertical-align:top;\"><IMG id=\"myimage\" style=\"background:#000000; max-width:1800; height:100%; max-height:1000;\" src=\"/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_PAGE << "=" << presentation << "\" onclick=\"getImageCoords(event,this," << fileIdStr << "," << messageIndexStr << ",'" << presentation << "');\"/></TD></TR>";
     }
     else
     if (presentation == "Symbols")
@@ -5659,13 +5527,6 @@ int Plugin::page_main(Spine::Reactor &theReactor,
       ostr2 << "<p>Your browser does not support iframes.</p>\n";
       ostr2 << "</IFRAME></TD></TR>";
     }
-    /*
-    else
-    if (presentation == "Dali")
-    {
-      ostr2 << "<TR><TD><IMG id=\"myimage\" style=\"background:#000000; max-width:1800; height:100%; max-height:1000;\" src=\"" + daliUrl << "&start=" << timeStr << "\" /></TD></TR>";
-    }
-    */
 
     std::string aggregation;
     std::string processing;
@@ -5709,16 +5570,31 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     ostr2 << "</TABLE>\n";
 
 
-    output << "<TABLE width=\"100%\" height=\"100%\">\n";
+    if (presentation == "Image" || presentation == "Map" || presentation == "Symbols" ||  presentation == "Isolines"  || presentation == "Streams")
+    {
+      output << "<TABLE height=\"100%\">\n";
+    }
+    else
+    {
+      output << "<TABLE height=\"100%\" width=\"100%\">\n";
+    }
+
     output << "<TR>\n";
 
-    output << "<TD  bgcolor=\"#C0C0C0\" width=\"290\">\n";
+    output << "<TD style=\"vertical-align:top; background:#C0C0C0; width:290;\">\n";
     output << ostr1.str();
     output << "</TD>\n";
 
-    output << "<TD>\n";
+    output << "<TD  style=\"vertical-align:top;\">\n";
     output << ostr2.str();
     output << "</TD>\n";
+
+    if (itsAnimationEnabled  &&  (presentation == "Image" || presentation == "Map" || presentation == "Symbols" ||  presentation == "Isolines"  || presentation == "Streams"))
+    {
+      output << "<TD style=\"vertical-align:top; width:70;\">\n";
+      output << ostr4.str();
+      output << "</TD>\n";
+    }
 
     output << "</TR>\n";
     output << "</TABLE>\n";
