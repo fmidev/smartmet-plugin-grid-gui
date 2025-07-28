@@ -11,6 +11,7 @@
 #include <grid-files/identification/GridDef.h>
 #include <grid-files/common/ShowFunction.h>
 #include <spine/SmartMet.h>
+#include <macgyver/Hash.h>
 #include <macgyver/TimeFormatter.h>
 #include <macgyver/FastMath.h>
 #include <boost/bind/bind.hpp>
@@ -2654,8 +2655,7 @@ int Plugin::page_image(Spine::Reactor &theReactor,
       blurStr + ":" + coordinateLinesStr + ":" + landBorderStr + ":" + projectionIdStr + ":" +
       landMaskStr + ":" + seaMaskStr + ":" + colorMapFileName + ":" + colorMapModificationTime + ":" + missingStr;
 
-    std::size_t seed = 0;
-    boost::hash_combine(seed, hash);
+    const std::size_t seed = Fmi::hash(hash);
     std::string seedStr = std::to_string(seed);
     theResponse.setHeader("ETag",seedStr);
 
@@ -2810,8 +2810,7 @@ int Plugin::page_isolines(Spine::Reactor &theReactor,
       coordinateLinesStr + ":" + landBorderStr + ":" + projectionIdStr + ":" +
       landMaskStr + ":" + seaMaskStr + ":" + isolinesStr + ":" + isolineValuesStr;
 
-    std::size_t seed = 0;
-    boost::hash_combine(seed, hash);
+    const std::size_t seed = Fmi::hash(hash);
     std::string seedStr = std::to_string(seed);
     theResponse.setHeader("ETag",seedStr);
 
@@ -2953,8 +2952,7 @@ int Plugin::page_streams(Spine::Reactor &theReactor,
       coordinateLinesStr + ":" + landBorderStr + ":" + projectionIdStr + ":" +
       landMaskStr + ":" + seaMaskStr+ ":" + stepStr+ ":" + minLengthStr+ ":" + maxLengthStr + ":" + backgroundStr;
 
-    std::size_t seed = 0;
-    boost::hash_combine(seed, hash);
+    const std::size_t seed = Fmi::hash(hash);
     std::string seedStr = std::to_string(seed);
     theResponse.setHeader("ETag",seedStr);
 
@@ -3102,8 +3100,7 @@ int Plugin::page_streamsAnimation(Spine::Reactor &theReactor,
       coordinateLinesStr + ":" + landBorderStr + ":" + projectionIdStr + ":" +
       landMaskStr + ":" + seaMaskStr+ ":" + stepStr+ ":" + minLengthStr+ ":" + maxLengthStr + ":" + backgroundStr;
 
-    std::size_t seed = 0;
-    boost::hash_combine(seed, hash);
+    const std::size_t seed = Fmi::hash(hash);
     std::string seedStr = std::to_string(seed);
     theResponse.setHeader("ETag",seedStr);
 
@@ -3280,8 +3277,7 @@ int Plugin::page_symbols(Spine::Reactor &theReactor,
       landMaskStr + ":" + seaMaskStr + ":" + locationFileName + ":" + locationFileModificationTime + ":" +
       symbolMapFileName + ":" + symbolMapModificationTime;
 
-    std::size_t seed = 0;
-    boost::hash_combine(seed, hash);
+    const std::size_t seed = Fmi::hash(hash);
     std::string seedStr = std::to_string(seed);
     theResponse.setHeader("ETag",seedStr);
 
@@ -3430,8 +3426,7 @@ int Plugin::page_map(Spine::Reactor &theReactor,
       blurStr + ":" + coordinateLinesStr + ":" + landBorderStr + ":" +
       landMaskStr + ":" + seaMaskStr + ":" + colorMapFileName + ":" + colorMapModificationTime + ":" + missingStr;
 
-    std::size_t seed = 0;
-    boost::hash_combine(seed, hash);
+    const std::size_t seed = Fmi::hash(hash);
     std::string seedStr = std::to_string(seed);
     theResponse.setHeader("ETag",seedStr);
 
