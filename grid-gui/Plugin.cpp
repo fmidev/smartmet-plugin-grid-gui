@@ -2149,6 +2149,26 @@ int Plugin::page_table(Spine::Reactor &theReactor,
     ostr << "</TR>\n";
 
 
+    T::ParamValue max = ParamValueMissing;
+    uint vcnt = gridData.mValues.size();
+    for (uint t=0; t<vcnt; t++)
+    {
+      if (gridData.mValues[t] != ParamValueMissing  &&  (max == ParamValueMissing ||  gridData.mValues[t] > max))
+        max = gridData.mValues[t];
+    }
+
+    std::string formatStr;
+    if (max < 0.00001)
+      formatStr = "%.14f";
+    else
+    if (max < 0.001)
+      formatStr = "%.12f";
+    else
+    if (max < 0.1)
+      formatStr = "%.6f";
+    else
+      formatStr = "%.3f";
+
     // ### Rows:
 
     for (uint y=0; y<height; y++)
@@ -2165,11 +2185,11 @@ int Plugin::page_table(Spine::Reactor &theReactor,
       for (uint x=0; x<width; x++)
       {
         ostr << "<TD>";
-        if (c < gridData.mValues.size())
+        if (c < sz)
         {
           if (gridData.mValues[c] != ParamValueMissing)
           {
-            sprintf(tmp,"%.3f",gridData.mValues[c]);
+            sprintf(tmp,formatStr.c_str(),gridData.mValues[c]);
             ostr << tmp;
           }
           else
