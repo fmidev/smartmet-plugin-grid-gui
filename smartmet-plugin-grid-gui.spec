@@ -3,8 +3,8 @@
 %define SPECNAME smartmet-plugin-%{DIRNAME}
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
-Version: 25.8.25
-Release: 2%{?dist}.fmi
+Version: 25.9.1
+Release: 1%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
 URL: https://github.com/fmidev/smartmet-plugin-grid-gui
@@ -62,6 +62,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/plugins/%{DIRNAME}.so
 
 %changelog
+* Mon Sep  1 2025 Andris Pavēnis <andris.pavenis@fmi.fi> 25.9.1-1.fmi
+- Update according to smartmet-library-spine ABI changes
+
 * Mon Aug 25 2025 Andris Pavēnis <andris.pavenis@fmi.fi> 25.8.25-2.fmi
 - Repackage due to smartmet-library-grid-files changes
 
