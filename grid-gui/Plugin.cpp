@@ -293,14 +293,8 @@ void Plugin::init()
   FUNCTION_TRACE
   try
   {
-    auto engine = itsReactor->getSingleton("grid", nullptr);
-    if (!engine)
-      throw Fmi::Exception(BCP, "The 'grid-engine' unavailable!");
-
-    itsGridEngine = reinterpret_cast<Engine::Grid::Engine*>(engine);
-
+    itsGridEngine = itsReactor->getEngine<Engine::Grid::Engine>("grid", nullptr);
     itsProducerFile = itsGridEngine->getProducerFileName();
-
   }
   catch (...)
   {
