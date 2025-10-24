@@ -226,7 +226,7 @@ class Plugin : public SmartMetPlugin
     void initSession(Session& session);
 
 
-    Engine::Grid::Engine*     itsGridEngine;
+    std::shared_ptr<Engine::Grid::Engine> itsGridEngine;
     const std::string         itsModuleName;
     Spine::Reactor*           itsReactor;
     ConfigurationFile         itsConfigurationFile;
