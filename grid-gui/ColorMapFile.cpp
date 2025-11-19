@@ -163,6 +163,9 @@ uint ColorMapFile::getColor(double value)
 {
   try
   {
+    if (value == ParamValueMissing)
+      return 0x00FFFFFF;
+
     // NOTICE: Lock thread before usage
 
     auto it = mColorMap.find(value);
@@ -184,7 +187,7 @@ uint ColorMapFile::getColor(double value)
     if (value < mColorMap.begin()->first)
       return mColorMap.begin()->second;
 
-    return 0xFFFFFFFF;
+    return 0x00FFFFFF;
   }
   catch (...)
   {
@@ -199,6 +202,9 @@ uint ColorMapFile::getSmoothColor(double value)
 {
   try
   {
+    if (value == ParamValueMissing)
+      return 0x00FFFFFF;
+
     // NOTICE: Lock thread before usage
 
     auto it = mColorMap.find(value);
@@ -260,7 +266,7 @@ uint ColorMapFile::getSmoothColor(double value)
     if (value < mColorMap.begin()->first)
       return mColorMap.begin()->second;
 
-    return 0xFFFFFFFF;
+    return 0x00FFFFFF;
   }
   catch (...)
   {
@@ -414,6 +420,7 @@ void ColorMapFile::loadFile()
             p++;
           }
         }
+        c--;
 
         if (c > 1)
         {
@@ -427,10 +434,18 @@ void ColorMapFile::loadFile()
             {
               double val = toDouble(field[0]);
               uint color = 0;
-              if (c > 3)
-                color = (atoll(field[1]) << 16) + (atoll(field[2]) << 8) + atoll(field[3]);
+              if (c == 4) // No Alpha
+                color = 0xFF000000 + (atoll(field[1]) << 16) + (atoll(field[2]) << 8) + atoll(field[3]);
               else
-                color = strtoul(field[1],nullptr,16);
+              if (c == 5)
+                color = (atoll(field[1]) << 24) + (atoll(field[2]) << 16) + (atoll(field[3]) << 8) + atoll(field[4]);
+              else
+              {
+                if (strlen(field[1]) == 8)
+                  color = strtoul(field[1],nullptr,16);
+                else // No Alpha
+                  color = 0xFF000000 + strtoul(field[1],nullptr,16);
+              }
 
               mColorMap.insert(std::pair<double,unsigned int>(val,color));
             }

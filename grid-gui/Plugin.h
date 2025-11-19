@@ -7,8 +7,6 @@
 #pragma once
 
 #include "ColorMapFile.h"
-#include "SymbolMapFile.h"
-#include "LocationFile.h"
 #include <spine/SmartMetPlugin.h>
 #include <spine/Reactor.h>
 #include <spine/HTTP.h>
@@ -26,6 +24,39 @@ namespace GridGui
 {
 
 typedef std::vector<std::pair<std::string,unsigned int>> Colors;
+
+struct ImagePaintParameters
+{
+  std::string imageFile;
+  uint fileId = 0;
+  uint messageIndex = 0;
+  T::GeometryId geometryId = 0;
+  T::GeometryId projectionId = 0;
+  bool zeroIsMissing = false;
+  unsigned char paint_alpha = 255;
+  std::string   paint_colorMapName;
+  unsigned char paint_hue = 0;
+  unsigned char paint_saturation = 0;
+  unsigned char paint_blur = 1;
+  int  stream_step = 10;
+  int  stream_minLength = 6;
+  int  stream_maxLength = 64;
+  uint stream_color = 0x808080;
+  bool stream_animation = false;
+  uint landBorder_color = 0xFF808080;
+  uint landColor = 0xFF808080;
+  uint landColor_position = 1;
+  uint landShading_light = 128;
+  uint landShading_shadow = 160;
+  uint landShading_position = 2;
+  uint seaColor = 0xFF0000FF;
+  uint seaColor_position = 1;
+  uint seaShading_light = 128;
+  uint seaShading_shadow = 160;
+  uint seaShading_position = 2;
+  uint coordinateLine_color = 0xFFC0C0C0;
+};
+
 
 
 
@@ -53,8 +84,6 @@ class Plugin : public SmartMetPlugin
 
   private:
 
-    bool isLand(double lon,double lat);
-
     int request(Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
                       Spine::HTTP::Response& theResponse);
@@ -79,11 +108,6 @@ class Plugin : public SmartMetPlugin
                       Spine::HTTP::Response& theResponse,
                       Session& session);
 
-    int page_timeseries(Spine::Reactor& theReactor,
-                      const Spine::HTTP::Request& theRequest,
-                      Spine::HTTP::Response& theResponse,
-                      Session& session);
-
     int page_table(Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
                       Spine::HTTP::Response& theResponse,
@@ -99,27 +123,12 @@ class Plugin : public SmartMetPlugin
                       Spine::HTTP::Response& theResponse,
                       Session& session);
 
-    int page_isolines(Spine::Reactor& theReactor,
-                      const Spine::HTTP::Request& theRequest,
-                      Spine::HTTP::Response& theResponse,
-                      Session& session);
-
     int page_streams(Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
                       Spine::HTTP::Response& theResponse,
                       Session& session);
 
     int page_streamsAnimation(Spine::Reactor& theReactor,
-                      const Spine::HTTP::Request& theRequest,
-                      Spine::HTTP::Response& theResponse,
-                      Session& session);
-
-    int page_locations(Spine::Reactor& theReactor,
-                      const Spine::HTTP::Request& theRequest,
-                      Spine::HTTP::Response& theResponse,
-                      Session& session);
-
-    int page_symbols(Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
                       Spine::HTTP::Response& theResponse,
                       Session& session);
@@ -135,57 +144,12 @@ class Plugin : public SmartMetPlugin
                       Session& session);
 
 
-    void saveImage(const char *imageFile,
-                      int width,
-                      int height,
+    void saveImage(ImagePaintParameters& params,int width,int height,
                       T::ParamValue_vec& values,
                       T::Coordinate_vec& coordinates,
-                      T::Coordinate_vec& lineCoordinates,
-                      unsigned char hue,
-                      unsigned char saturation,
-                      unsigned char blur,
-                      uint coordinateLines,
-                      uint isolines,
-                      std::string isolineValues,
-                      uint landBorder,
-                      std::string landMask,
-                      std::string seaMask,
-                      std::string colorMapName,
-                      std::string missingStr,
-                      T::GeometryId geometryId,
-                      std::string symbolMap,
-                      std::string locations,
-                      bool showSymbols,
-                      int pstep,
-                      int minLength,
-                      int maxLength,
-                      bool lightBackground,
-                      bool animation);
+                      T::Coordinate_vec *lineCoordinates);
 
-    void saveImage(const char *imageFile,
-                      uint fileId,
-                      uint messageIndex,
-                      unsigned char hue,
-                      unsigned char saturation,
-                      unsigned char blur,
-                      uint coordinateLines,
-                      uint isolines,
-                      std::string isolineValues,
-                      uint landBorder,
-                      std::string landMask,
-                      std::string seaMask,
-                      std::string colorMapName,
-                      std::string missingStr,
-                      T::GeometryId geometryId,
-                      T::GeometryId projectionId,
-                      std::string symbolMap,
-                      std::string locations,
-                      bool showSymbols,
-                      int pstep,
-                      int minLength,
-                      int maxLength,
-                      bool lightBackground,
-                      bool animation);
+    void saveImage(ImagePaintParameters& params);
 
     void saveMap(const char *imageFile,
                       uint columns,
@@ -201,12 +165,8 @@ class Plugin : public SmartMetPlugin
                       std::string colorMapName,
                       std::string missingStr);
 
-    void saveTimeSeries(const char *imageFile,std::vector<T::ParamValue>& valueList,int idx,std::set<int> dayIdx);
 
     T::ColorMapFile*  getColorMapFile(std::string colorMapName);
-    T::SymbolMapFile* getSymbolMapFile(std::string symbolMap);
-    T::LocationFile*  getLocationFile(std::string name);
-
 
     void checkImageCache();
     void getGenerations(T::GenerationInfoList& generationInfoList,std::set<std::string>& generations);
@@ -217,36 +177,22 @@ class Plugin : public SmartMetPlugin
     void getForecastNumbers(T::ContentInfoList& contentInfoList,int levelId,int level,int forecastType,std::set<int>& forecastNumbers);
     void getGeometries(T::ContentInfoList& contentInfoList,int levelId,int level,int forecastType,int forecastNumber,std::set<int>& geometries);
     uint getColorValue(std::string& colorName);
-    T::ParamValue_vec getIsolineValues(std::string& isolineValues);
+    void initSession(Session& session);
     void loadColorFile();
-    //void loadDaliFile();
-    void loadIsolineFile();
     void loadProducerFile();
     bool loadImage(const char *fname,Spine::HTTP::Response &theResponse);
-    void initSession(Session& session);
 
+  private:
 
-    std::shared_ptr<Engine::Grid::Engine> itsGridEngine;
     const std::string         itsModuleName;
     Spine::Reactor*           itsReactor;
     ConfigurationFile         itsConfigurationFile;
     std::string               itsGridConfigFile;
-    //std::string               itsDaliFile;
-    std::string               itsLandSeaMaskFile;
-    BitLine                   itsLandSeaMask;
-    uint                      itsLandSeaMask_width;
-    uint                      itsLandSeaMask_height;
     string_vec                itsColorMapFileNames;
-    string_vec                itsLocationFileNames;
-    string_vec                itsSymbolMapFileNames;
     T::ColorMapFile_vec       itsColorMapFiles;
-    T::LocationFile_vec       itsLocationFiles;
-    T::SymbolMapFile_vec      itsSymbolMapFiles;
-    std::string               itsIsolineFile;
     std::string               itsColorFile;
     Colors                    itsColors;
     time_t                    itsColors_lastModified;
-    time_t                    itsDaliFile_lastModified;
     std::string               itsImageCache_dir;
     uint                      itsImageCache_maxImages;
     uint                      itsImageCache_minImages;
@@ -257,11 +203,10 @@ class Plugin : public SmartMetPlugin
     std::string               itsProducerFile;
     time_t                    itsProducerFile_modificationTime;
     std::set<std::string>     itsProducerList;
+    std::set<int>             itsBlockedProjections;
 
-    std::map<std::string,T::ParamValue_vec> itsIsolines;
-    std::map<std::string,std::string>       itsImages;
-    std::set<int>                           itsBlockedProjections;
-    //std::vector<string_vec>                 itsDaliProducts;
+    std::shared_ptr<Engine::Grid::Engine> itsGridEngine;
+    std::map<std::string,std::string>      itsImages;
 };  // class Plugin
 
 }  // namespace GridGui
