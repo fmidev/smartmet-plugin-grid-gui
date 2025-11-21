@@ -9,7 +9,7 @@
 #include <grid-files/common/GeneralFunctions.h>
 #include <grid-files/common/ImagePaint.h>
 #include <grid-files/identification/GridDef.h>
-#include <grid-files/map/Topology.h>
+#include <grid-files/map/Topography.h>
 #include <grid-files/common/ShowFunction.h>
 #include <spine/SmartMet.h>
 #include <macgyver/Hash.h>
@@ -153,7 +153,7 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
       itsBlockedProjections.insert(std::stoi(*it));
 
     Identification::gridDef.init(itsGridConfigFile.c_str());
-    Map::topology.init(itsGridConfigFile.c_str(),true,true,true);
+    Map::topography.init(itsGridConfigFile.c_str(),true,true,true);
 
     for (auto it = itsColorMapFileNames.begin(); it != itsColorMapFileNames.end(); ++it)
     {
@@ -563,7 +563,7 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
         double xc = xd*(x-(dWidth/2));
         double yc = yd*((dHeight-y-1)-(dHeight/2));
 
-        bool land = Map::topology.isLand(xc,yc);
+        bool land = Map::topography.isLand(xc,yc);
 
         if (land  &&  (val == ParamValueMissing || ((col & 0xFF000000) == 0)))
           col = landColor;
@@ -808,7 +808,7 @@ void Plugin::saveImage(ImagePaintParameters& params,
 
           double lon = coordinates[c].x();
           double lat = coordinates[c].y();
-          bool land = Map::topology.isLand(lon,lat);
+          bool land = Map::topography.isLand(lon,lat);
 
 
           if (!land)
@@ -818,7 +818,7 @@ void Plugin::saveImage(ImagePaintParameters& params,
 
             if (params.seaShading_position)
             {
-              double m = Map::topology.getSeaShading(lon,lat);
+              double m = Map::topography.getSeaShading(lon,lat);
               if (m < 0)
               {
                 uint pp = (uint)(-(double)params.seaShading_shadow*m);
@@ -845,7 +845,7 @@ void Plugin::saveImage(ImagePaintParameters& params,
 
     if (size == coordinates.size() && (params.landShading_light || params.landShading_shadow || (params.landBorder_color & 0xFF000000)))
     {
-      // Counting land topology.
+      // Counting land topography.
 
       bool yLand[width];
       for (int x=0; x<width; x++)
@@ -873,7 +873,7 @@ void Plugin::saveImage(ImagePaintParameters& params,
           double lon = coordinates[c].x();
           double lat = coordinates[c].y();
 
-          bool land = Map::topology.isLand(lon,lat);
+          bool land = Map::topography.isLand(lon,lat);
           if (land)
           {
             if (params.landColor_position)
@@ -884,7 +884,7 @@ void Plugin::saveImage(ImagePaintParameters& params,
 ;
             if (params.landShading_position)
             {
-              double m = (double)Map::topology.getLandShading(lon,lat);
+              double m = (double)Map::topography.getLandShading(lon,lat);
               if (m < 0)
               {
                 uint pp = (uint)(-(double)params.landShading_shadow*m);
@@ -4593,7 +4593,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
       // ### Land and sea topology
 
-      ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Land and sea topology positions and intensity:</TD></TR>\n";
+      ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Land/sea topography positions and intensity:</TD></TR>\n";
       ostr1 << "<TR height=\"30\"><TD>\n";
 
       a = 0;
