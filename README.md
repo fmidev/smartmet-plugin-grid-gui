@@ -8,7 +8,7 @@ We noticed that the Grid-GUI was very useful and that's why we decided to publis
 
 The figure below shows the basic outlook of the Grid-GUI.  
 
-![Image](https://github.com/fmidev/smartmet-tools-grid/blob/master/doc/grid-support-img/grid-support-img8.png "gui")
+<img src="doc/images/grid-gui-new.png">
 
 ## Visualization
 
