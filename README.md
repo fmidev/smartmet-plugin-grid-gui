@@ -24,16 +24,11 @@ We have added continental borders and coordinate lines in the previous images. T
 
 ![Image](https://github.com/fmidev/smartmet-tools-grid/blob/master/doc/grid-support-img/grid-support-img11.png "gui")
 
-If a grid contains some kind of state of symbol values, we can map these values into actual symbols. We can also define locations for these symbols. For example, we can locate symbols so that they cover all the main cities. In future, we are probably doing the same 
-thing with numbers (for example, showing temperature values in selected locations).  
-
-![Image](https://github.com/fmidev/smartmet-tools-grid/blob/master/doc/grid-support-img/grid-support-img12.png "gui")
-
 ## Configuration
 
 The main configuration file of the Grid-GUI Plugin is read once when the server is started. The main configuration file of the SmartMet Server should point to this file. 
 
-The configuration file contains a lot of references to other files (color maps, symbol maps, locations, etc.) these files are dynamical configuration files, which are loaded in use automatically if they change. Unfortunately, we can only update these files without restart, but if we want to add new color maps, symbols maps or locations files, we have to restart the system. This is something that we should change in future.
+The configuration file contains a some references to other files (color maps, etc.) these files are dynamical configuration files, which are loaded in use automatically if they change. Unfortunately, we can only update these files without restart, but if we want to add new color map files then we have to restart the system. 
 
 
 ## Licence
