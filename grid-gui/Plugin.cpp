@@ -1186,11 +1186,12 @@ void Plugin::saveImage(ImagePaintParameters& params,
       uint sc = params.stream_color & 0x00FFFFFF;
 
       double mp = (double)lcolmax / (double)lcolors;
-
+      std::vector<int> timeVect;
       for (uint t=0; t<lcolors; t++)
       {
         uint cc = lcolmax - (uint)(t*mp);
         color[t] = (cc << 24) + sc;
+        timeVect.push_back(50);
       }
 
       if (params.stream_animation)
@@ -1222,7 +1223,7 @@ void Plugin::saveImage(ImagePaintParameters& params,
           }
         }
 
-        webp_anim_save(params.imageFile.c_str(),wimage,width,height,lcolors,50);
+        webp_anim_save(params.imageFile.c_str(),wimage,width,height,lcolors,timeVect);
 
         for (uint t=0; t<lcolors; t++)
           delete [] wimage[t];
