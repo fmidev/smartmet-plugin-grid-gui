@@ -32,7 +32,7 @@ BuildRequires: smartmet-library-spine-devel >= 25.12.12
 BuildRequires: smartmet-library-grid-files-devel >= 25.12.29
 BuildRequires: smartmet-library-grid-content-devel >= 25.12.29
 BuildRequires: smartmet-engine-grid-devel >= 25.12.29
-BuildRequires: gdal310-devel
+BuildRequires: gdal312-devel
 Requires: libconfig17
 Requires: smartmet-library-macgyver >= 25.12.2
 Requires: smartmet-library-spine >= 25.12.12
