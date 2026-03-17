@@ -28,8 +28,8 @@ typedef std::vector<std::pair<std::string,unsigned int>> Colors;
 struct ImagePaintParameters
 {
   std::string imageFile;
-  uint fileId = 0;
-  uint messageIndex = 0;
+  T::FileId fileId = 0;
+  T::MessageIndex messageIndex = 0;
   T::GeometryId geometryId = 0;
   T::GeometryId projectionId = 0;
   bool zeroIsMissing = false;

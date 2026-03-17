@@ -913,7 +913,7 @@ void Plugin::saveImage(ImagePaintParameters& params,
 
             if (yLand[x] &&  yy > 0)
             {
-              int ppos = (yy-1)*width + x-1;
+              int ppos = (yy-1)*width + x;
               landBorderImage[ppos] = params.landBorder_color;
             }
           }
@@ -1124,22 +1124,40 @@ void Plugin::saveImage(ImagePaintParameters& params,
 
 
     if (landImage)
+    {
       delete [] landImage;
+      landImage = nullptr;
+    }
 
     if (seaImage)
+    {
       delete [] seaImage;
+      seaImage = nullptr;
+    }
 
     if (landShadingImage)
+    {
       delete [] landShadingImage;
+      landShadingImage = nullptr;
+    }
 
     if (seaShadingImage)
+    {
       delete [] seaShadingImage;
+      landShadingImage = nullptr;
+    }
 
     if (valImage)
+    {
       delete [] valImage;
+      valImage = nullptr;
+    }
 
     if (landBorderImage)
+    {
       delete [] landBorderImage;
+      landBorderImage = nullptr;
+    }
 
 
     if (params.stream_step > 0)
@@ -1226,10 +1244,16 @@ void Plugin::saveImage(ImagePaintParameters& params,
         webp_anim_save(params.imageFile.c_str(),wimage,width,height,lcolors,timeVect);
 
         for (uint t=0; t<lcolors; t++)
+        {
           delete [] wimage[t];
+          wimage[t] = nullptr;
+        }
 
         delete [] direction;
+        direction = nullptr;
+
         delete [] streamImage;
+        streamImage = nullptr;
         return;
       }
       else
@@ -1244,7 +1268,10 @@ void Plugin::saveImage(ImagePaintParameters& params,
         }
       }
       delete [] direction;
+      direction = nullptr;
+
       delete [] streamImage;
+      streamImage = nullptr;
     }
 
 
@@ -1254,6 +1281,7 @@ void Plugin::saveImage(ImagePaintParameters& params,
       png_save(params.imageFile.c_str(),finalImage,width,height,1);
 
       delete [] finalImage;
+      finalImage = nullptr;
     }
 
 
@@ -1289,7 +1317,7 @@ int Plugin::page_info(Spine::Reactor &theReactor,
     std::ostringstream ostr;
 
     T::ContentInfo contentInfo;
-    int result = contentServer->getContentInfo(0,toUInt32(fileIdStr),toUInt32(messageIndexStr),contentInfo);
+    int result = contentServer->getContentInfo(0,toUInt64(fileIdStr),toUInt32(messageIndexStr),contentInfo);
     if (result != 0)
     {
       ostr << "<HTML><BODY>\n";
@@ -1463,7 +1491,7 @@ int Plugin::page_message(Spine::Reactor &theReactor,
 
     std::vector<uchar> messageBytes;
     std::vector<uint> messageSections;
-    int result = dataServer->getGridMessageBytes(0,toUInt32(fileIdStr),toUInt32(messageIndexStr),messageBytes,messageSections);
+    int result = dataServer->getGridMessageBytes(0,toUInt64(fileIdStr),toUInt32(messageIndexStr),messageBytes,messageSections);
     if (result != 0)
     {
       ostr << "<HTML><BODY>\n";
@@ -1586,7 +1614,7 @@ int Plugin::page_download(Spine::Reactor &theReactor,
 
     std::vector<uchar> messageBytes;
     std::vector<uint> messageSections;
-    int result = dataServer->getGridMessageBytes(0,toUInt32(fileIdStr),toUInt32(messageIndexStr),messageBytes,messageSections);
+    int result = dataServer->getGridMessageBytes(0,toUInt64(fileIdStr),toUInt32(messageIndexStr),messageBytes,messageSections);
     if (result != 0)
     {
       ostr << "<HTML><BODY>\n";
@@ -1669,7 +1697,7 @@ int Plugin::page_table(Spine::Reactor &theReactor,
     std::ostringstream ostr;
 
     T::GridData gridData;
-    int result = dataServer->getGridData(0,toUInt32(fileIdStr),toUInt32(messageIndexStr),gridData);
+    int result = dataServer->getGridData(0,toUInt64(fileIdStr),toUInt32(messageIndexStr),gridData);
     if (result != 0)
     {
       ostr << "<HTML><BODY>\n";
@@ -1827,7 +1855,7 @@ int Plugin::page_coordinates(Spine::Reactor &theReactor,
     std::ostringstream ostr;
 
     T::GridCoordinates coordinates;
-    int result = dataServer->getGridCoordinates(0,toUInt32(fileIdStr),toUInt32(messageIndexStr),T::CoordinateTypeValue::LATLON_COORDINATES,coordinates);
+    int result = dataServer->getGridCoordinates(0,toUInt64(fileIdStr),toUInt32(messageIndexStr),T::CoordinateTypeValue::LATLON_COORDINATES,coordinates);
     if (result != 0)
     {
       ostr << "<HTML><BODY>\n";
@@ -1919,8 +1947,8 @@ int Plugin::page_value(Spine::Reactor &theReactor,
     auto contentServer = itsGridEngine->getContentServer_sptr();
     auto dataServer = itsGridEngine->getDataServer_sptr();
 
-    uint fileId = session.getUIntAttribute(ATTR_FILE_ID);
-    uint messageIndex = session.getUIntAttribute(ATTR_MESSAGE_INDEX);
+    T::FileId fileId = session.getUInt64Attribute(ATTR_FILE_ID);
+    T::MessageIndex messageIndex = session.getUIntAttribute(ATTR_MESSAGE_INDEX);
     float xPos = session.getDoubleAttribute(ATTR_X);
     float yPos = session.getDoubleAttribute(ATTR_Y);
 
@@ -2189,12 +2217,12 @@ int Plugin::page_image(Spine::Reactor &theReactor,
     try
     {
       char fname[200];
-      sprintf(fname,"%s/grid-gui-image_%llu.png",itsImageCache_dir.c_str(),getTime());
+      sprintf(fname,"%s/grid-gui-image_%lu.png",itsImageCache_dir.c_str(),getTime());
 
       ImagePaintParameters params;
 
       params.imageFile = fname;
-      params.fileId = toUInt32(fileIdStr);
+      params.fileId = toUInt64(fileIdStr);
       params.messageIndex = toUInt32(messageIndexStr);
       params.geometryId = toInt32(geometryIdStr);
       params.projectionId = toUInt32(projectionIdStr);
@@ -2373,12 +2401,12 @@ int Plugin::page_streams(Spine::Reactor &theReactor,
     try
     {
       char fname[200];
-      sprintf(fname,"%s/grid-gui-image_%llu.png",itsImageCache_dir.c_str(),getTime());
+      sprintf(fname,"%s/grid-gui-image_%lu.png",itsImageCache_dir.c_str(),getTime());
 
       ImagePaintParameters params;
 
       params.imageFile = fname;
-      params.fileId = toUInt32(fileIdStr);
+      params.fileId = toUInt64(fileIdStr);
       params.messageIndex = toUInt32(messageIndexStr);
       params.geometryId = toInt32(geometryIdStr);
       params.projectionId = toUInt32(projectionIdStr);
@@ -2558,12 +2586,12 @@ int Plugin::page_streamsAnimation(Spine::Reactor &theReactor,
     try
     {
       char fname[200];
-      sprintf(fname,"%s/grid-gui-image_%llu.webp",itsImageCache_dir.c_str(),getTime());
+      sprintf(fname,"%s/grid-gui-image_%lu.webp",itsImageCache_dir.c_str(),getTime());
 
       ImagePaintParameters params;
 
       params.imageFile = fname;
-      params.fileId = toUInt32(fileIdStr);
+      params.fileId = toUInt64(fileIdStr);
       params.messageIndex = toUInt32(messageIndexStr);
       params.geometryId = toInt32(geometryIdStr);
       params.projectionId = toUInt32(projectionIdStr);
@@ -2733,7 +2761,7 @@ int Plugin::page_map(Spine::Reactor &theReactor,
 
       T::ParamValue_vec values;
       double_vec modificationParameters;
-      int result = dataServer->getGridValueVectorByRectangle(0,toUInt32(fileIdStr),toUInt32(messageIndexStr),T::CoordinateTypeValue::LATLON_COORDINATES,columns,rows,-180,90,360/C_DOUBLE(columns),-180/C_DOUBLE(rows),T::AreaInterpolationMethod::Nearest,0,modificationParameters,values);
+      int result = dataServer->getGridValueVectorByRectangle(0,toUInt64(fileIdStr),toUInt32(messageIndexStr),T::CoordinateTypeValue::LATLON_COORDINATES,columns,rows,-180,90,360/C_DOUBLE(columns),-180/C_DOUBLE(rows),T::AreaInterpolationMethod::Nearest,0,modificationParameters,values);
       if (result != 0)
       {
         std::ostringstream ostr;
@@ -2748,7 +2776,7 @@ int Plugin::page_map(Spine::Reactor &theReactor,
       uint landBorder = getColorValue(landBorderStr);
 
       char fname[200];
-      sprintf(fname,"/%s/grid-gui-image_%llu.png",itsImageCache_dir.c_str(),getTime());
+      sprintf(fname,"/%s/grid-gui-image_%lu.png",itsImageCache_dir.c_str(),getTime());
       saveMap(fname,columns,rows,values,toUInt8(hueStr),toUInt8(saturationStr),toUInt8(blurStr),coordinateLines,landBorder,landMaskStr,seaMaskStr,colorMap,missingStr);
 
       if (loadImage(fname,theResponse))
@@ -3362,7 +3390,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     contentServer->getProducerInfoList(0,producerInfoList);
     uint len = producerInfoList.getLength();
     producerInfoList.sortByName();
-    uint producerId = toUInt32(producerIdStr);
+    T::ProducerId producerId = toUInt32(producerIdStr);
 
     ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Producer:</TD></TR>\n";
     ostr1 << "<TR height=\"30\"><TD>\n";
@@ -3406,7 +3434,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     generationInfoList2.getGenerationInfoListByProducerId(producerId,generationInfoList);
     //generationInfoList2.getGenerationInfoListByProducerIdAndStatus(producerId,generationInfoList,T::GenerationInfo::Status::Ready);
 
-    uint generationId = toUInt32(generationIdStr);
+    T::GenerationId generationId = toUInt64(generationIdStr);
     bool generationNotReady = false;
 
     if (generationInfoList.getGenerationInfoById(generationId) == nullptr)
