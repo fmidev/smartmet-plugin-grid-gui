@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-plugin-%{DIRNAME}
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
-Version: 26.2.4
+Version: 26.3.18
 Release: 1%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
@@ -28,16 +28,16 @@ BuildRequires: libconfig17-devel
 BuildRequires: libwebp13-devel
 BuildRequires: smartmet-utils-devel >= 26.2.4
 BuildRequires: smartmet-library-macgyver-devel >= 26.2.4
-BuildRequires: smartmet-library-spine-devel >= 26.2.4
-BuildRequires: smartmet-library-grid-files-devel >= 26.2.4
-BuildRequires: smartmet-library-grid-content-devel >= 26.2.4
-BuildRequires: smartmet-engine-grid-devel >= 26.2.4
+BuildRequires: smartmet-library-spine-devel >= 26.3.13
+BuildRequires: smartmet-library-grid-files-devel >= 26.3.18
+BuildRequires: smartmet-library-grid-content-devel >= 26.3.18
+BuildRequires: smartmet-engine-grid-devel >= 26.3.18
 BuildRequires: gdal312-devel
 Requires: libconfig17
 Requires: smartmet-library-macgyver >= 26.2.4
-Requires: smartmet-library-spine >= 26.2.4
-Requires: smartmet-server >= 26.2.4
-Requires: smartmet-engine-grid >= 26.2.4
+Requires: smartmet-library-spine >= 26.3.13
+Requires: smartmet-server >= 26.3.9
+Requires: smartmet-engine-grid >= 26.3.18
 Provides: %{SPECNAME}
 
 %description
@@ -62,6 +62,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/plugins/%{DIRNAME}.so
 
 %changelog
+* Wed Mar 18 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> - 26.3.18-1.fmi
+- Added support for multiple content sources
+
 * Wed Feb  4 2026 Andris Pavēnis <andris.pavenis@fmi.fi> 26.2.4-1.fmi
 - Update to proj-9.7, gdal-3.12, fmt-12
 
