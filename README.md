@@ -1,5 +1,7 @@
-Grid-GUI Plugin
-===============
+# smartmet-plugin-grid-gui
+
+Part of [SmartMet Server](https://github.com/fmidev/smartmet-server). See the [SmartMet Server documentation](https://github.com/fmidev/smartmet-server) for a full overview of the ecosystem.
+
 ## Introduction
 
 The Grid-GUI Plugin can be used in order to visualize grid files, which information is registered into the Content Information Storage. Originally this plugin was created in order to help the development work in the grid support project. In other words, we just wanted to see that our key components were working correctly and they can open different kinds of grid files and support multiple projections. In addition, it offered us a nice way to see almost all information that was stored into the Content Information Storage.
@@ -54,6 +56,3 @@ You may contact us from following channels:
 Other resources which may be useful:  
 * Presentation about the server: http://www.slideshare.net/tervo/smartmet-server-providing-metocean-data  
 * Our public web pages (in Finnish): http://ilmatieteenlaitos.fi/avoin-lahdekoodi   
-
-
-
