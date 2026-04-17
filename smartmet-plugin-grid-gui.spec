@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-plugin-%{DIRNAME}
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
-Version: 26.4.13
+Version: 26.4.17
 Release: 1%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
@@ -29,15 +29,15 @@ BuildRequires: libwebp13-devel
 BuildRequires: smartmet-utils-devel >= 26.2.4
 BuildRequires: smartmet-library-macgyver-devel >= 26.4.13
 BuildRequires: smartmet-library-spine-devel >= 26.4.13
-BuildRequires: smartmet-library-grid-files-devel >= 26.4.13
-BuildRequires: smartmet-library-grid-content-devel >= 26.4.13
-BuildRequires: smartmet-engine-grid-devel >= 26.4.13
+BuildRequires: smartmet-library-grid-files-devel >= 26.4.17
+BuildRequires: smartmet-library-grid-content-devel >= 26.4.17
+BuildRequires: smartmet-engine-grid-devel >= 26.4.17
 BuildRequires: gdal312-devel
 Requires: libconfig17
 Requires: smartmet-library-macgyver >= 26.4.13
 Requires: smartmet-library-spine >= 26.4.13
 Requires: smartmet-server >= 26.4.13
-Requires: smartmet-engine-grid >= 26.4.13
+Requires: smartmet-engine-grid >= 26.4.17
 Provides: %{SPECNAME}
 
 %description
@@ -62,6 +62,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/plugins/%{DIRNAME}.so
 
 %changelog
+* Fri Apr 17 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> - 26.4.17-1.fmi
+- Repackaged due to grid-files API changes
+
 * Mon Apr 13 2026 Mika Heiskanen <mika.heiskanen@fmi.f> - 26.4.13-1.fmi
 - Repackaged due to API changes
 
