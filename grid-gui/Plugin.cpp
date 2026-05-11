@@ -270,9 +270,9 @@ void Plugin::loadProducerFile()
 
     char st[1000];
 
-    while (!feof(file))
+    while (fgets(st, 1000, file) != nullptr)
     {
-      if (fgets(st, 1000, file) != nullptr && st[0] != '#')
+      if (st[0] != '#')
       {
         bool ind = false;
         char* field[100];
@@ -363,9 +363,9 @@ void Plugin::loadColorFile()
 
     char st[1000];
 
-    while (!feof(file))
+    while (fgets(st,1000,file) != nullptr)
     {
-      if (fgets(st,1000,file) != nullptr  &&  st[0] != '#')
+      if (st[0] != '#')
       {
         bool ind = false;
         char *field[100];
@@ -399,7 +399,7 @@ void Plugin::loadColorFile()
             if (strlen(field[1]) == 8)
               color = strtoul(field[1],nullptr,16);
             else  // No alpha
-              color = 0xFF000000 + strtoul(field[1],nullptr,16);
+              color = 0xFF000000 | (strtoul(field[1],nullptr,16) & 0x00FFFFFF);
 
             itsColors.emplace_back(std::pair<std::string,unsigned int>(colorName,color));
           }
@@ -1647,8 +1647,7 @@ int Plugin::page_download(Spine::Reactor &theReactor,
       content->emplace_back('7');
       content->emplace_back('7');
 
-      char val[1000];
-      sprintf(val,"attachment; filename=message_%s_%s.grib",fileIdStr.c_str(),messageIndexStr.c_str());
+      std::string val = "attachment; filename=message_" + fileIdStr + "_" + messageIndexStr + ".grib";
       theResponse.setHeader("Content-Disposition",val);
       theResponse.setContent(sContent);
     }
@@ -2042,15 +2041,12 @@ bool Plugin::loadImage(const char *fname,Spine::HTTP::Response &theResponse)
       FILE *file = fopen(fname,"re");
       if (file != nullptr)
       {
-        while (!feof(file))
+        int n;
+        while ((n = fread(buf,1,10000,file)) > 0)
         {
-          int n = fread(buf,1,10000,file);
-          if (n > 0)
+          for (int t=0; t<n; t++)
           {
-            for (int t=0; t<n; t++)
-            {
-              content->emplace_back(buf[t]);
-            }
+            content->emplace_back(buf[t]);
           }
         }
         fclose(file);
@@ -2216,8 +2212,7 @@ int Plugin::page_image(Spine::Reactor &theReactor,
 
     try
     {
-      char fname[200];
-      sprintf(fname,"%s/grid-gui-image_%lu.png",itsImageCache_dir.c_str(),getTime());
+      std::string fname = itsImageCache_dir + "/grid-gui-image_" + std::to_string(getTime()) + ".png";
 
       ImagePaintParameters params;
 
@@ -2252,7 +2247,7 @@ int Plugin::page_image(Spine::Reactor &theReactor,
 
       saveImage(params);
 
-      if (loadImage(fname,theResponse))
+      if (loadImage(fname.c_str(),theResponse))
       {
         AutoThreadLock lock(&itsThreadLock);
         if (itsImages.find(hash) == itsImages.end())
@@ -2400,8 +2395,7 @@ int Plugin::page_streams(Spine::Reactor &theReactor,
 
     try
     {
-      char fname[200];
-      sprintf(fname,"%s/grid-gui-image_%lu.png",itsImageCache_dir.c_str(),getTime());
+      std::string fname = itsImageCache_dir + "/grid-gui-image_" + std::to_string(getTime()) + ".png";
 
       ImagePaintParameters params;
 
@@ -2436,7 +2430,7 @@ int Plugin::page_streams(Spine::Reactor &theReactor,
 
       saveImage(params);
 
-      if (loadImage(fname,theResponse))
+      if (loadImage(fname.c_str(),theResponse))
       {
         AutoThreadLock lock(&itsThreadLock);
         if (itsImages.find(hash) == itsImages.end())
@@ -2585,8 +2579,7 @@ int Plugin::page_streamsAnimation(Spine::Reactor &theReactor,
 
     try
     {
-      char fname[200];
-      sprintf(fname,"%s/grid-gui-image_%lu.webp",itsImageCache_dir.c_str(),getTime());
+      std::string fname = itsImageCache_dir + "/grid-gui-image_" + std::to_string(getTime()) + ".webp";
 
       ImagePaintParameters params;
 
@@ -2621,7 +2614,7 @@ int Plugin::page_streamsAnimation(Spine::Reactor &theReactor,
 
       saveImage(params);
 
-      if (loadImage(fname,theResponse))
+      if (loadImage(fname.c_str(),theResponse))
       {
         AutoThreadLock lock(&itsThreadLock);
         if (itsImages.find(hash) == itsImages.end())
@@ -2775,11 +2768,10 @@ int Plugin::page_map(Spine::Reactor &theReactor,
 
       uint landBorder = getColorValue(landBorderStr);
 
-      char fname[200];
-      sprintf(fname,"/%s/grid-gui-image_%lu.png",itsImageCache_dir.c_str(),getTime());
-      saveMap(fname,columns,rows,values,toUInt8(hueStr),toUInt8(saturationStr),toUInt8(blurStr),coordinateLines,landBorder,landMaskStr,seaMaskStr,colorMap,missingStr);
+      std::string fname = "/" + itsImageCache_dir + "/grid-gui-image_" + std::to_string(getTime()) + ".png";
+      saveMap(fname.c_str(),columns,rows,values,toUInt8(hueStr),toUInt8(saturationStr),toUInt8(blurStr),coordinateLines,landBorder,landMaskStr,seaMaskStr,colorMap,missingStr);
 
-      if (loadImage(fname,theResponse))
+      if (loadImage(fname.c_str(),theResponse))
       {
         AutoThreadLock lock(&itsThreadLock);
         if (itsImages.find(hash) == itsImages.end())
@@ -3513,12 +3505,9 @@ int Plugin::page_main(Spine::Reactor &theReactor,
         std::string parameterId = *it;
         std::string pName = *it;
 
-        char st[100];
-        strcpy(st,it->c_str());
-
-        if (strncasecmp(st,"GRIB-",5) == 0)
+        if (strncasecmp(it->c_str(),"GRIB-",5) == 0)
         {
-          std::string key = st+5;
+          std::string key = it->substr(5);
 
           Identification::GribParameterDef  def;
           if (Identification::gridDef.getGribParameterDefById(toUInt32(key),def))
@@ -3527,9 +3516,9 @@ int Plugin::page_main(Spine::Reactor &theReactor,
           }
         }
         else
-        if (strncasecmp(st,"NB-",3) == 0)
+        if (strncasecmp(it->c_str(),"NB-",3) == 0)
         {
-          std::string key = st+3;
+          std::string key = it->substr(3);
 
           Identification::NewbaseParameterDef  def;
           if (Identification::gridDef.getNewbaseParameterDefById(toUInt32(key),def))
@@ -3538,9 +3527,9 @@ int Plugin::page_main(Spine::Reactor &theReactor,
           }
         }
         else
-        if (strncasecmp(st,"FMI-",4) == 0)
+        if (strncasecmp(it->c_str(),"FMI-",4) == 0)
         {
-          std::string key = st+4;
+          std::string key = it->substr(4);
 
           Identification::FmiParameterDef def;
           if (Identification::gridDef.getFmiParameterDefById(toUInt32(key),def))
@@ -3833,8 +3822,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
     if (geometryId != 0)
     {
-      char tmp[100];
-      sprintf(tmp,"%s:%u",producerNameStr.c_str(),geometryId);
+      std::string tmp = producerNameStr + ":" + std::to_string(geometryId);
       if (itsProducerList.find(toUpperString(tmp)) == itsProducerList.end())
       {
         ostr1 << "<TR style=\"text-align:center; font-size:12; font-weight:bold;\"><TD >*** Search not configured ***</TD></TR>\n";
