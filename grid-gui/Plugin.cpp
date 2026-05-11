@@ -1144,7 +1144,7 @@ void Plugin::saveImage(ImagePaintParameters& params,
     if (seaShadingImage)
     {
       delete [] seaShadingImage;
-      landShadingImage = nullptr;
+      seaShadingImage = nullptr;
     }
 
     if (valImage)
