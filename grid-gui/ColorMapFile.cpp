@@ -394,9 +394,9 @@ void ColorMapFile::loadFile()
 
     char st[1000];
 
-    while (!feof(file))
+    while (fgets(st,1000,file) != nullptr)
     {
-      if (fgets(st,1000,file) != nullptr  &&  st[0] != '#')
+      if (st[0] != '#')
       {
         bool ind = false;
         char *field[100];
@@ -444,7 +444,7 @@ void ColorMapFile::loadFile()
                 if (strlen(field[1]) == 8)
                   color = strtoul(field[1],nullptr,16);
                 else // No Alpha
-                  color = 0xFF000000 + strtoul(field[1],nullptr,16);
+                  color = 0xFF000000 | (strtoul(field[1],nullptr,16) & 0x00FFFFFF);
               }
 
               mColorMap.insert(std::pair<double,unsigned int>(val,color));
