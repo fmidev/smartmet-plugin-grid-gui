@@ -13,12 +13,13 @@ The plugin registers at `/grid-gui` and is loaded dynamically by SmartMet Server
 ```bash
 make                  # Build grid-gui.so (release)
 make debug            # Build with debug flags
-make clean            # Remove build artifacts
+make clean            # Remove build artifacts (removes doc/html/)
 make install          # Install to $(plugindir)
 make rpm              # Build RPM package
 make configtest       # Validate cfg/grid-gui-plugin.conf syntax
 make format           # Run clang-format on source files
 make test             # Run tests (no test/ directory currently exists)
+make doc              # Generate Doxygen HTML documentation in doc/html/
 ```
 
 ## Dependencies
