@@ -87,6 +87,8 @@ using namespace SmartMet::Spine;
  */
 // ----------------------------------------------------------------------
 
+/*! \brief GridGui: Constructor. */
+
 Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
     : SmartMetPlugin(), itsModuleName("GridGui")
 {
@@ -196,6 +198,8 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
  */
 // ----------------------------------------------------------------------
 
+/*! \brief GridGui: Destructor. */
+
 Plugin::~Plugin()
 {
 }
@@ -208,6 +212,8 @@ Plugin::~Plugin()
  * \brief Initializator, in this case trivial
  */
 // ----------------------------------------------------------------------
+/*! \brief GridGui: Init. */
+
 void Plugin::init()
 {
   FUNCTION_TRACE
@@ -232,6 +238,8 @@ void Plugin::init()
  */
 // ----------------------------------------------------------------------
 
+/*! \brief GridGui: Shutdown. */
+
 void Plugin::shutdown()
 {
   FUNCTION_TRACE
@@ -248,6 +256,8 @@ void Plugin::shutdown()
 
 
 
+
+/*! \brief GridGui: Load producer file. */
 
 void Plugin::loadProducerFile()
 {
@@ -321,6 +331,8 @@ void Plugin::loadProducerFile()
 
 
 
+/*! \brief GridGui: Get color map file. */
+
 T::ColorMapFile* Plugin::getColorMapFile(std::string colorMapName)
 {
   FUNCTION_TRACE
@@ -345,6 +357,8 @@ T::ColorMapFile* Plugin::getColorMapFile(std::string colorMapName)
 
 
 
+
+/*! \brief GridGui: Load color file. */
 
 void Plugin::loadColorFile()
 {
@@ -421,6 +435,8 @@ void Plugin::loadColorFile()
 
 
 
+/*! \brief GridGui: Get color value. */
+
 uint Plugin::getColorValue(std::string& colorName)
 {
   FUNCTION_TRACE
@@ -445,6 +461,8 @@ uint Plugin::getColorValue(std::string& colorName)
 
 
 
+
+/*! \brief GridGui: Save map. */
 
 void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_vec&  values,unsigned char hue,unsigned char saturation,unsigned char blur,uint coordinateLines,uint landBorder,std::string landMask,std::string seaMask,std::string colorMapName,std::string missingStr)
 {
@@ -621,6 +639,8 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
 
 
 
+/*! \brief GridGui: Check image cache. */
+
 void Plugin::checkImageCache()
 {
   FUNCTION_TRACE
@@ -658,6 +678,8 @@ void Plugin::checkImageCache()
 
 
 
+
+/*! \brief GridGui: Save image. */
 
 void Plugin::saveImage(ImagePaintParameters& params)
 {
@@ -745,6 +767,8 @@ void Plugin::saveImage(ImagePaintParameters& params)
 
 
 
+
+/*! \brief GridGui: Save image. */
 
 void Plugin::saveImage(ImagePaintParameters& params,
     int width,
@@ -1300,6 +1324,8 @@ void Plugin::saveImage(ImagePaintParameters& params,
 
 
 
+/*! \brief GridGui: Page info. */
+
 int Plugin::page_info(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse,
@@ -1470,6 +1496,8 @@ int Plugin::page_info(Spine::Reactor &theReactor,
 
 
 
+/*! \brief GridGui: Page message. */
+
 int Plugin::page_message(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse,
@@ -1597,6 +1625,8 @@ int Plugin::page_message(Spine::Reactor &theReactor,
 
 
 
+/*! \brief GridGui: Page download. */
+
 int Plugin::page_download(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse,
@@ -1673,6 +1703,8 @@ int Plugin::page_download(Spine::Reactor &theReactor,
 
 
 
+
+/*! \brief GridGui: Page table. */
 
 int Plugin::page_table(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
@@ -1833,6 +1865,8 @@ int Plugin::page_table(Spine::Reactor &theReactor,
 
 
 
+/*! \brief GridGui: Page coordinates. */
+
 int Plugin::page_coordinates(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse,
@@ -1935,6 +1969,8 @@ int Plugin::page_coordinates(Spine::Reactor &theReactor,
 
 
 
+/*! \brief GridGui: Page value. */
+
 int Plugin::page_value(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse,
@@ -2023,6 +2059,8 @@ int Plugin::page_value(Spine::Reactor &theReactor,
 
 
 
+/*! \brief GridGui: Load image. */
+
 bool Plugin::loadImage(const char *fname,Spine::HTTP::Response &theResponse)
 {
   FUNCTION_TRACE
@@ -2080,6 +2118,8 @@ bool Plugin::loadImage(const char *fname,Spine::HTTP::Response &theResponse)
 
 
 
+
+/*! \brief GridGui: Page image. */
 
 int Plugin::page_image(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
@@ -2278,6 +2318,8 @@ int Plugin::page_image(Spine::Reactor &theReactor,
 
 
 
+/*! \brief GridGui: Page streams. */
+
 int Plugin::page_streams(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse,
@@ -2461,6 +2503,8 @@ int Plugin::page_streams(Spine::Reactor &theReactor,
 
 
 
+
+/*! \brief GridGui: Page streams animation. */
 
 int Plugin::page_streamsAnimation(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
@@ -2646,6 +2690,8 @@ int Plugin::page_streamsAnimation(Spine::Reactor &theReactor,
 
 
 
+/*! \brief GridGui: Page map. */
+
 int Plugin::page_map(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse,
@@ -2803,6 +2849,8 @@ int Plugin::page_map(Spine::Reactor &theReactor,
 
 
 
+/*! \brief GridGui: Get level ids. */
+
 void Plugin::getLevelIds(T::ContentInfoList& contentInfoList,std::set<int>& levelIds)
 {
   FUNCTION_TRACE
@@ -2853,6 +2901,8 @@ void Plugin::getLevelIds(T::ContentInfoList& contentInfoList,std::set<int>& leve
 
 
 
+/*! \brief GridGui: Get levels. */
+
 void Plugin::getLevels(T::ContentInfoList& contentInfoList,int levelId,std::set<int>& levels)
 {
   FUNCTION_TRACE
@@ -2887,6 +2937,8 @@ void Plugin::getLevels(T::ContentInfoList& contentInfoList,int levelId,std::set<
 
 
 
+
+/*! \brief GridGui: Get forecast types. */
 
 void Plugin::getForecastTypes(T::ContentInfoList& contentInfoList,int levelId,int level,std::set<int>& forecastTypes)
 {
@@ -2925,6 +2977,8 @@ void Plugin::getForecastTypes(T::ContentInfoList& contentInfoList,int levelId,in
 
 
 
+
+/*! \brief GridGui: Get forecast numbers. */
 
 void Plugin::getForecastNumbers(T::ContentInfoList& contentInfoList,int levelId,int level,int forecastType,std::set<int>& forecastNumbers)
 {
@@ -2966,6 +3020,8 @@ void Plugin::getForecastNumbers(T::ContentInfoList& contentInfoList,int levelId,
 
 
 
+
+/*! \brief GridGui: Get geometries. */
 
 void Plugin::getGeometries(T::ContentInfoList& contentInfoList,int levelId,int level,int forecastType,int forecastNumber,std::set<int>& geometries)
 {
@@ -3010,6 +3066,8 @@ void Plugin::getGeometries(T::ContentInfoList& contentInfoList,int levelId,int l
 
 
 
+
+/*! \brief GridGui: Get fmi key. */
 
 std::string Plugin::getFmiKey(std::string& producerName,T::ContentInfo& contentInfo)
 {
@@ -3061,6 +3119,8 @@ std::string Plugin::getFmiKey(std::string& producerName,T::ContentInfo& contentI
 
 
 
+/*! \brief GridGui: Get generations. */
+
 void Plugin::getGenerations(T::GenerationInfoList& generationInfoList,std::set<std::string>& generations)
 {
   FUNCTION_TRACE
@@ -3087,6 +3147,8 @@ void Plugin::getGenerations(T::GenerationInfoList& generationInfoList,std::set<s
 
 
 
+
+/*! \brief GridGui: Init session. */
 
 void Plugin::initSession(Session& session)
 {
@@ -3150,6 +3212,8 @@ void Plugin::initSession(Session& session)
 
 
 
+
+/*! \brief GridGui: Page main. */
 
 int Plugin::page_main(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
@@ -4915,6 +4979,8 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
 
 
+/*! \brief GridGui: Request. */
+
 int Plugin::request(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse)
@@ -5064,6 +5130,8 @@ int Plugin::request(Spine::Reactor &theReactor,
  */
 // ----------------------------------------------------------------------
 
+/*! \brief GridGui: Request handler. */
+
 void Plugin::requestHandler(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse)
@@ -5132,6 +5200,8 @@ const std::string &Plugin::getPluginName() const
  */
 // ----------------------------------------------------------------------
 
+/*! \brief GridGui: Get required api version. */
+
 int Plugin::getRequiredAPIVersion() const
 {
   return SMARTMET_API_VERSION;
@@ -5145,6 +5215,8 @@ int Plugin::getRequiredAPIVersion() const
  * \brief This is an admin plugin
  */
 // ----------------------------------------------------------------------
+
+/*! \brief GridGui: Is admin query. */
 
 bool Plugin::isAdminQuery(const Spine::HTTP::Request & /* theRequest */) const
 {

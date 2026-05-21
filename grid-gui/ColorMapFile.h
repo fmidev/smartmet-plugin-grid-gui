@@ -11,8 +11,18 @@ namespace SmartMet
 namespace T
 {
 
-typedef std::map<float,unsigned int> ColorMap;
+typedef std::map<float,unsigned int> ColorMap;  //!< Maps parameter value thresholds (float) to packed ARGB colors (uint).
 
+
+// ====================================================================================
+/*! \brief Manages a CSV-based color mapping file that translates grid parameter values
+ *  to packed ARGB colors for image rendering.
+ *
+ *  A single file can define several named color maps (e.g. one per parameter or
+ *  physical scale).  getColor() does exact threshold lookup; getSmoothColor() linearly
+ *  interpolates between adjacent thresholds.  The file is hot-reloaded on modification
+ *  so that color schemes can be adjusted without restarting the server. */
+// ====================================================================================
 
 class ColorMapFile
 {
@@ -41,15 +51,15 @@ class ColorMapFile
 
     void              loadFile();
 
-    string_vec        mNames;
-    std::string       mFilename;
-    ColorMap          mColorMap;
-    time_t            mLastModified;
-    ModificationLock  mModificationLock;
+    string_vec        mNames;           //!< Named color maps defined in this file (e.g. "Dali Temperature (Celsius)").
+    std::string       mFilename;        //!< Path to the CSV color map file on disk.
+    ColorMap          mColorMap;        //!< Loaded threshold → color mapping for the active color map.
+    time_t            mLastModified;    //!< Last-modified time of the file; used to detect when a reload is needed.
+    ModificationLock  mModificationLock;//!< Lock protecting concurrent access to mColorMap during hot-reload.
 };
 
 
-typedef std::vector<ColorMapFile> ColorMapFile_vec;
+typedef std::vector<ColorMapFile> ColorMapFile_vec;  //!< Collection of loaded color map files.
 
 
 }  // namespace T

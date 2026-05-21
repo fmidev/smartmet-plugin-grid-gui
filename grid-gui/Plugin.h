@@ -1,9 +1,3 @@
-// ======================================================================
-/*!
- * \brief SmartMet Grid Gui plugin interface
- */
-// ======================================================================
-
 #pragma once
 
 #include "ColorMapFile.h"
@@ -23,42 +17,58 @@ namespace Plugin
 namespace GridGui
 {
 
-typedef std::vector<std::pair<std::string,unsigned int>> Colors;
+typedef std::vector<std::pair<std::string,unsigned int>> Colors;  //!< Named color list: (name, packed ARGB) pairs loaded from the color definition CSV.
 
+/*! \brief All visual parameters that control how a single grid field is rendered to an image.
+ *
+ *  Passed to saveImage() so that rendering decisions (color map, stream lines, land/sea
+ *  shading, coordinate lines) are bundled together rather than spread across many arguments. */
 struct ImagePaintParameters
 {
-  std::string imageFile;
-  T::FileId fileId = 0;
-  T::MessageIndex messageIndex = 0;
-  T::GeometryId geometryId = 0;
-  T::GeometryId projectionId = 0;
-  bool zeroIsMissing = false;
-  unsigned char paint_alpha = 255;
-  std::string   paint_colorMapName;
-  unsigned char paint_hue = 0;
-  unsigned char paint_saturation = 0;
-  unsigned char paint_blur = 1;
-  int  stream_step = 10;
-  int  stream_minLength = 6;
-  int  stream_maxLength = 64;
-  uint stream_color = 0x808080;
-  bool stream_animation = false;
-  uint landBorder_color = 0xFF808080;
-  uint landColor = 0xFF808080;
-  uint landColor_position = 1;
-  uint landShading_light = 128;
-  uint landShading_shadow = 160;
-  uint landShading_position = 2;
-  uint seaColor = 0xFF0000FF;
-  uint seaColor_position = 1;
-  uint seaShading_light = 128;
-  uint seaShading_shadow = 160;
-  uint seaShading_position = 2;
-  uint coordinateLine_color = 0xFFC0C0C0;
+  std::string imageFile;                        //!< Output image file path.
+  T::FileId fileId = 0;                         //!< Grid file identifier.
+  T::MessageIndex messageIndex = 0;             //!< Message index within the grid file.
+  T::GeometryId geometryId = 0;                 //!< Source geometry identifier.
+  T::GeometryId projectionId = 0;               //!< Target projection geometry identifier.
+  bool zeroIsMissing = false;                   //!< Treat zero values as missing/transparent.
+  unsigned char paint_alpha = 255;              //!< Overall image opacity (0=transparent, 255=opaque).
+  std::string   paint_colorMapName;             //!< Name of the color map to use for value-to-color mapping.
+  unsigned char paint_hue = 0;                  //!< Hue shift applied to the color-mapped output.
+  unsigned char paint_saturation = 0;           //!< Saturation level for the color-mapped output.
+  unsigned char paint_blur = 1;                 //!< Blur radius applied after color mapping.
+  int  stream_step = 10;                        //!< Grid spacing (cells) between streamline seed points.
+  int  stream_minLength = 6;                    //!< Minimum streamline length (pixels) to draw.
+  int  stream_maxLength = 64;                   //!< Maximum streamline length (pixels) to draw.
+  uint stream_color = 0x808080;                 //!< Packed ARGB color used to draw streamlines.
+  bool stream_animation = false;                //!< Produce an animated WebP sequence for streamlines.
+  uint landBorder_color = 0xFF808080;           //!< Packed ARGB color for land border lines.
+  uint landColor = 0xFF808080;                  //!< Packed ARGB base color for land areas.
+  uint landColor_position = 1;                  //!< Z-order position for the land color layer.
+  uint landShading_light = 128;                 //!< Light intensity for land topographic shading.
+  uint landShading_shadow = 160;                //!< Shadow intensity for land topographic shading.
+  uint landShading_position = 2;                //!< Z-order position for the land shading layer.
+  uint seaColor = 0xFF0000FF;                   //!< Packed ARGB base color for sea areas.
+  uint seaColor_position = 1;                   //!< Z-order position for the sea color layer.
+  uint seaShading_light = 128;                  //!< Light intensity for sea depth shading.
+  uint seaShading_shadow = 160;                 //!< Shadow intensity for sea depth shading.
+  uint seaShading_position = 2;                 //!< Z-order position for the sea shading layer.
+  uint coordinateLine_color = 0xFFC0C0C0;       //!< Packed ARGB color for latitude/longitude grid lines.
 };
 
 
 
+
+// ====================================================================================
+/*! \brief SmartMet Server plugin that provides browser-based visualization of
+ *  meteorological grid data (GRIB1/GRIB2/NetCDF/QueryData).
+ *
+ *  Registered at `/grid-gui` as an admin-only handler.  Dispatches on the `page`
+ *  session parameter to: an HTML form UI (main), color-mapped raster images (image),
+ *  streamline/vector field animations (streams, streamsAnimation), geographic map
+ *  overlays (map), metadata display (info), raw message display (message), file
+ *  downloads (download), tabular data (table), coordinate lookups (coordinates), and
+ *  point value queries (value).  All page state is carried in a Session object. */
+// ====================================================================================
 
 class Plugin : public SmartMetPlugin
 {
@@ -184,29 +194,29 @@ class Plugin : public SmartMetPlugin
 
   private:
 
-    const std::string         itsModuleName;
-    Spine::Reactor*           itsReactor;
-    ConfigurationFile         itsConfigurationFile;
-    std::string               itsGridConfigFile;
-    string_vec                itsColorMapFileNames;
-    T::ColorMapFile_vec       itsColorMapFiles;
-    std::string               itsColorFile;
-    Colors                    itsColors;
-    time_t                    itsColors_lastModified;
-    std::string               itsImageCache_dir;
-    uint                      itsImageCache_maxImages;
-    uint                      itsImageCache_minImages;
-    bool                      itsAnimationEnabled;
-    std::string               itsImagesUnderConstruction[100];
-    uint                      itsImageCounter;
-    ThreadLock                itsThreadLock;
-    std::string               itsProducerFile;
-    time_t                    itsProducerFile_modificationTime;
-    std::set<std::string>     itsProducerList;
-    std::set<int>             itsBlockedProjections;
+    const std::string         itsModuleName;                    //!< Plugin name returned by getPluginName().
+    Spine::Reactor*           itsReactor;                       //!< Back-pointer to the server reactor (not owned).
+    ConfigurationFile         itsConfigurationFile;             //!< Parsed libconfig configuration.
+    std::string               itsGridConfigFile;                //!< Path to the grid-files library config file.
+    string_vec                itsColorMapFileNames;             //!< Paths to color map CSV files configured for this plugin.
+    T::ColorMapFile_vec       itsColorMapFiles;                 //!< Loaded and hot-reloadable color map files.
+    std::string               itsColorFile;                     //!< Path to the named color definitions CSV.
+    Colors                    itsColors;                        //!< Named colors loaded from itsColorFile.
+    time_t                    itsColors_lastModified;           //!< Last-modified time of itsColorFile; used to detect reload need.
+    std::string               itsImageCache_dir;                //!< Directory where rendered image files are cached.
+    uint                      itsImageCache_maxImages;          //!< Maximum number of images to keep in the cache before pruning.
+    uint                      itsImageCache_minImages;          //!< Minimum number of images to retain after a prune pass.
+    bool                      itsAnimationEnabled;              //!< Whether WebP animation rendering is enabled.
+    std::string               itsImagesUnderConstruction[100];  //!< Slot array tracking image files currently being rendered (prevents duplicate work).
+    uint                      itsImageCounter;                  //!< Rolling counter used to generate unique image file names.
+    ThreadLock                itsThreadLock;                    //!< Lock serialising concurrent access to image cache state.
+    std::string               itsProducerFile;                  //!< Path to the producer filter file listing visible producers.
+    time_t                    itsProducerFile_modificationTime; //!< Last-modified time of itsProducerFile; used to detect reload need.
+    std::set<std::string>     itsProducerList;                  //!< Set of producer names loaded from itsProducerFile (empty = show all).
+    std::set<int>             itsBlockedProjections;            //!< Geometry IDs excluded from the projection selector (too large to display).
 
-    std::shared_ptr<Engine::Grid::Engine> itsGridEngine;
-    std::map<std::string,std::string>      itsImages;
+    std::shared_ptr<Engine::Grid::Engine> itsGridEngine;        //!< Grid engine used for content and data server access.
+    std::map<std::string,std::string>      itsImages;           //!< Maps image hash keys to cached image file paths.
 };  // class Plugin
 
 }  // namespace GridGui
