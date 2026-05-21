@@ -11,6 +11,8 @@ namespace T
 
 
 
+/*! \brief GridGui: Constructor. */
+
 ColorMapFile::ColorMapFile()
 {
   try
@@ -26,6 +28,8 @@ ColorMapFile::ColorMapFile()
 
 
 
+
+/*! \brief GridGui: Constructor. */
 
 ColorMapFile::ColorMapFile(const std::string& filename)
 {
@@ -43,6 +47,8 @@ ColorMapFile::ColorMapFile(const std::string& filename)
 
 
 
+
+/*! \brief GridGui: Constructor. */
 
 ColorMapFile::ColorMapFile(const ColorMapFile& colorMapFile)
 {
@@ -63,6 +69,8 @@ ColorMapFile::ColorMapFile(const ColorMapFile& colorMapFile)
 
 
 
+/*! \brief GridGui: Destructor. */
+
 ColorMapFile::~ColorMapFile()
 {
   try
@@ -77,6 +85,8 @@ ColorMapFile::~ColorMapFile()
 
 
 
+
+/*! \brief GridGui: Init. */
 
 void ColorMapFile::init()
 {
@@ -95,6 +105,8 @@ void ColorMapFile::init()
 
 
 
+/*! \brief GridGui: Init. */
+
 void ColorMapFile::init(const std::string& filename)
 {
   try
@@ -111,6 +123,8 @@ void ColorMapFile::init(const std::string& filename)
 
 
 
+
+/*! \brief GridGui: Check updates. */
 
 bool ColorMapFile::checkUpdates()
 {
@@ -137,6 +151,8 @@ bool ColorMapFile::checkUpdates()
 
 
 
+/*! \brief GridGui: Get values and colors. */
+
 void ColorMapFile::getValuesAndColors(std::vector<float>& values,std::vector<unsigned int>& colors)
 {
   try
@@ -158,6 +174,8 @@ void ColorMapFile::getValuesAndColors(std::vector<float>& values,std::vector<uns
 
 
 
+
+/*! \brief GridGui: Get color. */
 
 uint ColorMapFile::getColor(double value)
 {
@@ -197,6 +215,8 @@ uint ColorMapFile::getColor(double value)
 
 
 
+
+/*! \brief GridGui: Get smooth color. */
 
 uint ColorMapFile::getSmoothColor(double value)
 {
@@ -278,6 +298,8 @@ uint ColorMapFile::getSmoothColor(double value)
 
 
 
+/*! \brief GridGui: Get last modification time. */
+
 time_t ColorMapFile::getLastModificationTime()
 {
   try
@@ -293,6 +315,8 @@ time_t ColorMapFile::getLastModificationTime()
 
 
 
+
+/*! \brief GridGui: Get filename. */
 
 std::string ColorMapFile::getFilename()
 {
@@ -310,6 +334,8 @@ std::string ColorMapFile::getFilename()
 
 
 
+/*! \brief GridGui: Get names. */
+
 string_vec ColorMapFile::getNames()
 {
   try
@@ -326,6 +352,8 @@ string_vec ColorMapFile::getNames()
 
 
 
+/*! \brief GridGui: Get modification lock. */
+
 ModificationLock* ColorMapFile::getModificationLock()
 {
   try
@@ -340,6 +368,8 @@ ModificationLock* ColorMapFile::getModificationLock()
 
 
 
+
+/*! \brief GridGui: Has name. */
 
 bool ColorMapFile::hasName(const char *name)
 {
@@ -362,6 +392,8 @@ bool ColorMapFile::hasName(const char *name)
 
 
 
+/*! \brief GridGui: Print. */
+
 void ColorMapFile::print(std::ostream& stream,uint level,uint optionFlags)
 {
   try
@@ -376,6 +408,8 @@ void ColorMapFile::print(std::ostream& stream,uint level,uint optionFlags)
 
 
 
+
+/*! \brief GridGui: Load file. */
 
 void ColorMapFile::loadFile()
 {
