@@ -462,6 +462,42 @@ uint Plugin::getColorValue(std::string& colorName)
 
 
 
+/*! \brief GridGui: Scan a parameter-value vector and derive a min/max/step triple for
+ *  the implicit colour scaling used by saveMap() when no colour map file is configured. */
+
+void Plugin::computeValueRangeForMap(const T::ParamValue_vec& values,
+                                     double& minValue,
+                                     double& maxValue,
+                                     double& step)
+{
+  double total = 0;
+  uint cnt = 0;
+  uint sz = values.size();
+
+  for (uint t = 0; t < sz; t++)
+  {
+    double val = values[t];
+    if (val != ParamValueMissing)
+    {
+      total = total + val;
+      cnt++;
+      if (val < minValue)
+        minValue = val;
+      if (val > maxValue)
+        maxValue = val;
+    }
+  }
+  double avg = total / (double)cnt;
+  double dd = maxValue - minValue;
+  double ddd = avg - minValue;
+  step = dd / 200;
+  if (maxValue > (minValue + 5*ddd))
+    step = 5*ddd / 200;
+}
+
+
+
+
 /*! \brief GridGui: Save map. */
 
 void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_vec&  values,unsigned char hue,unsigned char saturation,unsigned char blur,uint coordinateLines,uint landBorder,std::string landMask,std::string seaMask,std::string colorMapName,std::string missingStr)
@@ -497,31 +533,7 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
     double step = 0;
 
     if (!colorMapFile)
-    {
-      double total = 0;
-      uint cnt = 0;
-
-      for (uint t=0; t<sz; t++)
-      {
-        double val = values[t];
-        if (val != ParamValueMissing)
-        {
-          total = total + val;
-          cnt++;
-          if (val < minValue)
-            minValue = val;
-
-          if (val > maxValue)
-            maxValue = val;
-        }
-      }
-      double avg = total / (double)cnt;
-      double dd = maxValue - minValue;
-      double ddd = avg-minValue;
-      step = dd / 200;
-      if (maxValue > (minValue + 5*ddd))
-        step = 5*ddd / 200;
-    }
+      computeValueRangeForMap(values, minValue, maxValue, step);
 
     int width = columns;
     int height = rows;
@@ -1997,6 +2009,59 @@ int Plugin::page_value(Spine::Reactor &theReactor,
     if (contentInfo.mGeometryId == 0)
       return HTTP::Status::ok;
 
+    T::GeometryId projectionId = toInt32(session.getAttribute(ATTR_PROJECTION_ID));
+
+    if (projectionId > 0  &&  projectionId != contentInfo.mGeometryId)
+    {
+      // Image was rendered using the projection geometry's grid layout.  Map the click
+      // to the projection cell using the same row-orientation logic as saveImage(),
+      // look up the cell's latlon, and query the data by latlon so interpolation crosses
+      // geometries correctly.
+
+      uint cols = 0;
+      uint rows = 0;
+
+      if (!Identification::gridDef.getGridDimensionsByGeometryId(projectionId,cols,rows))
+        return HTTP::Status::ok;
+
+      T::Coordinate_svec latLonCoordinates = Identification::gridDef.getGridLatLonCoordinatesByGeometryId(projectionId);
+      if (!latLonCoordinates  ||  latLonCoordinates->size() < static_cast<std::size_t>(cols) * rows)
+        return HTTP::Status::ok;
+
+      const auto& coords = *latLonCoordinates;
+
+      // Same rotate test as Plugin::saveImage(): if rows run south-to-north in the
+      // coordinate array, the image is flipped vertically so that north is at the top.
+      bool rotate = true;
+      if (coords.size() > C_UINT(10*cols)  &&  coords[0].y() < coords[10*cols].y())
+        rotate = true;
+      else
+        rotate = false;
+
+      int col = static_cast<int>(xPos * cols);
+      int row = static_cast<int>(yPos * rows);
+      if (col < 0) col = 0;
+      if (col >= static_cast<int>(cols)) col = static_cast<int>(cols) - 1;
+      if (row < 0) row = 0;
+      if (row >= static_cast<int>(rows)) row = static_cast<int>(rows) - 1;
+
+      int dataRow = rotate ? static_cast<int>(rows) - row - 1 : row;
+      std::size_t idx = static_cast<std::size_t>(dataRow) * cols + static_cast<std::size_t>(col);
+
+      T::ParamValue value = 0;
+      double_vec modificationParameters;
+      const auto& p = coords[idx];
+      dataServer->getGridValueByPoint(0,fileId,messageIndex,T::CoordinateTypeValue::LATLON_COORDINATES,p.x(),p.y(),T::AreaInterpolationMethod::Linear,0,modificationParameters,value);
+
+      if (value != ParamValueMissing)
+        theResponse.setContent(std::to_string(value));
+      else
+        theResponse.setContent(std::string("Not available"));
+
+      theResponse.setHeader("Content-Type", "text/html; charset=UTF-8");
+      return HTTP::Status::ok;
+    }
+
     uint cols = 0;
     uint rows = 0;
 
@@ -2014,16 +2079,6 @@ int Plugin::page_value(Spine::Reactor &theReactor,
 
     if (!Identification::gridDef.getGridDirectionsByGeometryId(contentInfo.mGeometryId,reverseXDirection,reverseYDirection))
       return HTTP::Status::ok;
-/*
-    T::Coordinate_vec coordinates;
-    coordinates = Identification::gridDef.getGridLatLonCoordinatesByGeometryId(contentInfo.mGeometryId);
-
-    bool rotate = true;
-    if (coordinates.size() > (10*width)  &&  coordinates[0].y() < coordinates[10*width].y())
-      rotate = true;
-    else
-      rotate = false;
-*/
 
     double xx = xPos * dWidth;
     double yy = yPos * dHeight;
@@ -2325,179 +2380,7 @@ int Plugin::page_streams(Spine::Reactor &theReactor,
                             HTTP::Response &theResponse,
                             Session& session)
 {
-  FUNCTION_TRACE
-  try
-  {
-    auto dataServer = itsGridEngine->getDataServer_sptr();
-
-    std::string producerIdStr = session.getAttribute(ATTR_PRODUCER_ID);
-    std::string generationIdStr = session.getAttribute(ATTR_GENERATION_ID);
-    std::string parameterIdStr = session.getAttribute(ATTR_PARAMETER_ID);
-    std::string levelIdStr = session.getAttribute(ATTR_LEVEL_ID);
-    std::string levelStr = session.getAttribute(ATTR_LEVEL);
-    std::string geometryIdStr = session.getAttribute(ATTR_GEOMETRY_ID);
-    std::string producerNameStr = session.getAttribute(ATTR_PRODUCER_NAME);
-    std::string forecastTypeStr = session.getAttribute(ATTR_FORECAST_TYPE);
-    std::string forecastNumberStr = session.getAttribute(ATTR_FORECAST_NUMBER);
-    std::string presentation = session.getAttribute(ATTR_PRESENTATION);
-    std::string projectionIdStr = session.getAttribute(ATTR_PROJECTION_ID);
-    std::string fileIdStr = session.getAttribute(ATTR_FILE_ID);
-    std::string messageIndexStr = session.getAttribute(ATTR_MESSAGE_INDEX);
-    std::string timeStr = session.getAttribute(ATTR_TIME);
-    std::string hueStr = session.getAttribute(ATTR_HUE);
-    std::string saturationStr = session.getAttribute(ATTR_SATURATION);
-    std::string blurStr = session.getAttribute(ATTR_BLUR);
-    std::string coordinateLinesStr = session.getAttribute(ATTR_COORDINATE_LINES);
-    std::string landBorderStr = session.getAttribute(ATTR_LAND_BORDER);
-    std::string landMaskStr = session.getAttribute(ATTR_LAND_MASK);
-    std::string seaMaskStr = session.getAttribute(ATTR_SEA_MASK);
-    std::string colorMap = session.getAttribute(ATTR_COLOR_MAP);
-    std::string opacityStr = session.getAttribute(ATTR_OPACITY);
-    std::string missingStr = session.getAttribute(ATTR_MISSING);
-    std::string stepStr = session.getAttribute(ATTR_STEP);
-    std::string minLengthStr = session.getAttribute(ATTR_MIN_LENGTH);
-    std::string maxLengthStr = session.getAttribute(ATTR_MAX_LENGTH);
-    std::string streamColorStr = session.getAttribute(ATTR_STREAM_COLOR);
-    std::string unitStr = session.getAttribute(ATTR_UNIT);
-    std::string fmiKeyStr = session.getAttribute(ATTR_FMI_KEY);
-    std::string landShadingLightStr = session.getAttribute(ATTR_LAND_SHADING_LIGHT);
-    std::string landShadingShadowStr = session.getAttribute(ATTR_LAND_SHADING_SHADOW);
-    std::string landShadingPositionStr = session.getAttribute(ATTR_LAND_SHADING_POS);
-    std::string landColorPosStr = session.getAttribute(ATTR_LAND_COLOR_POS);
-    std::string seaShadingLightStr = session.getAttribute(ATTR_SEA_SHADING_LIGHT);
-    std::string seaShadingShadowStr = session.getAttribute(ATTR_SEA_SHADING_SHADOW);
-    std::string seaShadingPositionStr = session.getAttribute(ATTR_SEA_SHADING_POS);
-    std::string seaColorPosStr = session.getAttribute(ATTR_SEA_COLOR_POS);
-
-    std::string colorMapFileName = "";
-    std::string colorMapModificationTime = "";
-    if (!colorMap.empty() &&  strcasecmp(colorMap.c_str(),"None") != 0)
-    {
-      T::ColorMapFile *colorMapFile = getColorMapFile(colorMap);
-      if (colorMapFile != nullptr)
-      {
-        colorMapModificationTime = std::to_string(C_UINT(colorMapFile->getLastModificationTime()));
-        colorMapFileName = colorMapFile->getFilename();
-      }
-    }
-
-    if (projectionIdStr.empty())
-      projectionIdStr = geometryIdStr;
-
-    std::string hash = "Streams:" + fileIdStr + ":" + messageIndexStr + ":" + hueStr + ":" + saturationStr + ":" +
-      blurStr + ":" + coordinateLinesStr + ":" + landBorderStr + ":" + projectionIdStr + ":" +
-      landMaskStr + ":" + seaMaskStr + ":" + colorMapFileName + ":" + colorMapModificationTime + ":" + missingStr + ":" +
-      minLengthStr + ":" + maxLengthStr + ":" + stepStr + ":" + streamColorStr + ":" +
-      landShadingLightStr + ":" + landShadingShadowStr  + ":" + landShadingPositionStr  + ":" + landColorPosStr + ":" +
-      seaShadingLightStr + ":" + seaShadingShadowStr  + ":" + seaShadingPositionStr  + ":" + seaColorPosStr + ":" + opacityStr;
-
-    const std::size_t seed = Fmi::hash(hash);
-    std::string seedStr = std::to_string(seed);
-    theResponse.setHeader("ETag",seedStr);
-
-    auto etag = theRequest.getHeader("If-None-Match");
-    if (etag  && *etag == seedStr)
-      return HTTP::Status::not_modified;
-
-    bool found = false;
-    bool ind = true;
-
-    while (ind)
-    {
-      {
-        AutoThreadLock lock(&itsThreadLock);
-        auto it = itsImages.find(hash);
-        if (it != itsImages.end())
-        {
-          loadImage(it->second.c_str(),theResponse);
-          return HTTP::Status::ok;
-        }
-      }
-
-      if (!found)
-      {
-        for (uint t=0; t<100; t++)
-        {
-          if (itsImagesUnderConstruction[t] == hash)
-          {
-            found = true;
-          }
-        }
-        if (!found)
-          ind = false;
-      }
-
-      if (found)
-        time_usleep(0,10000);
-    }
-
-    uint idx = itsImageCounter % 100;
-    itsImagesUnderConstruction[idx] = hash;
-    itsImageCounter++;
-
-    try
-    {
-      std::string fname = itsImageCache_dir + "/grid-gui-image_" + std::to_string(getTime()) + ".png";
-
-      ImagePaintParameters params;
-
-      params.imageFile = fname;
-      params.fileId = toUInt64(fileIdStr);
-      params.messageIndex = toUInt32(messageIndexStr);
-      params.geometryId = toInt32(geometryIdStr);
-      params.projectionId = toUInt32(projectionIdStr);
-      params.zeroIsMissing = false;
-      params.paint_alpha = 255;
-      params.paint_colorMapName = colorMap;
-      params.paint_hue = toUInt8(hueStr);
-      params.paint_saturation = toUInt8(saturationStr);
-      params.paint_blur = toUInt8(blurStr);
-      params.stream_step = toUInt32(stepStr);
-      params.stream_minLength = toUInt32(minLengthStr);
-      params.stream_maxLength = toUInt32(maxLengthStr);
-      params.stream_color = getColorValue(streamColorStr);
-      params.stream_animation = false;
-      params.landBorder_color = getColorValue(landBorderStr);
-      params.landColor = getColorValue(landMaskStr);
-      params.landColor_position = toInt32(landColorPosStr);
-      params.landShading_light = toInt32(landShadingLightStr);
-      params.landShading_shadow = toInt32(landShadingShadowStr);
-      params.landShading_position = toInt32(landShadingPositionStr);
-      params.seaColor = getColorValue(seaMaskStr);
-      params.seaColor_position = toInt32(seaColorPosStr);
-      params.seaShading_light = toInt32(seaShadingLightStr);
-      params.seaShading_shadow = toInt32(seaShadingShadowStr);
-      params.seaShading_position = toInt32(seaShadingPositionStr);
-      params.coordinateLine_color = getColorValue(coordinateLinesStr);
-
-      saveImage(params);
-
-      if (loadImage(fname.c_str(),theResponse))
-      {
-        AutoThreadLock lock(&itsThreadLock);
-        if (itsImages.find(hash) == itsImages.end())
-        {
-          itsImages.insert(std::pair<std::string,std::string>(hash,fname));
-        }
-      }
-
-      itsImagesUnderConstruction[idx] = "";
-    }
-    catch (...)
-    {
-      itsImagesUnderConstruction[idx] = "";
-      Fmi::Exception exception(BCP, "Operation failed!", nullptr);
-      throw exception;
-    }
-
-    return HTTP::Status::ok;
-  }
-  catch (...)
-  {
-    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
-    exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
-    throw exception;
-  }
+  return page_streamsImpl(theRequest, theResponse, session, /*animation=*/false);
 }
 
 
@@ -2510,6 +2393,19 @@ int Plugin::page_streamsAnimation(Spine::Reactor &theReactor,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse,
                             Session& session)
+{
+  return page_streamsImpl(theRequest, theResponse, session, /*animation=*/true);
+}
+
+
+
+
+/*! \brief GridGui: Shared rendering helper for the streams and streams-animation pages. */
+
+int Plugin::page_streamsImpl(const HTTP::Request &theRequest,
+                             HTTP::Response &theResponse,
+                             Session& session,
+                             bool animation)
 {
   FUNCTION_TRACE
   try
@@ -2570,7 +2466,8 @@ int Plugin::page_streamsAnimation(Spine::Reactor &theReactor,
     if (projectionIdStr.empty())
       projectionIdStr = geometryIdStr;
 
-    std::string hash = "StreamsAnimation:" + fileIdStr + ":" + messageIndexStr + ":" + hueStr + ":" + saturationStr + ":" +
+    const char *hashPrefix = animation ? "StreamsAnimation:" : "Streams:";
+    std::string hash = std::string(hashPrefix) + fileIdStr + ":" + messageIndexStr + ":" + hueStr + ":" + saturationStr + ":" +
       blurStr + ":" + coordinateLinesStr + ":" + landBorderStr + ":" + projectionIdStr + ":" +
       landMaskStr + ":" + seaMaskStr + ":" + colorMapFileName + ":" + colorMapModificationTime + ":" + missingStr + ":" +
       minLengthStr + ":" + maxLengthStr + ":" + stepStr + ":" + streamColorStr + ":" +
@@ -2623,7 +2520,8 @@ int Plugin::page_streamsAnimation(Spine::Reactor &theReactor,
 
     try
     {
-      std::string fname = itsImageCache_dir + "/grid-gui-image_" + std::to_string(getTime()) + ".webp";
+      const char *fileExt = animation ? ".webp" : ".png";
+      std::string fname = itsImageCache_dir + "/grid-gui-image_" + std::to_string(getTime()) + fileExt;
 
       ImagePaintParameters params;
 
@@ -2642,7 +2540,7 @@ int Plugin::page_streamsAnimation(Spine::Reactor &theReactor,
       params.stream_minLength = toUInt32(minLengthStr);
       params.stream_maxLength = toUInt32(maxLengthStr);
       params.stream_color = getColorValue(streamColorStr);
-      params.stream_animation = true;
+      params.stream_animation = animation;
       params.landBorder_color = getColorValue(landBorderStr);
       params.landColor = getColorValue(landMaskStr);
       params.landColor_position = toInt32(landColorPosStr);
@@ -3213,6 +3111,82 @@ void Plugin::initSession(Session& session)
 
 
 
+/*! \brief GridGui: Emit the JavaScript helper block used by the page_main HTML page. */
+
+void Plugin::page_main_writeJavascript(std::ostringstream& output)
+{
+  output << "<SCRIPT>\n";
+
+  output << "var backColor;\n";
+  output << "var invisible = '#fefefe';\n";
+  output << "var buttonColor = '#808080';\n";
+
+  output << "function getPage(obj,frm,url)\n";
+  output << "{\n";
+  output << "  frm.location.href=url;\n";
+  output << "}\n";
+
+  output << "function setImage(img,url)\n";
+  output << "{\n";
+  output << "  img.src = url;\n";
+  output << "}\n";
+
+  output << "function mouseOver(obj)\n";
+  output << "{\n";
+  output << "  if (obj.bgColor != invisible)\n";
+  output << "  {\n";
+  output << "    backColor = obj.bgColor;\n";
+  output << "    obj.bgColor='#FF8040';\n";
+  output << "  }\n";
+  output << "}\n";
+
+  output << "function mouseOut(obj)\n";
+  output << "{\n";
+  output << "  if (obj.bgColor != invisible)\n";
+  output << "  {\n";
+  output << "    obj.bgColor=backColor;\n";
+  output << "  }\n";
+  output << "}\n";
+
+  output << "function keyDown(event,obj,img,url)\n";
+  output << "{\n";
+  output << "  var index = obj.selectedIndex\n";
+  output << "  var keyCode = ('which' in event) ? event.which : event.keyCode;\n";
+  output << "  if (keyCode == 38  &&  index > 0) index--;\n";
+  output << "  if (keyCode == 40) index++;\n";
+
+  output << "  setImage(img,url + obj.options[index].value);\n";
+  output << "}\n";
+
+  output << "function setText(id,txt)\n";
+  output << "{\n";
+  output << "  document.getElementById(id).innerHTML = txt;\n";
+  output << "}\n";
+
+  output << "function httpGet(theUrl)\n";
+  output << "{\n";
+  output << "  var xmlHttp = new XMLHttpRequest();\n";
+  output << "  xmlHttp.open(\"GET\", theUrl, false );\n";
+  output << "  xmlHttp.send( null );\n";
+  output << "  return xmlHttp.responseText;\n";
+  output << "}\n";
+
+  output << "function getImageCoords(event,img,fileId,messageIndex,presentation,sessionParam) {\n";
+  output << "  var posX = event.offsetX?(event.offsetX):event.pageX-img.offsetLeft;\n";
+  output << "  var posY = event.offsetY?(event.offsetY):event.pageY-img.offsetTop;\n";
+  output << "  var prosX = posX / img.width;\n";
+  output << "  var prosY = posY / img.height;\n";
+  output << "  var url = \"/grid-gui?session=\" + sessionParam + \";" << ATTR_PAGE << "=value;" << ATTR_PRESENTATION << "=\" + presentation + \";" << ATTR_FILE_ID << "=\" + fileId + \";" << ATTR_MESSAGE_INDEX << "=\" + messageIndex + \";" << ATTR_X << "=\" + prosX + \";" << ATTR_Y << "=\" + prosY;\n";
+  output << "  var txt = httpGet(url);\n";
+  output << "  document.getElementById('gridValue').value = txt;\n";
+
+  output << "}\n";
+  output << "</SCRIPT>\n";
+}
+
+
+
+
 /*! \brief GridGui: Page main. */
 
 int Plugin::page_main(Spine::Reactor &theReactor,
@@ -3368,73 +3342,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     output << "<HTML>\n";
     output << "<BODY>\n";
 
-    output << "<SCRIPT>\n";
-
-    output << "var backColor;\n";
-    output << "var invisible = '#fefefe';\n";
-    output << "var buttonColor = '#808080';\n";
-
-    output << "function getPage(obj,frm,url)\n";
-    output << "{\n";
-    output << "  frm.location.href=url;\n";
-    output << "}\n";
-
-    output << "function setImage(img,url)\n";
-    output << "{\n";
-    output << "  img.src = url;\n";
-    output << "}\n";
-
-    output << "function mouseOver(obj)\n";
-    output << "{\n";
-    output << "  if (obj.bgColor != invisible)\n";
-    output << "  {\n";
-    output << "    backColor = obj.bgColor;\n";
-    output << "    obj.bgColor='#FF8040';\n";
-    output << "  }\n";
-    output << "}\n";
-
-    output << "function mouseOut(obj)\n";
-    output << "{\n";
-    output << "  if (obj.bgColor != invisible)\n";
-    output << "  {\n";
-    output << "    obj.bgColor=backColor;\n";
-    output << "  }\n";
-    output << "}\n";
-
-    output << "function keyDown(event,obj,img,url)\n";
-    output << "{\n";
-    output << "  var index = obj.selectedIndex\n";
-    output << "  var keyCode = ('which' in event) ? event.which : event.keyCode;\n";
-    output << "  if (keyCode == 38  &&  index > 0) index--;\n";
-    output << "  if (keyCode == 40) index++;\n";
-
-    output << "  setImage(img,url + obj.options[index].value);\n";
-    output << "}\n";
-
-    output << "function setText(id,txt)\n";
-    output << "{\n";
-    output << "  document.getElementById(id).innerHTML = txt;\n";
-    output << "}\n";
-
-    output << "function httpGet(theUrl)\n";
-    output << "{\n";
-    output << "  var xmlHttp = new XMLHttpRequest();\n";
-    output << "  xmlHttp.open(\"GET\", theUrl, false );\n";
-    output << "  xmlHttp.send( null );\n";
-    output << "  return xmlHttp.responseText;\n";
-    output << "}\n";
-
-    output << "function getImageCoords(event,img,fileId,messageIndex,presentation) {\n";
-    output << "  var posX = event.offsetX?(event.offsetX):event.pageX-img.offsetLeft;\n";
-    output << "  var posY = event.offsetY?(event.offsetY):event.pageY-img.offsetTop;\n";
-    output << "  var prosX = posX / img.width;\n";
-    output << "  var prosY = posY / img.height;\n";
-    output << "  var url = \"/grid-gui?session=" << ATTR_PAGE << "=value;" << ATTR_PRESENTATION << "=\" + presentation + \";" << ATTR_FILE_ID << "=\" + fileId + \";" << ATTR_MESSAGE_INDEX << "=\" + messageIndex + \";" << ATTR_X << "=\" + prosX + \";" << ATTR_Y << "=\" + prosY;\n";
-    output << "  var txt = httpGet(url);\n";
-    output << "  document.getElementById('gridValue').value = txt;\n";
-
-    output << "}\n";
-    output << "</SCRIPT>\n";
+    page_main_writeJavascript(output);
 
 
     ostr1 << "<TABLE width=\"100%\" height=\"100%\">\n";
@@ -4850,7 +4758,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
     if (presentation == "Image")
     {
-      ostr2 << "<TR><TD style=\"vertical-align:top;\"><IMG id=\"myimage\" style=\"background:#000000; max-width:1800; height:100%; max-height:1000;\" src=\"/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_PAGE << "=" << presentation << "\" onclick=\"getImageCoords(event,this," << fileIdStr << "," << messageIndexStr << ",'" << presentation << "');\"/></TD></TR>";
+      ostr2 << "<TR><TD style=\"vertical-align:top;\"><IMG id=\"myimage\" style=\"background:#000000; max-width:1800; height:100%; max-height:1000;\" src=\"/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_PAGE << "=" << presentation << "\" onclick=\"getImageCoords(event,this," << fileIdStr << "," << messageIndexStr << ",'" << presentation << "','" << session.getUrlParameter() << "');\"/></TD></TR>";
     }
     else
     if (presentation == "Map")
@@ -4881,7 +4789,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     else
     if (presentation == "Streams" || presentation == "StreamsAnimation")
     {
-      ostr2 << "<TR><TD><IMG id=\"myimage\" style=\"background:#000000; max-width:1800; height:100%; max-height:1000;\" src=\"/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_PAGE << "=" << presentation << "\" onclick=\"getImageCoords(event,this," << fileIdStr << "," << messageIndexStr << ",'" << presentation << "');\"/></TD></TR>";
+      ostr2 << "<TR><TD><IMG id=\"myimage\" style=\"background:#000000; max-width:1800; height:100%; max-height:1000;\" src=\"/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_PAGE << "=" << presentation << "\" onclick=\"getImageCoords(event,this," << fileIdStr << "," << messageIndexStr << ",'" << presentation << "','" << session.getUrlParameter() << "');\"/></TD></TR>";
     }
     else
     if (presentation == "Message")
