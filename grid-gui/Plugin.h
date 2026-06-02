@@ -143,6 +143,28 @@ class Plugin : public SmartMetPlugin
                       Spine::HTTP::Response& theResponse,
                       Session& session);
 
+    /*! \brief Shared implementation for the two streams-rendering page handlers.
+     *  When animation is false: emits a PNG of stream lines.
+     *  When animation is true: emits an animated WebP of moving stream points. */
+    int page_streamsImpl(const Spine::HTTP::Request& theRequest,
+                         Spine::HTTP::Response& theResponse,
+                         Session& session,
+                         bool animation);
+
+    /*! \brief Emit the JavaScript helper block used by the page_main HTML page (mouse
+     *  hover handlers, page navigation, image swap, XHR helper for grid-value lookup,
+     *  etc.).  Writes directly to the given output stream. */
+    void page_main_writeJavascript(std::ostringstream& output);
+
+    /*! \brief Scan a parameter-value vector and compute the minimum, maximum and a
+     *  per-class step size used by saveMap()'s implicit colour scaling when no explicit
+     *  colour map file is configured.  The step is clamped so that an asymmetric
+     *  distribution (max >> avg) doesn't compress most of the range into one bucket. */
+    void computeValueRangeForMap(const T::ParamValue_vec& values,
+                                 double& minValue,
+                                 double& maxValue,
+                                 double& step);
+
     int page_map(Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
                       Spine::HTTP::Response& theResponse,
