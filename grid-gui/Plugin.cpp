@@ -20,6 +20,7 @@
 #include <boost/lexical_cast.hpp>
 #include <webp/encode.h>
 #include <webp/mux.h>
+#include <optional>
 
 #define FUNCTION_TRACE FUNCTION_TRACE_OFF
 
@@ -2174,6 +2175,28 @@ bool Plugin::loadImage(const char *fname,Spine::HTTP::Response &theResponse)
 
 
 
+namespace
+{
+// Evaluate the If-Match / If-None-Match conditional headers (RFC 7232) for a
+// resource whose current ETag is theETag. Returns the bodyless status to send
+// when a precondition matches (304 Not Modified for If-None-Match, 412
+// Precondition Failed for a failed If-Match), or std::nullopt when the full
+// response is required. While the frontend is probing for the ETag
+// (X-Request-ETag) it performs the evaluation itself, so this returns nullopt.
+std::optional<HTTP::Status> conditionalResponseStatus(const HTTP::Request &theRequest,
+                                                      const std::string &theETag)
+{
+  if (theRequest.getHeader("X-Request-ETag"))
+    return std::nullopt;
+
+  HTTP::ETagFilter etag_filter(theRequest);
+  auto [full_response_required, suggested_status] = etag_filter.evaluate(theETag);
+  if (full_response_required)
+    return std::nullopt;
+  return suggested_status;
+}
+}  // namespace
+
 /*! \brief GridGui: Page image. */
 
 int Plugin::page_image(Spine::Reactor &theReactor,
@@ -2250,9 +2273,8 @@ int Plugin::page_image(Spine::Reactor &theReactor,
     std::string seedStr = std::to_string(seed);
     theResponse.setHeader("ETag",seedStr);
 
-    auto etag = theRequest.getHeader("If-None-Match");
-    if (etag  && *etag == seedStr)
-      return HTTP::Status::not_modified;
+    if (auto status = conditionalResponseStatus(theRequest, seedStr))
+      return *status;
 
     bool found = false;
     bool ind = true;
@@ -2478,9 +2500,8 @@ int Plugin::page_streamsImpl(const HTTP::Request &theRequest,
     std::string seedStr = std::to_string(seed);
     theResponse.setHeader("ETag",seedStr);
 
-    auto etag = theRequest.getHeader("If-None-Match");
-    if (etag  && *etag == seedStr)
-      return HTTP::Status::not_modified;
+    if (auto status = conditionalResponseStatus(theRequest, seedStr))
+      return *status;
 
     bool found = false;
     bool ind = true;
@@ -2650,9 +2671,8 @@ int Plugin::page_map(Spine::Reactor &theReactor,
     std::string seedStr = std::to_string(seed);
     theResponse.setHeader("ETag",seedStr);
 
-    auto etag = theRequest.getHeader("If-None-Match");
-    if (etag  && *etag == seedStr)
-      return HTTP::Status::not_modified;
+    if (auto status = conditionalResponseStatus(theRequest, seedStr))
+      return *status;
 
     bool found = false;
     bool ind = true;
