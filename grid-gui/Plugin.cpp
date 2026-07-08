@@ -20,6 +20,7 @@
 #include <boost/lexical_cast.hpp>
 #include <webp/encode.h>
 #include <webp/mux.h>
+#include <optional>
 
 #define FUNCTION_TRACE FUNCTION_TRACE_OFF
 
@@ -2250,9 +2251,8 @@ int Plugin::page_image(Spine::Reactor &theReactor,
     std::string seedStr = std::to_string(seed);
     theResponse.setHeader("ETag",seedStr);
 
-    auto etag = theRequest.getHeader("If-None-Match");
-    if (etag  && *etag == seedStr)
-      return HTTP::Status::not_modified;
+    if (auto status = conditionalResponseStatus(theRequest, seedStr))
+      return *status;
 
     bool found = false;
     bool ind = true;
@@ -2478,9 +2478,8 @@ int Plugin::page_streamsImpl(const HTTP::Request &theRequest,
     std::string seedStr = std::to_string(seed);
     theResponse.setHeader("ETag",seedStr);
 
-    auto etag = theRequest.getHeader("If-None-Match");
-    if (etag  && *etag == seedStr)
-      return HTTP::Status::not_modified;
+    if (auto status = conditionalResponseStatus(theRequest, seedStr))
+      return *status;
 
     bool found = false;
     bool ind = true;
@@ -2650,9 +2649,8 @@ int Plugin::page_map(Spine::Reactor &theReactor,
     std::string seedStr = std::to_string(seed);
     theResponse.setHeader("ETag",seedStr);
 
-    auto etag = theRequest.getHeader("If-None-Match");
-    if (etag  && *etag == seedStr)
-      return HTTP::Status::not_modified;
+    if (auto status = conditionalResponseStatus(theRequest, seedStr))
+      return *status;
 
     bool found = false;
     bool ind = true;
