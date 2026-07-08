@@ -28,14 +28,14 @@ BuildRequires: libconfig17-devel
 BuildRequires: libwebp13-devel
 BuildRequires: smartmet-utils-devel >= 26.6.17
 BuildRequires: smartmet-library-macgyver-devel >= 26.6.15
-BuildRequires: smartmet-library-spine-devel >= 26.6.24
+BuildRequires: smartmet-library-spine-devel >= 26.7.7
 BuildRequires: smartmet-library-grid-files-devel >= 26.6.24
 BuildRequires: smartmet-library-grid-content-devel >= 26.6.24
 BuildRequires: smartmet-engine-grid-devel >= 26.6.24
 BuildRequires: gdal312-devel
 Requires: libconfig17
 Requires: smartmet-library-macgyver >= 26.6.15
-Requires: smartmet-library-spine >= 26.6.24
+Requires: smartmet-library-spine >= 26.7.7
 Requires: smartmet-server >= 26.6.24
 Requires: smartmet-engine-grid >= 26.6.24
 Provides: %{SPECNAME}
