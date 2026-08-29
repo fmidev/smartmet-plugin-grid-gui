@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-plugin-%{DIRNAME}
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
-Version: 26.7.8
+Version: 26.8.30
 Release: 1%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
@@ -62,6 +62,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/plugins/%{DIRNAME}.so
 
 %changelog
+* Sat Aug 30 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> - 26.8.30-1.fmi
+- Security: replace exit(-1) on a mismatched grid with a thrown exception (a malformed
+  grid could kill the whole server process), and replace two request-sized stack VLAs
+  (bool yLand[width]) with heap vectors to avoid a stack overflow on a large grid.
 * Wed Jul  8 2026 Andris Pavēnis <andris.pavenis@fmi.fi> 26.7.8-1.fmi
 - Use ETagFilter for If-Match and If-None-Match conditional requests
 
