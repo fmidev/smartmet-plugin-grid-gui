@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-plugin-%{DIRNAME}
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
-Version: 26.7.8
+Version: 26.9.3
 Release: 1%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
@@ -29,15 +29,17 @@ BuildRequires: libwebp13-devel
 BuildRequires: smartmet-utils-devel >= 26.6.17
 BuildRequires: smartmet-library-macgyver-devel >= 26.6.15
 BuildRequires: smartmet-library-spine-devel >= 26.7.7
-BuildRequires: smartmet-library-grid-files-devel >= 26.6.24
-BuildRequires: smartmet-library-grid-content-devel >= 26.6.24
+BuildRequires: smartmet-library-grid-files-devel >= 26.8.27
+BuildRequires: smartmet-library-grid-content-devel >= 26.9.2
 BuildRequires: smartmet-engine-grid-devel >= 26.6.24
 BuildRequires: gdal312-devel
 Requires: libconfig17
 Requires: smartmet-library-macgyver >= 26.6.15
+Requires: smartmet-library-grid-files >= 26.8.27
+Requires: smartmet-library-grid-content >= 26.9.2
 Requires: smartmet-library-spine >= 26.7.7
 Requires: smartmet-server >= 26.6.24
-Requires: smartmet-engine-grid >= 26.6.24
+Requires: smartmet-engine-grid >= 26.9.2
 Provides: %{SPECNAME}
 
 %description
@@ -62,6 +64,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/plugins/%{DIRNAME}.so
 
 %changelog
+* Thu Sep  3 2026 Andris Pavēnis <andris.pavenis@fmi.fi> 26.9.3-1.fmi
+- Repackage due to smartmet-library-grid-content ABI changes
+
 * Wed Jul  8 2026 Andris Pavēnis <andris.pavenis@fmi.fi> 26.7.8-1.fmi
 - Use ETagFilter for If-Match and If-None-Match conditional requests
 
