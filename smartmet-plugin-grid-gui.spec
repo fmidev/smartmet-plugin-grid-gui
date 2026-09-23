@@ -26,20 +26,20 @@ BuildRequires: make
 BuildRequires: %{smartmet_boost}-devel
 BuildRequires: libconfig17-devel
 BuildRequires: libwebp13-devel
-BuildRequires: smartmet-utils-devel >= 26.6.17
-BuildRequires: smartmet-library-macgyver-devel >= 26.6.15
-BuildRequires: smartmet-library-spine-devel >= 26.7.7
-BuildRequires: smartmet-library-grid-files-devel >= 26.8.27
-BuildRequires: smartmet-library-grid-content-devel >= 26.9.2
-BuildRequires: smartmet-engine-grid-devel >= 26.6.24
+BuildRequires: smartmet-utils-devel >= 26.9.3
+BuildRequires: smartmet-library-macgyver-devel >= 26.9.23
+BuildRequires: smartmet-library-spine-devel >= 26.9.23
+BuildRequires: smartmet-library-grid-files-devel >= 26.9.23
+BuildRequires: smartmet-library-grid-content-devel >= 26.9.23
+BuildRequires: smartmet-engine-grid-devel >= 26.9.23
 BuildRequires: gdal312-devel
 Requires: libconfig17
-Requires: smartmet-library-macgyver >= 26.6.15
-Requires: smartmet-library-grid-files >= 26.8.27
-Requires: smartmet-library-grid-content >= 26.9.2
-Requires: smartmet-library-spine >= 26.7.7
-Requires: smartmet-server >= 26.6.24
-Requires: smartmet-engine-grid >= 26.9.2
+Requires: smartmet-library-macgyver >= 26.9.23
+Requires: smartmet-library-grid-files >= 26.9.23
+Requires: smartmet-library-grid-content >= 26.9.23
+Requires: smartmet-library-spine >= 26.9.23
+Requires: smartmet-server >= 26.9.2
+Requires: smartmet-engine-grid >= 26.9.23
 Provides: %{SPECNAME}
 
 %description
@@ -64,6 +64,8 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/plugins/%{DIRNAME}.so
 
 %changelog
+* Wed Sep 23 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> - 26.9.3-1.fmi
+- Repackaged due to base library ABI changes
 * Thu Sep  3 2026 Andris Pavēnis <andris.pavenis@fmi.fi> 26.9.3-1.fmi
 - Repackage due to smartmet-library-grid-content ABI changes
 
