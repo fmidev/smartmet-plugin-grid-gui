@@ -4,7 +4,7 @@
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
 Version: 26.9.24
-Release: 1%{?dist}.fmi
+Release: 2%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
 URL: https://github.com/fmidev/smartmet-plugin-grid-gui
@@ -64,8 +64,14 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/plugins/%{DIRNAME}.so
 
 %changelog
+* Thu Sep 24 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> - 26.9.24-2.fmi
+- Security: replace exit(-1) on a mismatched grid with a thrown exception (a malformed
+  grid could kill the whole server process), and replace two request-sized stack VLAs
+  (bool yLand[width]) with heap vectors to avoid a stack overflow on a large grid.
+
 * Thu Sep 24 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> - 26.9.24-1.fmi
 - Repackaged due to base library ABI changes
+
 * Thu Sep  3 2026 Andris Pavēnis <andris.pavenis@fmi.fi> 26.9.3-1.fmi
 - Repackage due to smartmet-library-grid-content ABI changes
 

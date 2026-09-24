@@ -525,8 +525,11 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
 
     if (sz != (columns * rows))
     {
-      printf("The number of values (%u) does not match to the grid size (%u x %u)1\n",sz,columns,rows);
-      exit(-1);
+      // A malformed/mismatched grid must not terminate the whole server process.
+      throw Fmi::Exception(BCP, "The number of values does not match the grid size")
+          .addParameter("values", Fmi::to_string(sz))
+          .addParameter("columns", Fmi::to_string(columns))
+          .addParameter("rows", Fmi::to_string(rows));
     }
 
     double maxValue = -1000000000;
@@ -552,9 +555,9 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
     uint *image = new uint[width*height];
 
     uint c = 0;
-    bool yLand[width];
-    for (int x=0; x<width; x++)
-      yLand[x] = false;
+    // Heap-allocated rather than a stack VLA: width comes from the grid geometry and a
+    // large grid would otherwise overflow the stack.
+    std::vector<bool> yLand(width, false);
 
     ModificationLock *modificationLock = NULL;
     if (colorMapFile != nullptr)
@@ -884,9 +887,8 @@ void Plugin::saveImage(ImagePaintParameters& params,
     {
       // Counting land topography.
 
-      bool yLand[width];
-      for (int x=0; x<width; x++)
-        yLand[x] = false;
+      // Heap-allocated rather than a stack VLA (width comes from the grid geometry).
+      std::vector<bool> yLand(width, false);
 
       landShadingImage = new uint[size];
       landImage = new uint[size];
