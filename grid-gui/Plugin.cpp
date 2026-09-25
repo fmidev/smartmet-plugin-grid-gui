@@ -369,7 +369,7 @@ void Plugin::loadProducerFile()
 
 /*! \brief GridGui: Get color map file. */
 
-T::ColorMapFile* Plugin::getColorMapFile(std::string colorMapName)
+T::ColorMapFile* Plugin::getColorMapFile(const std::string& colorMapName)
 {
   FUNCTION_TRACE
   try
@@ -536,7 +536,7 @@ void Plugin::computeValueRangeForMap(const T::ParamValue_vec& values,
 
 /*! \brief GridGui: Save map. */
 
-void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_vec&  values,unsigned char hue,unsigned char saturation,unsigned char blur,uint coordinateLines,uint landBorder,std::string landMask,std::string seaMask,std::string colorMapName,std::string missingStr)
+void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_vec&  values,unsigned char hue,unsigned char saturation,unsigned char blur,uint coordinateLines,uint landBorder,std::string landMask,std::string seaMask,const std::string& colorMapName,const std::string& missingStr)
 {
   FUNCTION_TRACE
   try
@@ -3496,7 +3496,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
       for (auto it = generations.rbegin(); it != generations.rend(); ++it)
       {
-        std::string name = *it;
+        const std::string& name = *it;
         T::GenerationInfo *g = generationInfoList.getGenerationInfoByName(name);
         if (g != nullptr && (g->mDeletionTime == 0 || g->mDeletionTime > requiredAccessTime))
         {
@@ -4028,7 +4028,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
                 std::ostringstream out;
                 out << "&" << ATTR_TIME << "=" << g->getForecastTime() << "&" << ATTR_FILE_ID << "=" << g->mFileId << "&" << ATTR_MESSAGE_INDEX << "=" << g->mMessageIndex << "&" << ATTR_FORECAST_TYPE << "=" << forecastTypeStr << "&" << ATTR_FORECAST_NUMBER << "=" << forecastNumberStr;
                 std::string url = out.str();
-                std::string uu = url;
+                const std::string& uu = url;
 
                 if (currentCont != nullptr  &&  nextCont == nullptr)
                   nextCont = g;
@@ -4148,7 +4148,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
         std::ostringstream out;
         out << "&" << ATTR_TIME << "=" << timeStr << "&" << ATTR_FILE_ID << "=" << g->mFileId << "&" << ATTR_MESSAGE_INDEX << "=" << g->mMessageIndex << "&" << ATTR_FORECAST_TYPE << "=" << forecastTypeStr << "&" << ATTR_FORECAST_NUMBER << "=" << forecastNumberStr;
         std::string url = out.str();
-        std::string uu = url;
+        const std::string& uu = url;
 
         std::string bg = "#E0E0E0";
         if (g->mParameterLevel == level)

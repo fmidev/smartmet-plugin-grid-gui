@@ -194,11 +194,11 @@ class Plugin : public SmartMetPlugin
                       uint landBorder,
                       std::string landMask,
                       std::string seaMask,
-                      std::string colorMapName,
-                      std::string missingStr);
+                      const std::string& colorMapName,
+                      const std::string& missingStr);
 
 
-    T::ColorMapFile*  getColorMapFile(std::string colorMapName);
+    T::ColorMapFile*  getColorMapFile(const std::string& colorMapName);
 
     void checkImageCache();
     void getGenerations(T::GenerationInfoList& generationInfoList,std::set<std::string>& generations);
