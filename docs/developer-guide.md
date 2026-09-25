@@ -258,13 +258,14 @@ with a suitable `expires_seconds`.
   returns at once if it has already been initialised, and the grid engine (loaded
   before plugins) always does that first. The plugin's setting only matters if its file
   differs from the engine's, and then it silently has no effect.
-* **Request values are not escaped.** Session attributes are written into the generated
-  HTML and JavaScript (`onchange="getPage(…'/grid-gui?session=…')"` and the page
-  content) without HTML escaping or URL encoding. A crafted link can inject script into
-  the page. Combined with `Access-Control-Allow-Origin: *`, and with grid-admin's session
-  cookie on the same origin, this is the main reason to restrict `/grid-gui` with
+* **Request values are not escaped on output.** Session attributes are written into the
+  generated HTML and JavaScript without escaping or URL encoding. `request()` therefore
+  rejects (400) any parameter name or value containing `` < > " ' ` \ & `` or control
+  characters before it reaches the session (`isSafeRequestValue()`). Keep that check in
+  place, and escape values yourself if you add output of data that does not come through
+  it. The page has no authentication of its own, so restrict `/grid-gui` with
   `plugins.grid-gui.ip_filters`: being a private handler only hides it from the
-  frontends, and grid-gui has no authentication of its own.
+  frontends.
 * **`itsImagesUnderConstruction` is used without the lock.** The slot scan and the slot
   writes in the image pages happen outside `itsThreadLock`, so concurrent requests race
   on those `std::string`s. The worst outcome is a duplicate render, but it is still a

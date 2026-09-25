@@ -34,6 +34,37 @@ namespace GridGui
 
 using namespace SmartMet::Spine;
 
+namespace
+{
+// Request values are copied into the session string, which page_main() writes unescaped
+// into HTML attributes and JavaScript string literals (onchange="getPage(...,'/grid-gui?
+// session=...')"). Reject any value that could end those contexts or start markup, so a
+// crafted link cannot inject script. Legitimate values (producer, parameter and colour map
+// names, times, numbers) never contain these characters.
+bool isSafeRequestValue(const std::string& value)
+{
+  for (unsigned char ch : value)
+  {
+    if (ch < 0x20 || ch == 0x7f)
+      return false;
+    switch (ch)
+    {
+      case '<':
+      case '>':
+      case '"':
+      case '\'':
+      case '`':
+      case '\\':
+      case '&':
+        return false;
+      default:
+        break;
+    }
+  }
+  return true;
+}
+}  // namespace
+
 #define ATTR_STREAM_COLOR       "sc"
 #define ATTR_BLUR               "bl"
 #define ATTR_COLOR_MAP          "cm"
@@ -4901,6 +4932,17 @@ int Plugin::request(Spine::Reactor &theReactor,
 
     Session session;
 
+    Spine::HTTP::ParamMap map = theRequest.getParameterMap();
+    for (const auto& param : map)
+    {
+      if (!isSafeRequestValue(param.first) || !isSafeRequestValue(param.second))
+      {
+        theResponse.setHeader("Content-Type", "text/plain; charset=UTF-8");
+        theResponse.setContent("Invalid characters in request parameter\n");
+        return HTTP::Status::bad_request;
+      }
+    }
+
     std::optional<std::string> v;
     v = theRequest.getParameter("session");
     if (v)
@@ -4912,7 +4954,6 @@ int Plugin::request(Spine::Reactor &theReactor,
     else
       initSession(session);
 
-    Spine::HTTP::ParamMap map = theRequest.getParameterMap();
     for (auto it = map.begin(); it != map.end(); it++)
     {
       //printf("SEARCH [%s][%s]\n",it->first.c_str(),it->second.c_str());
