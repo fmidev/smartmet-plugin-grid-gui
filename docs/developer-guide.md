@@ -84,7 +84,7 @@ The session class (`Session`) comes from grid-files (`common/Session.h`).
    `animationEnabled` and the three `imageCache.*` keys are mandatory.
 3. It calls `Identification::gridDef.init()` and `Map::topography.init()` with its
    `grid-files.configFile`. `gridDef.init()` does nothing if the grid engine already
-   initialised it, which is the normal case (see [§12](#12-known-pitfalls)). The
+   initialised it, which is the normal case. The
    topography provides the land and sea masks and shading.
 4. It loads the colour maps and colours, and **deletes every
    `grid-gui-image_*` file in the image cache directory**.
@@ -221,7 +221,7 @@ All keys are under `smartmet.plugin.grid-gui`:
 
 | Key | Meaning |
 |-----|---------|
-| `grid-files.configFile` | grid-files configuration. In practice the engine's is used; see [§12](#12-known-pitfalls). |
+| `grid-files.configFile` | grid-files configuration. In practice the engine's is used. |
 | `colorFile` | Named colours. |
 | `colorMapFiles` | List of colour map files. |
 | `animationEnabled` | Offer the animated WebP variants. |
@@ -251,18 +251,10 @@ with a suitable `expires_seconds`.
 
 ## 12. Known pitfalls
 
-* **`grid-files.configFile` is effectively ignored.** `Identification::gridDef.init()`
-  returns at once if it has already been initialised, and the grid engine (loaded
-  before plugins) always does that first. The plugin's setting only matters if its file
-  differs from the engine's, and then it silently has no effect.
 * **Keep request validation in place.** `request()` accepts only plain parameter names
   and values (`isSafeRequestValue()`), and returns 400 otherwise. Escape any new output
   that does not come through that check. Restrict `/grid-gui` with
   `plugins.grid-gui.ip_filters`.
-* **`itsImagesUnderConstruction` is used without the lock.** The slot scan and the slot
-  writes in the image pages happen outside `itsThreadLock`, so concurrent requests race
-  on those `std::string`s. The worst outcome is a duplicate render, but it is still a
-  data race.
 * **Image files are deleted at startup.** Every `grid-gui-image_*` file in
   `imageCache.directory` is removed when the plugin starts. Do not point it at a
   directory that another server instance also uses.
