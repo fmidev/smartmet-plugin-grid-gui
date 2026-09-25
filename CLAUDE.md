@@ -50,7 +50,7 @@ The monolithic plugin class inherits `SmartMetPlugin` from spine. It implements:
   - `page_coordinates` — coordinate lookups
   - `page_value` — point value queries
 
-- **Session management** — UI state passed via HTTP POST parameters, stored in a `Session` object
+- **Session management** — no server-side state: the whole UI state is a `key=value;` string in the `session` URL parameter, parsed into a grid-files `Session` object
 - **Image caching** — hash-keyed file cache in `/tmp/` with configurable size limits and thread-safe generation
 - **Dynamic config reload** — color map files and producer lists auto-reload on file modification
 
@@ -66,6 +66,8 @@ Manages CSV-based color mapping files that translate grid values to colors. Supp
 The plugin talks to two server APIs via the grid engine (`Engine::Grid::Engine`):
 - **Content Server** — queries metadata: producers, generations, parameters, levels, geometries, projections
 - **Data Server** — retrieves actual grid values and file/message data
+
+Full developer documentation: `docs/developer-guide.md`.
 
 ## Configuration
 

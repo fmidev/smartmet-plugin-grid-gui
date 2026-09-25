@@ -44,6 +44,8 @@ Small changes and bug fixes can be submitted via pull request. In larger contrib
 CLA is required in order to contribute. Please contact us for more information!
 
 ## Documentation
+
+Developer guide: [docs/developer-guide.md](docs/developer-guide.md) — plugin internals for developers
 SmartMet Server Grid support (https://github.com/fmidev/smartmet-tools-grid/raw/master/doc/grid-support.pdf)
 
 
