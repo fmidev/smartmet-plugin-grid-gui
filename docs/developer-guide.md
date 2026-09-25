@@ -30,7 +30,7 @@ and the grid-files [developer guide](https://github.com/fmidev/smartmet-library-
 
 ## 1. What the plugin does
 
-`grid-gui.so` registers the **private** (admin) URL `/grid-gui`. It serves a browser UI
+`grid-gui.so` registers the **private** URL `/grid-gui`. It serves a browser UI
 for looking at any field in the grid content registry:
 
 * choose producer → generation → parameter → level type → level → forecast type →
@@ -76,7 +76,12 @@ The session class (`Session`) comes from grid-files (`common/Session.h`).
 
 **Constructor**
 
-1. It registers `/grid-gui` with `addPrivateContentHandler()`.
+1. It registers `/grid-gui` with `addPrivateContentHandler()`. A **private** handler is
+   only left out of the server's URI list, which the frontends use for routing, so it
+   cannot be reached through a frontend. It is **not** access-restricted: anyone who can
+   connect to the backend's own port can call it. Restrict it with
+   `plugins.grid-gui.ip_filters` in the server configuration (see the spine developer
+   guide, §7).
 2. It reads the configuration. `grid-files.configFile`, `colorMapFiles`, `colorFile`,
    `animationEnabled` and the three `imageCache.*` keys are mandatory.
 3. It calls `Identification::gridDef.init()` and `Map::topography.init()` with its
@@ -257,8 +262,9 @@ with a suitable `expires_seconds`.
   HTML and JavaScript (`onchange="getPage(…'/grid-gui?session=…')"` and the page
   content) without HTML escaping or URL encoding. A crafted link can inject script into
   the page. Combined with `Access-Control-Allow-Origin: *`, and with grid-admin's session
-  cookie on the same admin origin, this is the main reason to keep `/grid-gui` on the
-  private admin interface only.
+  cookie on the same origin, this is the main reason to restrict `/grid-gui` with
+  `plugins.grid-gui.ip_filters`: being a private handler only hides it from the
+  frontends, and grid-gui has no authentication of its own.
 * **`itsImagesUnderConstruction` is used without the lock.** The slot scan and the slot
   writes in the image pages happen outside `itsThreadLock`, so concurrent requests race
   on those `std::string`s. The worst outcome is a duplicate render, but it is still a
