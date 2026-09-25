@@ -77,11 +77,9 @@ The session class (`Session`) comes from grid-files (`common/Session.h`).
 **Constructor**
 
 1. It registers `/grid-gui` with `addPrivateContentHandler()`. A **private** handler is
-   only left out of the server's URI list, which the frontends use for routing, so it
-   cannot be reached through a frontend. It is **not** access-restricted: anyone who can
-   connect to the backend's own port can call it. Restrict it with
-   `plugins.grid-gui.ip_filters` in the server configuration (see the spine developer
-   guide, §7).
+   left out of the server's URI list, which the frontends use for routing. Restrict
+   access with `plugins.grid-gui.ip_filters` in the server configuration (see the spine
+   developer guide, §7).
 2. It reads the configuration. `grid-files.configFile`, `colorMapFiles`, `colorFile`,
    `animationEnabled` and the three `imageCache.*` keys are mandatory.
 3. It calls `Identification::gridDef.init()` and `Map::topography.init()` with its
@@ -119,8 +117,7 @@ grid-gui keeps **no server-side session**. The whole UI state is a string of sho
 5. It sets `Cache-Control: public, max-age=N`: 600 s for images, maps, streams, tables
    and coordinates (their URL fully identifies the content), 1 s for the rest.
 
-`requestHandler()` adds `Access-Control-Allow-Origin: *` and turns exceptions into
-`400 Bad Request`.
+`requestHandler()` turns exceptions into `400 Bad Request`.
 
 The attribute names are the `ATTR_*` macros at the top of `Plugin.cpp`, for example
 `pi` (producer id), `g` (generation), `p` (parameter), `lt` / `l` (level type and
@@ -258,14 +255,10 @@ with a suitable `expires_seconds`.
   returns at once if it has already been initialised, and the grid engine (loaded
   before plugins) always does that first. The plugin's setting only matters if its file
   differs from the engine's, and then it silently has no effect.
-* **Request values are not escaped on output.** Session attributes are written into the
-  generated HTML and JavaScript without escaping or URL encoding. `request()` therefore
-  rejects (400) any parameter name or value containing `` < > " ' ` \ & `` or control
-  characters before it reaches the session (`isSafeRequestValue()`). Keep that check in
-  place, and escape values yourself if you add output of data that does not come through
-  it. The page has no authentication of its own, so restrict `/grid-gui` with
-  `plugins.grid-gui.ip_filters`: being a private handler only hides it from the
-  frontends.
+* **Keep request validation in place.** `request()` accepts only plain parameter names
+  and values (`isSafeRequestValue()`), and returns 400 otherwise. Escape any new output
+  that does not come through that check. Restrict `/grid-gui` with
+  `plugins.grid-gui.ip_filters`.
 * **`itsImagesUnderConstruction` is used without the lock.** The slot scan and the slot
   writes in the image pages happen outside `itsThreadLock`, so concurrent requests race
   on those `std::string`s. The worst outcome is a duplicate render, but it is still a
