@@ -186,7 +186,11 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
     for (auto it=projVec.begin(); it != projVec.end(); ++it)
       itsBlockedProjections.insert(std::stoi(*it));
 
-    Identification::gridDef.init(itsGridConfigFile.c_str());
+    // The grid definitions (Identification::gridDef) are shared by the whole
+    // process and are initialized by the grid engine from its own
+    // grid-files.configFile; init() waits for the engine. Initializing them here
+    // as well only raced with the engine: whichever call came first won. The
+    // file configured here is used for the topography.
     Map::topography.init(itsGridConfigFile.c_str(),true,true,true);
 
     for (auto it = itsColorMapFileNames.begin(); it != itsColorMapFileNames.end(); ++it)
