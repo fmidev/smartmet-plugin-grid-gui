@@ -2310,11 +2310,14 @@ int Plugin::page_image(Spine::Reactor &theReactor,
       {
         // ### Let's check if another thread is already generating the requested image
 
-        for (uint t=0; t<100; t++)
         {
-          if (itsImagesUnderConstruction[t] == hash)
+          AutoThreadLock lock(&itsThreadLock);
+          for (uint t=0; t<100; t++)
           {
-            found = true;
+            if (itsImagesUnderConstruction[t] == hash)
+            {
+              found = true;
+            }
           }
         }
 
@@ -2334,9 +2337,13 @@ int Plugin::page_image(Spine::Reactor &theReactor,
 
     // ### It seems that we should generated the requested image by ourselves.
 
-    uint idx = itsImageCounter % 100;
-    itsImagesUnderConstruction[idx] = hash;
-    itsImageCounter++;
+    uint idx = 0;
+    {
+      AutoThreadLock lock(&itsThreadLock);
+      idx = itsImageCounter % 100;
+      itsImagesUnderConstruction[idx] = hash;
+      itsImageCounter++;
+    }
 
     try
     {
@@ -2383,11 +2390,17 @@ int Plugin::page_image(Spine::Reactor &theReactor,
           itsImages.insert(std::pair<std::string,std::string>(hash,fname));
         }
       }
-      itsImagesUnderConstruction[idx] = "";
+      {
+        AutoThreadLock lock(&itsThreadLock);
+        itsImagesUnderConstruction[idx] = "";
+      }
     }
     catch (...)
     {
-      itsImagesUnderConstruction[idx] = "";
+      {
+        AutoThreadLock lock(&itsThreadLock);
+        itsImagesUnderConstruction[idx] = "";
+      }
       Fmi::Exception exception(BCP, "Operation failed!", nullptr);
       throw exception;
     }
@@ -2531,11 +2544,14 @@ int Plugin::page_streamsImpl(const HTTP::Request &theRequest,
 
       if (!found)
       {
-        for (uint t=0; t<100; t++)
         {
-          if (itsImagesUnderConstruction[t] == hash)
+          AutoThreadLock lock(&itsThreadLock);
+          for (uint t=0; t<100; t++)
           {
-            found = true;
+            if (itsImagesUnderConstruction[t] == hash)
+            {
+              found = true;
+            }
           }
         }
         if (!found)
@@ -2546,9 +2562,13 @@ int Plugin::page_streamsImpl(const HTTP::Request &theRequest,
         time_usleep(0,10000);
     }
 
-    uint idx = itsImageCounter % 100;
-    itsImagesUnderConstruction[idx] = hash;
-    itsImageCounter++;
+    uint idx = 0;
+    {
+      AutoThreadLock lock(&itsThreadLock);
+      idx = itsImageCounter % 100;
+      itsImagesUnderConstruction[idx] = hash;
+      itsImageCounter++;
+    }
 
     try
     {
@@ -2597,11 +2617,17 @@ int Plugin::page_streamsImpl(const HTTP::Request &theRequest,
         }
       }
 
-      itsImagesUnderConstruction[idx] = "";
+      {
+        AutoThreadLock lock(&itsThreadLock);
+        itsImagesUnderConstruction[idx] = "";
+      }
     }
     catch (...)
     {
-      itsImagesUnderConstruction[idx] = "";
+      {
+        AutoThreadLock lock(&itsThreadLock);
+        itsImagesUnderConstruction[idx] = "";
+      }
       Fmi::Exception exception(BCP, "Operation failed!", nullptr);
       throw exception;
     }
@@ -2702,11 +2728,14 @@ int Plugin::page_map(Spine::Reactor &theReactor,
 
       if (!found)
       {
-        for (uint t=0; t<100; t++)
         {
-          if (itsImagesUnderConstruction[t] == hash)
+          AutoThreadLock lock(&itsThreadLock);
+          for (uint t=0; t<100; t++)
           {
-            found = true;
+            if (itsImagesUnderConstruction[t] == hash)
+            {
+              found = true;
+            }
           }
         }
         if (!found)
@@ -2717,9 +2746,13 @@ int Plugin::page_map(Spine::Reactor &theReactor,
         time_usleep(0,10000);
     }
 
-    uint idx = itsImageCounter % 100;
-    itsImagesUnderConstruction[idx] = hash;
-    itsImageCounter++;
+    uint idx = 0;
+    {
+      AutoThreadLock lock(&itsThreadLock);
+      idx = itsImageCounter % 100;
+      itsImagesUnderConstruction[idx] = hash;
+      itsImageCounter++;
+    }
 
     try
     {
@@ -2755,11 +2788,17 @@ int Plugin::page_map(Spine::Reactor &theReactor,
         }
       }
 
-      itsImagesUnderConstruction[idx] = "";
+      {
+        AutoThreadLock lock(&itsThreadLock);
+        itsImagesUnderConstruction[idx] = "";
+      }
     }
     catch (...)
     {
-      itsImagesUnderConstruction[idx] = "";
+      {
+        AutoThreadLock lock(&itsThreadLock);
+        itsImagesUnderConstruction[idx] = "";
+      }
       Fmi::Exception exception(BCP, "Operation failed!", nullptr);
       throw exception;
     }
