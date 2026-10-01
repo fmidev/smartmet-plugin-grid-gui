@@ -77,15 +77,16 @@ The session class (`Session`) comes from grid-files (`common/Session.h`).
 **Constructor**
 
 1. It registers `/grid-gui` with `addPrivateContentHandler()`. A **private** handler is
-   left out of the server's URI list, which the frontends use for routing. Restrict
-   access with `plugins.grid-gui.ip_filters` in the server configuration (see the spine
-   developer guide, §7).
+   left out of the server's URI list, which the frontends use for routing. Without
+   `plugins.grid-gui.ip_filters` in the server configuration it accepts only localhost
+   and the private networks 10.0.0.0/8, 172.16.0.0/12 and 192.168.0.0/16. Setting
+   `ip_filters` replaces that default (see the spine developer guide, §7).
 2. It reads the configuration. `grid-files.configFile`, `colorMapFiles`, `colorFile`,
    `animationEnabled` and the three `imageCache.*` keys are mandatory.
-3. It calls `Identification::gridDef.init()` and `Map::topography.init()` with its
-   `grid-files.configFile`. `gridDef.init()` does nothing if the grid engine already
-   initialised it, which is the normal case. The
-   topography provides the land and sea masks and shading.
+3. It calls `Map::topography.init()` with its `grid-files.configFile`. The topography
+   provides the land and sea masks and shading. The grid definitions
+   (`Identification::gridDef`) are shared by the whole process and always come from
+   the grid engine's own `grid-files.configFile`.
 4. It loads the colour maps and colours, and **deletes every
    `grid-gui-image_*` file in the image cache directory**.
 
