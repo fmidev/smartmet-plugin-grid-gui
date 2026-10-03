@@ -186,7 +186,11 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
     for (auto it=projVec.begin(); it != projVec.end(); ++it)
       itsBlockedProjections.insert(std::stoi(*it));
 
-    Identification::gridDef.init(itsGridConfigFile.c_str());
+    // The grid definitions (Identification::gridDef) are shared by the whole
+    // process and are initialized by the grid engine from its own
+    // grid-files.configFile; init() waits for the engine. Initializing them here
+    // as well only raced with the engine: whichever call came first won. The
+    // file configured here is used for the topography.
     Map::topography.init(itsGridConfigFile.c_str(),true,true,true);
 
     for (auto it = itsColorMapFileNames.begin(); it != itsColorMapFileNames.end(); ++it)
@@ -365,7 +369,7 @@ void Plugin::loadProducerFile()
 
 /*! \brief GridGui: Get color map file. */
 
-T::ColorMapFile* Plugin::getColorMapFile(std::string colorMapName)
+T::ColorMapFile* Plugin::getColorMapFile(const std::string& colorMapName)
 {
   FUNCTION_TRACE
   try
@@ -532,7 +536,7 @@ void Plugin::computeValueRangeForMap(const T::ParamValue_vec& values,
 
 /*! \brief GridGui: Save map. */
 
-void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_vec&  values,unsigned char hue,unsigned char saturation,unsigned char blur,uint coordinateLines,uint landBorder,std::string landMask,std::string seaMask,std::string colorMapName,std::string missingStr)
+void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_vec&  values,unsigned char hue,unsigned char saturation,unsigned char blur,uint coordinateLines,uint landBorder,std::string landMask,std::string seaMask,const std::string& colorMapName,const std::string& missingStr)
 {
   FUNCTION_TRACE
   try
@@ -2310,11 +2314,14 @@ int Plugin::page_image(Spine::Reactor &theReactor,
       {
         // ### Let's check if another thread is already generating the requested image
 
-        for (uint t=0; t<100; t++)
         {
-          if (itsImagesUnderConstruction[t] == hash)
+          AutoThreadLock lock(&itsThreadLock);
+          for (uint t=0; t<100; t++)
           {
-            found = true;
+            if (itsImagesUnderConstruction[t] == hash)
+            {
+              found = true;
+            }
           }
         }
 
@@ -2334,9 +2341,13 @@ int Plugin::page_image(Spine::Reactor &theReactor,
 
     // ### It seems that we should generated the requested image by ourselves.
 
-    uint idx = itsImageCounter % 100;
-    itsImagesUnderConstruction[idx] = hash;
-    itsImageCounter++;
+    uint idx = 0;
+    {
+      AutoThreadLock lock(&itsThreadLock);
+      idx = itsImageCounter % 100;
+      itsImagesUnderConstruction[idx] = hash;
+      itsImageCounter++;
+    }
 
     try
     {
@@ -2383,11 +2394,17 @@ int Plugin::page_image(Spine::Reactor &theReactor,
           itsImages.insert(std::pair<std::string,std::string>(hash,fname));
         }
       }
-      itsImagesUnderConstruction[idx] = "";
+      {
+        AutoThreadLock lock(&itsThreadLock);
+        itsImagesUnderConstruction[idx] = "";
+      }
     }
     catch (...)
     {
-      itsImagesUnderConstruction[idx] = "";
+      {
+        AutoThreadLock lock(&itsThreadLock);
+        itsImagesUnderConstruction[idx] = "";
+      }
       Fmi::Exception exception(BCP, "Operation failed!", nullptr);
       throw exception;
     }
@@ -2531,11 +2548,14 @@ int Plugin::page_streamsImpl(const HTTP::Request &theRequest,
 
       if (!found)
       {
-        for (uint t=0; t<100; t++)
         {
-          if (itsImagesUnderConstruction[t] == hash)
+          AutoThreadLock lock(&itsThreadLock);
+          for (uint t=0; t<100; t++)
           {
-            found = true;
+            if (itsImagesUnderConstruction[t] == hash)
+            {
+              found = true;
+            }
           }
         }
         if (!found)
@@ -2546,9 +2566,13 @@ int Plugin::page_streamsImpl(const HTTP::Request &theRequest,
         time_usleep(0,10000);
     }
 
-    uint idx = itsImageCounter % 100;
-    itsImagesUnderConstruction[idx] = hash;
-    itsImageCounter++;
+    uint idx = 0;
+    {
+      AutoThreadLock lock(&itsThreadLock);
+      idx = itsImageCounter % 100;
+      itsImagesUnderConstruction[idx] = hash;
+      itsImageCounter++;
+    }
 
     try
     {
@@ -2597,11 +2621,17 @@ int Plugin::page_streamsImpl(const HTTP::Request &theRequest,
         }
       }
 
-      itsImagesUnderConstruction[idx] = "";
+      {
+        AutoThreadLock lock(&itsThreadLock);
+        itsImagesUnderConstruction[idx] = "";
+      }
     }
     catch (...)
     {
-      itsImagesUnderConstruction[idx] = "";
+      {
+        AutoThreadLock lock(&itsThreadLock);
+        itsImagesUnderConstruction[idx] = "";
+      }
       Fmi::Exception exception(BCP, "Operation failed!", nullptr);
       throw exception;
     }
@@ -2702,11 +2732,14 @@ int Plugin::page_map(Spine::Reactor &theReactor,
 
       if (!found)
       {
-        for (uint t=0; t<100; t++)
         {
-          if (itsImagesUnderConstruction[t] == hash)
+          AutoThreadLock lock(&itsThreadLock);
+          for (uint t=0; t<100; t++)
           {
-            found = true;
+            if (itsImagesUnderConstruction[t] == hash)
+            {
+              found = true;
+            }
           }
         }
         if (!found)
@@ -2717,9 +2750,13 @@ int Plugin::page_map(Spine::Reactor &theReactor,
         time_usleep(0,10000);
     }
 
-    uint idx = itsImageCounter % 100;
-    itsImagesUnderConstruction[idx] = hash;
-    itsImageCounter++;
+    uint idx = 0;
+    {
+      AutoThreadLock lock(&itsThreadLock);
+      idx = itsImageCounter % 100;
+      itsImagesUnderConstruction[idx] = hash;
+      itsImageCounter++;
+    }
 
     try
     {
@@ -2755,11 +2792,17 @@ int Plugin::page_map(Spine::Reactor &theReactor,
         }
       }
 
-      itsImagesUnderConstruction[idx] = "";
+      {
+        AutoThreadLock lock(&itsThreadLock);
+        itsImagesUnderConstruction[idx] = "";
+      }
     }
     catch (...)
     {
-      itsImagesUnderConstruction[idx] = "";
+      {
+        AutoThreadLock lock(&itsThreadLock);
+        itsImagesUnderConstruction[idx] = "";
+      }
       Fmi::Exception exception(BCP, "Operation failed!", nullptr);
       throw exception;
     }
@@ -3453,7 +3496,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
       for (auto it = generations.rbegin(); it != generations.rend(); ++it)
       {
-        std::string name = *it;
+        const std::string& name = *it;
         T::GenerationInfo *g = generationInfoList.getGenerationInfoByName(name);
         if (g != nullptr && (g->mDeletionTime == 0 || g->mDeletionTime > requiredAccessTime))
         {
@@ -3985,7 +4028,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
                 std::ostringstream out;
                 out << "&" << ATTR_TIME << "=" << g->getForecastTime() << "&" << ATTR_FILE_ID << "=" << g->mFileId << "&" << ATTR_MESSAGE_INDEX << "=" << g->mMessageIndex << "&" << ATTR_FORECAST_TYPE << "=" << forecastTypeStr << "&" << ATTR_FORECAST_NUMBER << "=" << forecastNumberStr;
                 std::string url = out.str();
-                std::string uu = url;
+                const std::string& uu = url;
 
                 if (currentCont != nullptr  &&  nextCont == nullptr)
                   nextCont = g;
@@ -4105,7 +4148,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
         std::ostringstream out;
         out << "&" << ATTR_TIME << "=" << timeStr << "&" << ATTR_FILE_ID << "=" << g->mFileId << "&" << ATTR_MESSAGE_INDEX << "=" << g->mMessageIndex << "&" << ATTR_FORECAST_TYPE << "=" << forecastTypeStr << "&" << ATTR_FORECAST_NUMBER << "=" << forecastNumberStr;
         std::string url = out.str();
-        std::string uu = url;
+        const std::string& uu = url;
 
         std::string bg = "#E0E0E0";
         if (g->mParameterLevel == level)
