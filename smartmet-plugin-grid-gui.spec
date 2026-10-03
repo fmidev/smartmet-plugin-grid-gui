@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-plugin-%{DIRNAME}
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
-Version: 26.9.26
+Version: 26.10.3
 Release: 1%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
@@ -27,17 +27,17 @@ BuildRequires: %{smartmet_boost}-devel
 BuildRequires: libconfig17-devel
 BuildRequires: libwebp13-devel
 BuildRequires: smartmet-utils-devel >= 26.9.3
-BuildRequires: smartmet-library-macgyver-devel >= 26.9.26-2
-BuildRequires: smartmet-library-spine-devel >= 26.9.26
+BuildRequires: smartmet-library-macgyver-devel >= 26.10.3
+BuildRequires: smartmet-library-spine-devel >= 26.10.3
 BuildRequires: smartmet-library-grid-files-devel >= 26.9.26
 BuildRequires: smartmet-library-grid-content-devel >= 26.9.26
 BuildRequires: smartmet-engine-grid-devel >= 26.9.26
 BuildRequires: gdal312-devel
 Requires: libconfig17
-Requires: smartmet-library-macgyver >= 26.9.26-2
+Requires: smartmet-library-macgyver >= 26.10.3
 Requires: smartmet-library-grid-files >= 26.9.26
 Requires: smartmet-library-grid-content >= 26.9.26
-Requires: smartmet-library-spine >= 26.9.26
+Requires: smartmet-library-spine >= 26.10.3
 Requires: smartmet-server >= 26.9.2
 Requires: smartmet-engine-grid >= 26.9.26
 Provides: %{SPECNAME}
@@ -64,6 +64,11 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/plugins/%{DIRNAME}.so
 
 %changelog
+* Sat Oct 03 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> - 26.10.3-1.fmi
+- Remove unnecessary copies found by clang-tidy performance checks
+- Do not initialize the shared grid definitions in grid-gui
+- Guard the images-under-construction slots with the thread lock
+
 * Sat Sep 26 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> - 26.9.26-1.fmi
 - Repackaged due to grid-files ABI changes
 - Require the 26.9.26 releases of the SmartMet dependencies
