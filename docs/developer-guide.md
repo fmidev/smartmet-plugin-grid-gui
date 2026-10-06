@@ -57,7 +57,7 @@ make configtest    # cfgvalidate on cfg/grid-gui-plugin.conf
   macgyver; the grid engine is resolved at runtime.
 * **There are no tests.** `make test` prints "No tests available". Test changes by
   running a server with the grid engine and the plugin and clicking through the
-  presentation modes. The engine's test fixture (`smartmet-engine-grid-test`) with the
+  presentation modes. The grid test fixture (`smartmet-library-grid-files-test`) with the
   GRIB files from `smartmet-test-data` is enough for that.
 
 ## 3. Source files
