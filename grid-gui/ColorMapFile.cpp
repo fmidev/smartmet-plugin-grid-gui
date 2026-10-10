@@ -159,10 +159,10 @@ void ColorMapFile::getValuesAndColors(std::vector<float>& values,std::vector<uns
   {
     AutoReadLock lock(&mModificationLock);
 
-    for (auto it = mColorMap.begin(); it != mColorMap.end(); ++it)
+    for (auto & it : mColorMap)
     {
-      values.emplace_back(it->first);
-      colors.emplace_back(it->second);
+      values.emplace_back(it.first);
+      colors.emplace_back(it.second);
     }
   }
   catch (...)
@@ -375,9 +375,9 @@ bool ColorMapFile::hasName(const char *name)
 {
   try
   {
-    for (auto it = mNames.begin(); it != mNames.end(); ++it)
+    for (auto & mName : mNames)
     {
-      if (strcasecmp(name,it->c_str()) == 0)
+      if (strcasecmp(name,mName.c_str()) == 0)
         return true;
     }
     return false;

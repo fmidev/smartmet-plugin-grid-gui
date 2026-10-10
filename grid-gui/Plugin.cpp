@@ -21,6 +21,7 @@
 #include <webp/encode.h>
 #include <webp/mux.h>
 #include <optional>
+#include <ranges>
 
 #define FUNCTION_TRACE FUNCTION_TRACE_OFF
 
@@ -183,8 +184,8 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
 
     std::vector<std::string> projVec;
     itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.blockedProjections",projVec);
-    for (auto it=projVec.begin(); it != projVec.end(); ++it)
-      itsBlockedProjections.insert(std::stoi(*it));
+    for (auto & it : projVec)
+      itsBlockedProjections.insert(std::stoi(it));
 
     // The grid definitions (Identification::gridDef) are shared by the whole
     // process and are initialized by the grid engine from its own
@@ -193,10 +194,10 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
     // file configured here is used for the topography.
     Map::topography.init(itsGridConfigFile.c_str(),true,true,true);
 
-    for (auto it = itsColorMapFileNames.begin(); it != itsColorMapFileNames.end(); ++it)
+    for (auto & itsColorMapFileName : itsColorMapFileNames)
     {
       T::ColorMapFile colorMapFile;
-      colorMapFile.init(it->c_str());
+      colorMapFile.init(itsColorMapFileName.c_str());
       itsColorMapFiles.emplace_back(colorMapFile);
     }
 
@@ -214,9 +215,9 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
 
     getFileList(itsImageCache_dir.c_str(),filePatterns,false,dirList,fileList);
 
-    for (auto it = fileList.begin(); it != fileList.end(); ++it)
+    for (auto & it : fileList)
     {
-      std::string fname = itsImageCache_dir + "/" + it->second;
+      std::string fname = itsImageCache_dir + "/" + it.second;
       remove(fname.c_str());
     }
   }
@@ -374,11 +375,11 @@ T::ColorMapFile* Plugin::getColorMapFile(const std::string& colorMapName)
   try
   {
     T::ColorMapFile *map = nullptr;
-    for (auto it = itsColorMapFiles.begin(); it != itsColorMapFiles.end(); ++it)
+    for (auto & itsColorMapFile : itsColorMapFiles)
     {
-      it->checkUpdates();
-      if (it->hasName(colorMapName.c_str()))
-        map = &(*it);
+      itsColorMapFile.checkUpdates();
+      if (itsColorMapFile.hasName(colorMapName.c_str()))
+        map = &itsColorMapFile;
     }
     return map;
   }
@@ -477,10 +478,10 @@ uint Plugin::getColorValue(std::string& colorName)
   FUNCTION_TRACE
   try
   {
-    for (auto it = itsColors.begin(); it != itsColors.end(); ++it)
+    for (auto & itsColor : itsColors)
     {
-      if (it->first == colorName)
-        return it->second;
+      if (itsColor.first == colorName)
+        return itsColor.second;
     }
 
     return 0x00FFFFFF;
@@ -704,9 +705,9 @@ void Plugin::checkImageCache()
     {
       std::map<std::string,std::string> tmpImages;
 
-      for (auto it = itsImages.begin(); it != itsImages.end(); ++it)
+      for (auto & itsImage : itsImages)
       {
-        tmpImages.insert(std::pair<std::string,std::string>(it->second,it->first));
+        tmpImages.insert(std::pair<std::string,std::string>(itsImage.second,itsImage.first));
       }
 
       for (auto it = tmpImages.begin(); it != tmpImages.end()  &&  cnt > itsImageCache_minImages; ++it)
@@ -2318,9 +2319,9 @@ int Plugin::page_image(Spine::Reactor &theReactor,
 
         {
           AutoThreadLock lock(&itsThreadLock);
-          for (uint t=0; t<100; t++)
+          for (const auto & t : itsImagesUnderConstruction)
           {
-            if (itsImagesUnderConstruction[t] == hash)
+            if (t == hash)
             {
               found = true;
             }
@@ -2552,9 +2553,9 @@ int Plugin::page_streamsImpl(const HTTP::Request &theRequest,
       {
         {
           AutoThreadLock lock(&itsThreadLock);
-          for (uint t=0; t<100; t++)
+          for (const auto & t : itsImagesUnderConstruction)
           {
-            if (itsImagesUnderConstruction[t] == hash)
+            if (t == hash)
             {
               found = true;
             }
@@ -2736,9 +2737,9 @@ int Plugin::page_map(Spine::Reactor &theReactor,
       {
         {
           AutoThreadLock lock(&itsThreadLock);
-          for (uint t=0; t<100; t++)
+          for (const auto & t : itsImagesUnderConstruction)
           {
-            if (itsImagesUnderConstruction[t] == hash)
+            if (t == hash)
             {
               found = true;
             }
@@ -3496,9 +3497,8 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
       ostr1 << "<SELECT style=\"width:280px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_GENERATION_ID << "=' + this.options[this.selectedIndex].value)\">\n";
 
-      for (auto it = generations.rbegin(); it != generations.rend(); ++it)
+      for (const auto & name : std::ranges::reverse_view(generations))
       {
-        const std::string& name = *it;
         T::GenerationInfo *g = generationInfoList.getGenerationInfoByName(name);
         if (g != nullptr && (g->mDeletionTime == 0 || g->mDeletionTime > requiredAccessTime))
         {
@@ -3548,36 +3548,36 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     if (paramKeyList.size() > 0)
     {
       ostr1 << R"(<SELECT style="width:280px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_PARAMETER_ID << "=' + this.options[this.selectedIndex].value)\">\n";
-      for (auto it=paramKeyList.begin(); it!=paramKeyList.end(); ++it)
+      for (const auto & it : paramKeyList)
       {
-        std::string parameterId = *it;
-        std::string pName = *it;
+        std::string parameterId = it;
+        std::string pName = it;
 
-        if (strncasecmp(it->c_str(),"GRIB-",5) == 0)
+        if (strncasecmp(it.c_str(),"GRIB-",5) == 0)
         {
-          std::string key = it->substr(5);
+          std::string key = it.substr(5);
 
           Identification::GribParameterDef  def;
           if (Identification::gridDef.getGribParameterDefById(toUInt32(key),def))
           {
-            pName = *it + " (" + def.mParameterDescription + ")";
+            pName = it + " (" + def.mParameterDescription + ")";
           }
         }
         else
-        if (strncasecmp(it->c_str(),"NB-",3) == 0)
+        if (strncasecmp(it.c_str(),"NB-",3) == 0)
         {
-          std::string key = it->substr(3);
+          std::string key = it.substr(3);
 
           Identification::NewbaseParameterDef  def;
           if (Identification::gridDef.getNewbaseParameterDefById(toUInt32(key),def))
           {
-            pName = *it + " (" + def.mParameterName + ")";
+            pName = it + " (" + def.mParameterName + ")";
           }
         }
         else
-        if (strncasecmp(it->c_str(),"FMI-",4) == 0)
+        if (strncasecmp(it.c_str(),"FMI-",4) == 0)
         {
-          std::string key = it->substr(4);
+          std::string key = it.substr(4);
 
           Identification::FmiParameterDef def;
           if (Identification::gridDef.getFmiParameterDefById(toUInt32(key),def))
@@ -3591,7 +3591,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
         else
         {
           Identification::FmiParameterDef def;
-          if (Identification::gridDef.getFmiParameterDefByName(*it,def))
+          if (Identification::gridDef.getFmiParameterDefByName(it,def))
           {
             parameterId = def.mParameterName;
             pName = def.mParameterName + " (" + def.mParameterDescription + ")";
@@ -3646,32 +3646,32 @@ int Plugin::page_main(Spine::Reactor &theReactor,
         disabled = "disabled";
 
       ostr1 << "<SELECT style=\"width:200px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_LEVEL_ID << "=' + this.options[this.selectedIndex].value) \">\n";
-      for (auto it = levelIds.begin(); it != levelIds.end(); ++it)
+      for (int it : levelIds)
       {
         if (levelIdStr.empty())
         {
-          levelIdStr = std::to_string(*it);
-          levelId = *it;
+          levelIdStr = std::to_string(it);
+          levelId = it;
           //printf("EMPTY => LEVEL ID %s\n",levelIdStr.c_str());
         }
 
-        std::string lStr = std::to_string(*it);
+        std::string lStr = std::to_string(it);
         Identification::LevelDef levelDef;
-        if (*it < 1000)
+        if (it < 1000)
         {
-          if (Identification::gridDef.getFmiLevelDef(*it,levelDef))
-            lStr = "FMI-" + std::to_string(*it) + " : " + levelDef.mDescription;
+          if (Identification::gridDef.getFmiLevelDef(it,levelDef))
+            lStr = "FMI-" + std::to_string(it) + " : " + levelDef.mDescription;
           else
-            lStr = "FMI-" + std::to_string(*it) + " : ";
+            lStr = "FMI-" + std::to_string(it) + " : ";
         }
-        if (levelId == *it)
+        if (levelId == it)
         {
-          ostr1 << "<OPTION selected value=\"" <<  *it << "\">" <<  lStr << "</OPTION>\n";
+          ostr1 << "<OPTION selected value=\"" <<  it << "\">" <<  lStr << "</OPTION>\n";
           session.setAttribute(ATTR_LEVEL_ID,levelId);
         }
         else
         {
-          ostr1 << "<OPTION value=\"" <<  *it << "\">" <<  lStr << "</OPTION>\n";
+          ostr1 << "<OPTION value=\"" <<  it << "\">" <<  lStr << "</OPTION>\n";
         }
       }
       ostr1 << "</SELECT>\n";
@@ -3697,23 +3697,23 @@ int Plugin::page_main(Spine::Reactor &theReactor,
         disabled = "disabled";
 
       ostr1 << "<SELECT style=\"width:70px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_LEVEL << "=' + this.options[this.selectedIndex].value)\">\n";
-      for (auto it = levels.begin(); it != levels.end(); ++it)
+      for (int it : levels)
       {
         if (levelStr.empty())
         {
-          levelStr = std::to_string(*it);
-          level = *it;
+          levelStr = std::to_string(it);
+          level = it;
           //printf("EMPTY => LEVEL %s\n",levelStr.c_str());
         }
 
-        if (level == *it)
+        if (level == it)
         {
-          ostr1 << "<OPTION selected value=\"" <<  *it << "\">" <<  *it << "</OPTION>\n";
+          ostr1 << "<OPTION selected value=\"" <<  it << "\">" <<  it << "</OPTION>\n";
           session.setAttribute(ATTR_LEVEL,level);
         }
         else
         {
-          ostr1 << "<OPTION value=\"" <<  *it << "\">" <<  *it << "</OPTION>\n";
+          ostr1 << "<OPTION value=\"" <<  it << "\">" <<  it << "</OPTION>\n";
         }
       }
       ostr1 << "</SELECT>\n";
@@ -3741,30 +3741,30 @@ int Plugin::page_main(Spine::Reactor &theReactor,
         disabled = "disabled";
 
       ostr1 << "<SELECT style=\"width:200px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_FORECAST_TYPE << "=' + this.options[this.selectedIndex].value)\">\n";
-      for (auto it = forecastTypes.begin(); it != forecastTypes.end(); ++it)
+      for (int it : forecastTypes)
       {
         if (forecastTypeStr.empty())
         {
-          forecastTypeStr = std::to_string(*it);
-          forecastType = *it;
+          forecastTypeStr = std::to_string(it);
+          forecastType = it;
           //printf("EMPTY => FORECAST TYPE %s\n",forecastTypeStr.c_str());
         }
 
-        std::string lStr = std::to_string(*it);
+        std::string lStr = std::to_string(it);
         Identification::ForecastTypeDef typeDef;
-        if (Identification::gridDef.getFmiForecastTypeDef(*it,typeDef))
-          lStr = std::to_string(*it) + " : " + typeDef.mName;
+        if (Identification::gridDef.getFmiForecastTypeDef(it,typeDef))
+          lStr = std::to_string(it) + " : " + typeDef.mName;
         else
-          lStr = std::to_string(*it) + " : ";
+          lStr = std::to_string(it) + " : ";
 
-        if (forecastType == *it)
+        if (forecastType == it)
         {
-          ostr1 << "<OPTION selected value=\"" <<  *it << "\">" <<  lStr << "</OPTION>\n";
+          ostr1 << "<OPTION selected value=\"" <<  it << "\">" <<  lStr << "</OPTION>\n";
           session.setAttribute(ATTR_FORECAST_TYPE,forecastType);
         }
         else
         {
-          ostr1 << "<OPTION value=\"" <<  *it << "\">" << lStr << "</OPTION>\n";
+          ostr1 << "<OPTION value=\"" <<  it << "\">" << lStr << "</OPTION>\n";
         }
       }
       ostr1 << "</SELECT>\n";
@@ -3787,23 +3787,23 @@ int Plugin::page_main(Spine::Reactor &theReactor,
         disabled = "disabled";
 
       ostr1 << "<SELECT style=\"width:70px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_FORECAST_NUMBER << "=' + this.options[this.selectedIndex].value)\">\n";
-      for (auto it = forecastNumbers.begin(); it != forecastNumbers.end(); ++it)
+      for (int it : forecastNumbers)
       {
         if (forecastNumberStr.empty())
         {
-          forecastNumberStr = std::to_string(*it);
-          forecastNumber = *it;
+          forecastNumberStr = std::to_string(it);
+          forecastNumber = it;
           //printf("EMPTY => FORECAST NUMBER %s\n",forecastNumberStr.c_str());
         }
 
-        if (*it == forecastNumber)
+        if (it == forecastNumber)
         {
-          ostr1 << "<OPTION selected value=\"" <<  *it << "\">" <<  *it << "</OPTION>\n";
+          ostr1 << "<OPTION selected value=\"" <<  it << "\">" <<  it << "</OPTION>\n";
           session.setAttribute(ATTR_FORECAST_NUMBER,forecastNumber);
         }
         else
         {
-          ostr1 << "<OPTION value=\"" <<  *it << "\">" <<  *it << "</OPTION>\n";
+          ostr1 << "<OPTION value=\"" <<  it << "\">" <<  it << "</OPTION>\n";
         }
       }
       ostr1 << "</SELECT>\n";
@@ -3831,36 +3831,36 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
       ostr1 << "<SELECT style=\"width:280px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_GEOMETRY_ID << "=' + this.options[this.selectedIndex].value)\">\n";
 
-      for (auto it=geometries.begin(); it!=geometries.end(); ++it)
+      for (int geometrie : geometries)
       {
-        std::string st = std::to_string(*it);
+        std::string st = std::to_string(geometrie);
 
         std::string gName;
         uint cols = 0;
         uint rows = 0;
 
-        Identification::gridDef.getGeometryNameById(*it,gName);
+        Identification::gridDef.getGeometryNameById(geometrie,gName);
 
-        if (Identification::gridDef.getGridDimensionsByGeometryId(*it,cols,rows))
-          st = std::to_string(*it) + ":" + gName + " (" + std::to_string(cols) + " x " + std::to_string(rows) + ")";
+        if (Identification::gridDef.getGridDimensionsByGeometryId(geometrie,cols,rows))
+          st = std::to_string(geometrie) + ":" + gName + " (" + std::to_string(cols) + " x " + std::to_string(rows) + ")";
         else
-          st = std::to_string(*it) + ":" + gName;
+          st = std::to_string(geometrie) + ":" + gName;
 
         if (geometryId == 0)
         {
-          geometryId = *it;
+          geometryId = geometrie;
           geometryIdStr = std::to_string(geometryId);
           //printf("EMPTY => GEOMETRY %s\n",geometryIdStr.c_str());
         }
 
-        if (geometryId == *it)
+        if (geometryId == geometrie)
         {
-          ostr1 << "<OPTION selected value=\"" <<  *it << "\">" <<  st << "</OPTION>\n";
+          ostr1 << "<OPTION selected value=\"" <<  geometrie << "\">" <<  st << "</OPTION>\n";
           session.setAttribute(ATTR_GEOMETRY_ID,geometryId);
         }
         else
         {
-          ostr1 << "<OPTION value=\"" <<  *it << "\">" <<  st << "</OPTION>\n";
+          ostr1 << "<OPTION value=\"" <<  geometrie << "\">" <<  st << "</OPTION>\n";
         }
       }
       ostr1 << "</SELECT>\n";
@@ -3964,20 +3964,20 @@ int Plugin::page_main(Spine::Reactor &theReactor,
       ostr1 << R"(<TD><SELECT id="yearselect" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() + "' + this.options[this.selectedIndex].value)\"";
       ostr1 << " >\n";
 
-      for (auto it = timeGroupStrList.begin();it != timeGroupStrList.end(); ++it)
+      for (const auto & it : timeGroupStrList)
       {
         std::ostringstream out;
-        out << "&" << ATTR_TIME_GROUP << "=" << *it << "&" << ATTR_FORECAST_TYPE << "=" << forecastTypeStr << "&" << ATTR_FORECAST_NUMBER << "=" << forecastNumberStr;
+        out << "&" << ATTR_TIME_GROUP << "=" << it << "&" << ATTR_FORECAST_TYPE << "=" << forecastTypeStr << "&" << ATTR_FORECAST_NUMBER << "=" << forecastNumberStr;
         std::string url = out.str();
 
-        if (*it == timeGroupStr)
+        if (it == timeGroupStr)
         {
-          ostr1 << "<OPTION selected value=\"" <<  url << "\">" <<  *it << "</OPTION>\n";
+          ostr1 << "<OPTION selected value=\"" <<  url << "\">" <<  it << "</OPTION>\n";
           session.setAttribute(ATTR_TIME_GROUP,timeGroupStr);
         }
         else
         {
-          ostr1 << "<OPTION value=\"" <<  url << "\">" <<  *it << "</OPTION>\n";
+          ostr1 << "<OPTION value=\"" <<  url << "\">" <<  it << "</OPTION>\n";
         }
       }
       ostr1 << "</SELECT></TD>\n";
@@ -4235,38 +4235,38 @@ int Plugin::page_main(Spine::Reactor &theReactor,
       {
         ostr1 << R"(<SELECT style="width:200px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_PROJECTION_ID << "=' + this.options[this.selectedIndex].value)\">\n";
 
-        for (auto it=projections.begin(); it!=projections.end(); ++it)
+        for (int projection : projections)
         {
-          std::string st = std::to_string(*it);
+          std::string st = std::to_string(projection);
 
-          if (projectionId == *it || itsBlockedProjections.find(*it) == itsBlockedProjections.end())
+          if (projectionId == projection || itsBlockedProjections.find(projection) == itsBlockedProjections.end())
           {
             std::string gName;
             uint cols = 0;
             uint rows = 0;
 
-            Identification::gridDef.getGeometryNameById(*it,gName);
+            Identification::gridDef.getGeometryNameById(projection,gName);
 
-            if (Identification::gridDef.getGridDimensionsByGeometryId(*it,cols,rows))
-              st = std::to_string(*it) + ":" + gName + " (" + std::to_string(cols) + " x " + std::to_string(rows) + ")";
+            if (Identification::gridDef.getGridDimensionsByGeometryId(projection,cols,rows))
+              st = std::to_string(projection) + ":" + gName + " (" + std::to_string(cols) + " x " + std::to_string(rows) + ")";
             else
-              st = std::to_string(*it) + ":" + gName;
+              st = std::to_string(projection) + ":" + gName;
 
             if (projectionId == 0)
             {
-              projectionId = *it;
+              projectionId = projection;
               projectionIdStr = std::to_string(projectionId);
               //printf("EMPTY => PROJECTION %s\n",projectionIdStr.c_str());
             }
 
-            if (projectionId == *it)
+            if (projectionId == projection)
             {
-              ostr1 << "<OPTION selected value=\"" <<  *it << "\">" <<  st << "</OPTION>\n";
+              ostr1 << "<OPTION selected value=\"" <<  projection << "\">" <<  st << "</OPTION>\n";
               session.setAttribute(ATTR_PROJECTION_ID,projectionId);
             }
             else
             {
-              ostr1 << "<OPTION value=\"" <<  *it << "\">" <<  st << "</OPTION>\n";
+              ostr1 << "<OPTION value=\"" <<  projection << "\">" <<  st << "</OPTION>\n";
             }
           }
         }
@@ -4303,11 +4303,11 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
       std::set<std::string> names;
 
-      for (auto it = itsColorMapFiles.begin(); it != itsColorMapFiles.end(); ++it)
+      for (auto & itsColorMapFile : itsColorMapFiles)
       {
-        string_vec nameList = it->getNames();
-        for (auto name = nameList.begin(); name != nameList.end(); ++name)
-          names.insert(*name);
+        string_vec nameList = itsColorMapFile.getNames();
+        for (auto & name : nameList)
+          names.insert(name);
       }
 
       ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Color map and opacity:</TD></TR>\n";
@@ -4324,16 +4324,16 @@ int Plugin::page_main(Spine::Reactor &theReactor,
         ostr1 << "<OPTION value=\"None\">None</OPTION>\n";
       }
 
-      for (auto it = names.begin(); it != names.end(); ++it)
+      for (const auto & name : names)
       {
-        if (colorMap == *it)
+        if (colorMap == name)
         {
-          ostr1 << "<OPTION selected value=\"" << *it << "\">" <<  *it << "</OPTION>\n";
+          ostr1 << "<OPTION selected value=\"" << name << "\">" <<  name << "</OPTION>\n";
           session.setAttribute(ATTR_COLOR_MAP,colorMap);
         }
         else
         {
-          ostr1 << "<OPTION value=\"" <<  *it << "\">" <<  *it << "</OPTION>\n";
+          ostr1 << "<OPTION value=\"" <<  name << "\">" <<  name << "</OPTION>\n";
         }
       }
       ostr1 << "</SELECT>\n";
@@ -4513,16 +4513,16 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
         ostr1 << R"(<SELECT style="width:120px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_STREAM_COLOR << "=' + this.options[this.selectedIndex].value)\">\n";
 
-        for (auto it = itsColors.begin(); it != itsColors.end(); ++it)
+        for (auto & itsColor : itsColors)
         {
-          if (streamColorStr == it->first)
+          if (streamColorStr == itsColor.first)
           {
-            ostr1 << "<OPTION selected value=\"" << it->first << "\">" <<  it->first << "</OPTION>\n";
+            ostr1 << "<OPTION selected value=\"" << itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
             session.setAttribute(ATTR_STREAM_COLOR,streamColorStr);
           }
           else
           {
-            ostr1 << "<OPTION value=\"" <<  it->first << "\">" <<  it->first << "</OPTION>\n";
+            ostr1 << "<OPTION value=\"" <<  itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
           }
           a++;
         }
@@ -4537,16 +4537,16 @@ int Plugin::page_main(Spine::Reactor &theReactor,
       ostr1 << "<TR height=\"30\"><TD>\n";
       ostr1 << R"(<SELECT style="width:280px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_COORDINATE_LINES << "=' + this.options[this.selectedIndex].value)\">\n";
 
-      for (auto it = itsColors.begin(); it != itsColors.end(); ++it)
+      for (auto & itsColor : itsColors)
       {
-        if (coordinateLinesStr == it->first)
+        if (coordinateLinesStr == itsColor.first)
         {
-          ostr1 << "<OPTION selected value=\"" << it->first << "\">" <<  it->first << "</OPTION>\n";
+          ostr1 << "<OPTION selected value=\"" << itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
           session.setAttribute(ATTR_COORDINATE_LINES,coordinateLinesStr);
         }
         else
         {
-          ostr1 << "<OPTION value=\"" <<  it->first << "\">" <<  it->first << "</OPTION>\n";
+          ostr1 << "<OPTION value=\"" <<  itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
         }
 
         a++;
@@ -4558,16 +4558,16 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
       ostr1 << R"(<SELECT style="width:280px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_LAND_BORDER << "=' + this.options[this.selectedIndex].value)\">\n";
 
-      for (auto it = itsColors.begin(); it != itsColors.end(); ++it)
+      for (auto & itsColor : itsColors)
       {
-        if (landBorderStr == it->first)
+        if (landBorderStr == itsColor.first)
         {
-          ostr1 << "<OPTION selected value=\"" << it->first << "\">" <<  it->first << "</OPTION>\n";
+          ostr1 << "<OPTION selected value=\"" << itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
           session.setAttribute(ATTR_LAND_BORDER,landBorderStr);
         }
         else
         {
-          ostr1 << "<OPTION value=\"" <<  it->first << "\">" <<  it->first << "</OPTION>\n";
+          ostr1 << "<OPTION value=\"" <<  itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
         }
         a++;
       }
@@ -4602,16 +4602,16 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
       a = 0;
       ostr1 << R"(<SELECT style="width:190px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_LAND_MASK << "=' + this.options[this.selectedIndex].value)\">\n";
-      for (auto it = itsColors.begin(); it != itsColors.end(); ++it)
+      for (auto & itsColor : itsColors)
       {
-        if (landMaskStr == it->first)
+        if (landMaskStr == itsColor.first)
         {
-          ostr1 << "<OPTION selected value=\"" << it->first << "\">" <<  it->first << "</OPTION>\n";
+          ostr1 << "<OPTION selected value=\"" << itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
           session.setAttribute(ATTR_LAND_MASK,landMaskStr);
         }
         else
         {
-          ostr1 << "<OPTION value=\"" <<  it->first << "\">" <<  it->first << "</OPTION>\n";
+          ostr1 << "<OPTION value=\"" <<  itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
         }
         a++;
       }
@@ -4638,16 +4638,16 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
       ostr1 << R"(<SELECT style="width:190px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_SEA_MASK << "=' + this.options[this.selectedIndex].value)\">\n";
       a = 0;
-      for (auto it = itsColors.begin(); it != itsColors.end(); ++it)
+      for (auto & itsColor : itsColors)
       {
-        if (seaMaskStr == it->first)
+        if (seaMaskStr == itsColor.first)
         {
-          ostr1 << "<OPTION selected value=\"" << it->first << "\">" <<  it->first << "</OPTION>\n";
+          ostr1 << "<OPTION selected value=\"" << itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
           session.setAttribute(ATTR_SEA_MASK,seaMaskStr);
         }
         else
         {
-          ostr1 << "<OPTION value=\"" <<  it->first << "\">" <<  it->first << "</OPTION>\n";
+          ostr1 << "<OPTION value=\"" <<  itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
         }
         a++;
       }
@@ -4999,16 +4999,16 @@ int Plugin::request(Spine::Reactor &theReactor,
     else
       initSession(session);
 
-    for (auto it = map.begin(); it != map.end(); it++)
+    for (auto & it : map)
     {
       //printf("SEARCH [%s][%s]\n",it->first.c_str(),it->second.c_str());
       std::string value;
-      if (strcasecmp(it->first.c_str(),"session") != 0  &&  session.getAttribute(it->first.c_str(),value))
+      if (strcasecmp(it.first.c_str(),"session") != 0  &&  session.getAttribute(it.first.c_str(),value))
       {
-        if (value != it->second)
+        if (value != it.second)
         {
-          session.setAttribute(it->first.c_str(),it->second.c_str());
-          std::string name = std::string("#") + it->first;
+          session.setAttribute(it.first.c_str(),it.second.c_str());
+          std::string name = std::string("#") + it.first;
           session.setAttribute(name.c_str(),value.c_str());
         }
       }
