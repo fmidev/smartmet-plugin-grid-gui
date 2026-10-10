@@ -210,7 +210,7 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
     std::set<std::string> dirList;
     std::vector<std::pair<std::string,std::string>> fileList;
 
-    filePatterns.emplace_back(std::string("grid-gui-image_*"));
+    filePatterns.emplace_back("grid-gui-image_*");
 
     getFileList(itsImageCache_dir.c_str(),filePatterns,false,dirList,fileList);
 
@@ -450,7 +450,7 @@ void Plugin::loadColorFile()
             else  // No alpha
               color = 0xFF000000 | (strtoul(field[1],nullptr,16) & 0x00FFFFFF);
 
-            itsColors.emplace_back(std::pair<std::string,unsigned int>(colorName,color));
+            itsColors.emplace_back(colorName,color);
           }
         }
       }

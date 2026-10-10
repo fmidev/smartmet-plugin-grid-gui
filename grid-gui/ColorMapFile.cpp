@@ -462,7 +462,7 @@ void ColorMapFile::loadFile()
           {
             if (strcasecmp(field[0],"NAME") == 0)
             {
-              mNames.emplace_back(std::string(field[1]));
+              mNames.emplace_back(field[1]);
             }
             else
             {
