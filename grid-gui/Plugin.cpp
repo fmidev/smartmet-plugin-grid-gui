@@ -836,6 +836,9 @@ void Plugin::saveImage(ImagePaintParameters& params,
     if (!params.paint_colorMapName.empty() &&  strcasecmp(params.paint_colorMapName.c_str(),"None") != 0)
       colorMapFile = getColorMapFile(params.paint_colorMapName);
 
+    if (width <= 0 || height <= 0)
+      return;
+
     uint size = width*height;
     std::size_t sz = values.size();
 
@@ -844,7 +847,7 @@ void Plugin::saveImage(ImagePaintParameters& params,
 
     if (sz < size)
     {
-      printf("ERROR: There are not enough values (= %lu) for the grid (%u x %u)!\n",sz,width,height);
+      printf("ERROR: There are not enough values (= %zu) for the grid (%d x %d)!\n",sz,width,height);
       return;
     }
 
@@ -3058,7 +3061,7 @@ std::string Plugin::getFmiKey(std::string& producerName,T::ContentInfo& contentI
     p += sprintf(p,":%s",producerName.c_str());
 
     if (contentInfo.mGeometryId > 0)
-      p += sprintf(p,":%u",contentInfo.mGeometryId);
+      p += sprintf(p,":%d",contentInfo.mGeometryId);
     else
       p += sprintf(p,":");
 
