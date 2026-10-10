@@ -184,7 +184,7 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
 
     std::vector<std::string> projVec;
     itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.blockedProjections",projVec);
-    for (auto & it : projVec)
+    for (auto& it : projVec)
       itsBlockedProjections.insert(std::stoi(it));
 
     // The grid definitions (Identification::gridDef) are shared by the whole
@@ -194,7 +194,7 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
     // file configured here is used for the topography.
     Map::topography.init(itsGridConfigFile.c_str(),true,true,true);
 
-    for (auto & itsColorMapFileName : itsColorMapFileNames)
+    for (auto& itsColorMapFileName : itsColorMapFileNames)
     {
       T::ColorMapFile colorMapFile;
       colorMapFile.init(itsColorMapFileName.c_str());
@@ -215,7 +215,7 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
 
     getFileList(itsImageCache_dir.c_str(),filePatterns,false,dirList,fileList);
 
-    for (auto & it : fileList)
+    for (auto& it : fileList)
     {
       std::string fname = itsImageCache_dir + "/" + it.second;
       remove(fname.c_str());
@@ -375,7 +375,7 @@ T::ColorMapFile* Plugin::getColorMapFile(const std::string& colorMapName)
   try
   {
     T::ColorMapFile *map = nullptr;
-    for (auto & itsColorMapFile : itsColorMapFiles)
+    for (auto& itsColorMapFile : itsColorMapFiles)
     {
       itsColorMapFile.checkUpdates();
       if (itsColorMapFile.hasName(colorMapName.c_str()))
@@ -478,7 +478,7 @@ uint Plugin::getColorValue(std::string& colorName)
   FUNCTION_TRACE
   try
   {
-    for (auto & itsColor : itsColors)
+    for (auto& itsColor : itsColors)
     {
       if (itsColor.first == colorName)
         return itsColor.second;
@@ -705,7 +705,7 @@ void Plugin::checkImageCache()
     {
       std::map<std::string,std::string> tmpImages;
 
-      for (auto & itsImage : itsImages)
+      for (auto& itsImage : itsImages)
       {
         tmpImages.insert(std::pair<std::string,std::string>(itsImage.second,itsImage.first));
       }
@@ -2319,7 +2319,7 @@ int Plugin::page_image(Spine::Reactor &theReactor,
 
         {
           AutoThreadLock lock(&itsThreadLock);
-          for (const auto & t : itsImagesUnderConstruction)
+          for (const auto& t : itsImagesUnderConstruction)
           {
             if (t == hash)
             {
@@ -2553,7 +2553,7 @@ int Plugin::page_streamsImpl(const HTTP::Request &theRequest,
       {
         {
           AutoThreadLock lock(&itsThreadLock);
-          for (const auto & t : itsImagesUnderConstruction)
+          for (const auto& t : itsImagesUnderConstruction)
           {
             if (t == hash)
             {
@@ -2737,7 +2737,7 @@ int Plugin::page_map(Spine::Reactor &theReactor,
       {
         {
           AutoThreadLock lock(&itsThreadLock);
-          for (const auto & t : itsImagesUnderConstruction)
+          for (const auto& t : itsImagesUnderConstruction)
           {
             if (t == hash)
             {
@@ -3497,7 +3497,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
       ostr1 << "<SELECT style=\"width:280px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_GENERATION_ID << "=' + this.options[this.selectedIndex].value)\">\n";
 
-      for (const auto & name : std::ranges::reverse_view(generations))
+      for (const auto& name : std::ranges::reverse_view(generations))
       {
         T::GenerationInfo *g = generationInfoList.getGenerationInfoByName(name);
         if (g != nullptr && (g->mDeletionTime == 0 || g->mDeletionTime > requiredAccessTime))
@@ -3548,7 +3548,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
     if (paramKeyList.size() > 0)
     {
       ostr1 << R"(<SELECT style="width:280px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_PARAMETER_ID << "=' + this.options[this.selectedIndex].value)\">\n";
-      for (const auto & it : paramKeyList)
+      for (const auto& it : paramKeyList)
       {
         std::string parameterId = it;
         std::string pName = it;
@@ -3964,7 +3964,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
       ostr1 << R"(<TD><SELECT id="yearselect" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() + "' + this.options[this.selectedIndex].value)\"";
       ostr1 << " >\n";
 
-      for (const auto & it : timeGroupStrList)
+      for (const auto& it : timeGroupStrList)
       {
         std::ostringstream out;
         out << "&" << ATTR_TIME_GROUP << "=" << it << "&" << ATTR_FORECAST_TYPE << "=" << forecastTypeStr << "&" << ATTR_FORECAST_NUMBER << "=" << forecastNumberStr;
@@ -4303,10 +4303,10 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
       std::set<std::string> names;
 
-      for (auto & itsColorMapFile : itsColorMapFiles)
+      for (auto& itsColorMapFile : itsColorMapFiles)
       {
         string_vec nameList = itsColorMapFile.getNames();
-        for (auto & name : nameList)
+        for (auto& name : nameList)
           names.insert(name);
       }
 
@@ -4324,7 +4324,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
         ostr1 << "<OPTION value=\"None\">None</OPTION>\n";
       }
 
-      for (const auto & name : names)
+      for (const auto& name : names)
       {
         if (colorMap == name)
         {
@@ -4513,7 +4513,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
         ostr1 << R"(<SELECT style="width:120px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_STREAM_COLOR << "=' + this.options[this.selectedIndex].value)\">\n";
 
-        for (auto & itsColor : itsColors)
+        for (auto& itsColor : itsColors)
         {
           if (streamColorStr == itsColor.first)
           {
@@ -4537,7 +4537,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
       ostr1 << "<TR height=\"30\"><TD>\n";
       ostr1 << R"(<SELECT style="width:280px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_COORDINATE_LINES << "=' + this.options[this.selectedIndex].value)\">\n";
 
-      for (auto & itsColor : itsColors)
+      for (auto& itsColor : itsColors)
       {
         if (coordinateLinesStr == itsColor.first)
         {
@@ -4558,7 +4558,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
       ostr1 << R"(<SELECT style="width:280px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_LAND_BORDER << "=' + this.options[this.selectedIndex].value)\">\n";
 
-      for (auto & itsColor : itsColors)
+      for (auto& itsColor : itsColors)
       {
         if (landBorderStr == itsColor.first)
         {
@@ -4602,7 +4602,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
       a = 0;
       ostr1 << R"(<SELECT style="width:190px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_LAND_MASK << "=' + this.options[this.selectedIndex].value)\">\n";
-      for (auto & itsColor : itsColors)
+      for (auto& itsColor : itsColors)
       {
         if (landMaskStr == itsColor.first)
         {
@@ -4638,7 +4638,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
       ostr1 << R"(<SELECT style="width:190px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_SEA_MASK << "=' + this.options[this.selectedIndex].value)\">\n";
       a = 0;
-      for (auto & itsColor : itsColors)
+      for (auto& itsColor : itsColors)
       {
         if (seaMaskStr == itsColor.first)
         {
@@ -4999,7 +4999,7 @@ int Plugin::request(Spine::Reactor &theReactor,
     else
       initSession(session);
 
-    for (auto & it : map)
+    for (auto& it : map)
     {
       //printf("SEARCH [%s][%s]\n",it->first.c_str(),it->second.c_str());
       std::string value;
