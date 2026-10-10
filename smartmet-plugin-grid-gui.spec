@@ -68,6 +68,7 @@ rm -rf $RPM_BUILD_ROOT
 - Reject non-positive image dimensions before allocating the image buffers
 - Fixed printf format specifiers for signed integer arguments
 - Use auto and return {} where clang-tidy suggests it, no functional changes
+- Mark overriding methods override and use nullptr, no functional changes
 
 * Sat Oct 03 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> - 26.10.3-1.fmi
 - Remove unnecessary copies found by clang-tidy performance checks

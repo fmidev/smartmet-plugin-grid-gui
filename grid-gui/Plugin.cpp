@@ -594,7 +594,7 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
     // large grid would otherwise overflow the stack.
     std::vector<bool> yLand(width, false);
 
-    ModificationLock *modificationLock = NULL;
+    ModificationLock *modificationLock = nullptr;
     if (colorMapFile != nullptr)
       modificationLock = colorMapFile->getModificationLock();
 
@@ -2297,9 +2297,9 @@ int Plugin::page_image(Spine::Reactor &theReactor,
     bool found = false;
     bool ind = true;
 
-    time_t endTime = time(0) + 30;
+    time_t endTime = time(nullptr) + 30;
 
-    while (ind  &&  time(0) < endTime)
+    while (ind  &&  time(nullptr) < endTime)
     {
       {
         AutoThreadLock lock(&itsThreadLock);
@@ -3274,7 +3274,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
   FUNCTION_TRACE
   try
   {
-    const char *layerPosition[] = {"None","Bottom","Top",NULL};
+    const char *layerPosition[] = {"None","Bottom","Top",nullptr};
 
     //session.print(std::cout,0,0);
 
@@ -4585,7 +4585,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
       a = 0;
       ostr1 << "<SELECT style=\"width:80px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_LAND_COLOR_POS << "=' + this.options[this.selectedIndex].value)\">\n";
-      while (layerPosition[a] != NULL)
+      while (layerPosition[a] != nullptr)
       {
         if (landcol_pos == a)
         {
@@ -4621,7 +4621,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
       a = 0;
       ostr1 << "<SELECT style=\"width:80px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_SEA_COLOR_POS << "=' + this.options[this.selectedIndex].value)\">\n";
-      while (layerPosition[a] != NULL)
+      while (layerPosition[a] != nullptr)
       {
         if (seacol_pos == a)
         {
@@ -4664,7 +4664,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
       a = 0;
       ostr1 << "<SELECT style=\"width:80px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_LAND_SHADING_POS << "=' + this.options[this.selectedIndex].value)\">\n";
-      while (layerPosition[a] != NULL)
+      while (layerPosition[a] != nullptr)
       {
         if (landshade_pos == a)
         {
@@ -4722,7 +4722,7 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
       a = 0;
       ostr1 << "<SELECT style=\"width:80px;\" onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_SEA_SHADING_POS << "=' + this.options[this.selectedIndex].value)\">\n";
-      while (layerPosition[a] != NULL)
+      while (layerPosition[a] != nullptr)
       {
         if (seashade_pos == a)
         {
