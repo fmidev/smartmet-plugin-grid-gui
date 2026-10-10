@@ -11,7 +11,7 @@ namespace SmartMet
 namespace T
 {
 
-typedef std::map<float,unsigned int> ColorMap;  //!< Maps parameter value thresholds (float) to packed ARGB colors (uint).
+using ColorMap = std::map<float,unsigned int>;  //!< Maps parameter value thresholds (float) to packed ARGB colors (uint).
 
 
 // ====================================================================================
@@ -59,7 +59,7 @@ class ColorMapFile
 };
 
 
-typedef std::vector<ColorMapFile> ColorMapFile_vec;  //!< Collection of loaded color map files.
+using ColorMapFile_vec = std::vector<ColorMapFile>;  //!< Collection of loaded color map files.
 
 
 }  // namespace T

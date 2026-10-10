@@ -237,8 +237,7 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
 /*! \brief GridGui: Destructor. */
 
 Plugin::~Plugin()
-{
-}
+= default;
 
 
 

@@ -17,7 +17,7 @@ namespace Plugin
 namespace GridGui
 {
 
-typedef std::vector<std::pair<std::string,unsigned int>> Colors;  //!< Named color list: (name, packed ARGB) pairs loaded from the color definition CSV.
+using Colors = std::vector<std::pair<std::string,unsigned int>>;  //!< Named color list: (name, packed ARGB) pairs loaded from the color definition CSV.
 
 /*! \brief All visual parameters that control how a single grid field is rendered to an image.
  *
