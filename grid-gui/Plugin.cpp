@@ -5137,7 +5137,8 @@ void Plugin::requestHandler(Spine::Reactor &theReactor,
       //for (auto it = headers.begin(); it != headers.end(); ++it)
       //  std::cout << it->first << " = " << it->second << "\n";
 
-      theResponse.setHeader("Access-Control-Allow-Origin", "*");
+      // No CORS header: grid-gui is an internal tool and its pages and images must not
+      // be readable by scripts on other origins.
       int status = request(theReactor, theRequest, theResponse);
       theResponse.setStatus(status);
     }
