@@ -236,8 +236,8 @@ uint ColorMapFile::getSmoothColor(double value)
     uint lowerColor = 0;
     uint upperColor = 0;
 
-    uchar *a = (uchar*)&lowerColor;
-    uchar *b = (uchar*)&upperColor;
+    auto *a = (uchar*)&lowerColor;
+    auto *b = (uchar*)&upperColor;
 
     it = mColorMap.lower_bound(value);
     if (it != mColorMap.end())

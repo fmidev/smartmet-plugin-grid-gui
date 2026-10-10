@@ -580,8 +580,8 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
     uint xx = columns / 36;
     uint yy = rows / 18;
 
-    double dWidth = C_DOUBLE(width);
-    double dHeight = C_DOUBLE(height);
+    auto dWidth = C_DOUBLE(width);
+    auto dHeight = C_DOUBLE(height);
 
     double xd = 360/dWidth;
     double yd = 180/dHeight;
@@ -961,7 +961,7 @@ void Plugin::saveImage(ImagePaintParameters& params,
 ;
             if (params.landShading_position)
             {
-              double m = (double)Map::topography.getLandShading(lon,lat);
+              auto m = (double)Map::topography.getLandShading(lon,lat);
               if (m < 0)
               {
                 uint pp = (uint)(-(double)params.landShading_shadow*m);
@@ -1241,7 +1241,7 @@ void Plugin::saveImage(ImagePaintParameters& params,
     {
       // Draw stream lines
 
-      T::ParamValue *direction = new float[size];
+      auto *direction = new float[size];
       if (!rotate)
       {
         uint idx = 0;
@@ -1711,7 +1711,7 @@ int Plugin::page_download(Spine::Reactor &theReactor,
     uint sz = messageBytes.size();
     if (sz > 0)
     {
-      std::vector<char> *content = new std::vector<char>();
+      auto *content = new std::vector<char>();
       content->reserve(sz);
 
       std::shared_ptr<std::vector<char>> sContent;
@@ -2112,8 +2112,8 @@ int Plugin::page_value(Spine::Reactor &theReactor,
     uint height = rows;
     uint width = cols;
 
-    double dWidth = C_DOUBLE(width);
-    double dHeight = C_DOUBLE(height);
+    auto dWidth = C_DOUBLE(width);
+    auto dHeight = C_DOUBLE(height);
 
     bool reverseXDirection = false;
     bool reverseYDirection = false;
@@ -2166,7 +2166,7 @@ bool Plugin::loadImage(const char *fname,Spine::HTTP::Response &theResponse)
     if (sz > 0)
     {
       char buf[10000];
-      std::vector<char> *content = new std::vector<char>();
+      auto *content = new std::vector<char>();
       content->reserve(sz);
 
       std::shared_ptr<std::vector<char>> sContent;
