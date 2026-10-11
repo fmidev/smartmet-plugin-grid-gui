@@ -217,7 +217,7 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
     for (auto& it : fileList)
     {
       std::string fname = itsImageCache_dir + "/" + it.second;
-      remove(fname.c_str());
+      (void)remove(fname.c_str());
     }
   }
   catch (...)
@@ -353,7 +353,7 @@ void Plugin::loadProducerFile()
         }
       }
     }
-    fclose(file);
+    (void)fclose(file);
 
     itsProducerFile_modificationTime = getFileModificationTime(itsProducerFile.c_str());
   }
@@ -455,7 +455,7 @@ void Plugin::loadColorFile()
         }
       }
     }
-    fclose(file);
+    (void)fclose(file);
 
     itsColors_lastModified = getFileModificationTime(itsColorFile.c_str());
   }
@@ -711,7 +711,7 @@ void Plugin::checkImageCache()
 
       for (auto it = tmpImages.begin(); it != tmpImages.end()  &&  cnt > itsImageCache_minImages; ++it)
       {
-        remove(it->first.c_str());
+        (void)remove(it->first.c_str());
         itsImages.erase(it->second);
         cnt--;
       }
@@ -2182,7 +2182,7 @@ bool Plugin::loadImage(const char *fname,Spine::HTTP::Response &theResponse)
             content->emplace_back(buf[t]);
           }
         }
-        fclose(file);
+        (void)fclose(file);
 
         //theResponse.setHeader("Content-Type","image/jpg");
         theResponse.setHeader("Content-Type","image/png");
