@@ -21,7 +21,6 @@
 #include <webp/encode.h>
 #include <webp/mux.h>
 #include <optional>
-#include <ranges>
 
 #define FUNCTION_TRACE FUNCTION_TRACE_OFF
 
@@ -3497,8 +3496,9 @@ int Plugin::page_main(Spine::Reactor &theReactor,
 
       ostr1 << "<SELECT style=\"width:280px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_GENERATION_ID << "=' + this.options[this.selectedIndex].value)\">\n";
 
-      for (const auto& name : std::ranges::reverse_view(generations))
+      for (auto it = generations.rbegin(); it != generations.rend(); ++it)
       {
+        const std::string& name = *it;
         T::GenerationInfo *g = generationInfoList.getGenerationInfoByName(name);
         if (g != nullptr && (g->mDeletionTime == 0 || g->mDeletionTime > requiredAccessTime))
         {
