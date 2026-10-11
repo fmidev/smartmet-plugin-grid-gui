@@ -27,19 +27,19 @@ BuildRequires: %{smartmet_boost}-devel
 BuildRequires: libconfig17-devel
 BuildRequires: libwebp13-devel
 BuildRequires: smartmet-utils-devel >= 26.9.3
-BuildRequires: smartmet-library-macgyver-devel >= 26.10.3
-BuildRequires: smartmet-library-spine-devel >= 26.10.3
-BuildRequires: smartmet-library-grid-files-devel >= 26.9.26
-BuildRequires: smartmet-library-grid-content-devel >= 26.9.26
-BuildRequires: smartmet-engine-grid-devel >= 26.9.26
+BuildRequires: smartmet-library-macgyver-devel >= 26.10.11
+BuildRequires: smartmet-library-spine-devel >= 26.10.11
+BuildRequires: smartmet-library-grid-files-devel >= 26.10.11
+BuildRequires: smartmet-library-grid-content-devel >= 26.10.11
+BuildRequires: smartmet-engine-grid-devel >= 26.10.11
 BuildRequires: gdal312-devel
 Requires: libconfig17
-Requires: smartmet-library-macgyver >= 26.10.3
-Requires: smartmet-library-grid-files >= 26.9.26
-Requires: smartmet-library-grid-content >= 26.9.26
-Requires: smartmet-library-spine >= 26.10.3
-Requires: smartmet-server >= 26.9.2
-Requires: smartmet-engine-grid >= 26.9.26
+Requires: smartmet-library-macgyver >= 26.10.11
+Requires: smartmet-library-grid-files >= 26.10.11
+Requires: smartmet-library-grid-content >= 26.10.11
+Requires: smartmet-library-spine >= 26.10.11
+Requires: smartmet-server >= 26.10.11
+Requires: smartmet-engine-grid >= 26.10.11
 Provides: %{SPECNAME}
 
 %description
@@ -66,8 +66,6 @@ rm -rf $RPM_BUILD_ROOT
 %changelog
 * Sun Oct 11 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> - 26.10.11-1.fmi
 - Removed the Access-Control-Allow-Origin: * header
-
-* Sat Oct 10 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> - 26.10.10-1.fmi
 - Reject non-positive image dimensions before allocating the image buffers
 - Fixed printf format specifiers for signed integer arguments
 - Use auto and return {} where clang-tidy suggests it, no functional changes
