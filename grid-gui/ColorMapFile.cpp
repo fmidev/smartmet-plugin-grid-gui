@@ -468,11 +468,12 @@ void ColorMapFile::loadFile()
             {
               double val = toDouble(field[0]);
               uint color = 0;
+              auto component = [](const char *str) { return toInt64(str); };
               if (c == 4) // No Alpha
-                color = 0xFF000000 + (atoll(field[1]) << 16) + (atoll(field[2]) << 8) + atoll(field[3]);
+                color = 0xFF000000 + (component(field[1]) << 16) + (component(field[2]) << 8) + component(field[3]);
               else
               if (c == 5)
-                color = (atoll(field[1]) << 24) + (atoll(field[2]) << 16) + (atoll(field[3]) << 8) + atoll(field[4]);
+                color = (component(field[1]) << 24) + (component(field[2]) << 16) + (component(field[3]) << 8) + component(field[4]);
               else
               {
                 if (strlen(field[1]) == 8)
