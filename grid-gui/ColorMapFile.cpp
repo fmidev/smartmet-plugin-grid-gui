@@ -300,7 +300,7 @@ uint ColorMapFile::getSmoothColor(double value)
 
 /*! \brief GridGui: Get last modification time. */
 
-time_t ColorMapFile::getLastModificationTime()
+time_t ColorMapFile::getLastModificationTime() const
 {
   try
   {

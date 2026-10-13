@@ -39,7 +39,7 @@ class ColorMapFile
     uint              getSmoothColor(double value);
     void              getValuesAndColors(std::vector<float>& values,std::vector<unsigned int>& colors);
     std::string       getFilename();
-    time_t            getLastModificationTime();
+    time_t            getLastModificationTime() const;
     string_vec        getNames();
     ModificationLock* getModificationLock();
 

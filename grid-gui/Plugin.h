@@ -94,51 +94,51 @@ class Plugin : public SmartMetPlugin
 
   private:
 
-    int request(Spine::Reactor& theReactor,
+    int request(const Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
                       Spine::HTTP::Response& theResponse);
 
-    int page_info(Spine::Reactor& theReactor,
+    int page_info(const Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
                       Spine::HTTP::Response& theResponse,
                       Session& session);
 
-    int page_message(Spine::Reactor& theReactor,
+    int page_message(const Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
                       Spine::HTTP::Response& theResponse,
                       Session& session);
 
-    int page_download(Spine::Reactor& theReactor,
+    int page_download(const Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
                       Spine::HTTP::Response& theResponse,
                       Session& session);
 
-    int page_value(Spine::Reactor& theReactor,
+    int page_value(const Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
                       Spine::HTTP::Response& theResponse,
                       Session& session);
 
-    int page_table(Spine::Reactor& theReactor,
+    int page_table(const Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
                       Spine::HTTP::Response& theResponse,
                       Session& session);
 
-    int page_coordinates(Spine::Reactor& theReactor,
+    int page_coordinates(const Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
                       Spine::HTTP::Response& theResponse,
                       Session& session);
 
-    int page_image(Spine::Reactor& theReactor,
+    int page_image(const Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
                       Spine::HTTP::Response& theResponse,
                       Session& session);
 
-    int page_streams(Spine::Reactor& theReactor,
+    int page_streams(const Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
                       Spine::HTTP::Response& theResponse,
                       Session& session);
 
-    int page_streamsAnimation(Spine::Reactor& theReactor,
+    int page_streamsAnimation(const Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
                       Spine::HTTP::Response& theResponse,
                       Session& session);
@@ -165,12 +165,12 @@ class Plugin : public SmartMetPlugin
                                  double& maxValue,
                                  double& step);
 
-    int page_map(Spine::Reactor& theReactor,
+    int page_map(const Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
                       Spine::HTTP::Response& theResponse,
                       Session& session);
 
-    int page_main(Spine::Reactor& theReactor,
+    int page_main(const Spine::Reactor& theReactor,
                       const Spine::HTTP::Request& theRequest,
                       Spine::HTTP::Response& theResponse,
                       Session& session);
@@ -192,8 +192,8 @@ class Plugin : public SmartMetPlugin
                       unsigned char blur,
                       uint coordinateLines,
                       uint landBorder,
-                      std::string landMask,
-                      std::string seaMask,
+                      const std::string& landMask,
+                      const std::string& seaMask,
                       const std::string& colorMapName,
                       const std::string& missingStr);
 
@@ -202,13 +202,13 @@ class Plugin : public SmartMetPlugin
 
     void checkImageCache();
     void getGenerations(T::GenerationInfoList& generationInfoList,std::set<std::string>& generations);
-    void getLevelIds(T::ContentInfoList& contentInfoList,std::set<int>& levelIds);
-    void getLevels(T::ContentInfoList& contentInfoList,int levelId,std::set<int>& levels);
-    std::string getFmiKey(std::string& producerName,T::ContentInfo& contentInfo);
-    void getForecastTypes(T::ContentInfoList& contentInfoList,int levelId,int level,std::set<int>& forecastTypes);
-    void getForecastNumbers(T::ContentInfoList& contentInfoList,int levelId,int level,int forecastType,std::set<int>& forecastNumbers);
-    void getGeometries(T::ContentInfoList& contentInfoList,int levelId,int level,int forecastType,int forecastNumber,std::set<int>& geometries);
-    uint getColorValue(std::string& colorName);
+    void getLevelIds(const T::ContentInfoList& contentInfoList,std::set<int>& levelIds);
+    void getLevels(const T::ContentInfoList& contentInfoList,int levelId,std::set<int>& levels);
+    std::string getFmiKey(const std::string& producerName,const T::ContentInfo& contentInfo);
+    void getForecastTypes(const T::ContentInfoList& contentInfoList,int levelId,int level,std::set<int>& forecastTypes);
+    void getForecastNumbers(const T::ContentInfoList& contentInfoList,int levelId,int level,int forecastType,std::set<int>& forecastNumbers);
+    void getGeometries(const T::ContentInfoList& contentInfoList,int levelId,int level,int forecastType,int forecastNumber,std::set<int>& geometries);
+    uint getColorValue(const std::string& colorName);
     void initSession(Session& session);
     void loadColorFile();
     void loadProducerFile();

@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-plugin-%{DIRNAME}
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
-Version: 26.10.11
+Version: 26.10.13
 Release: 1%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
@@ -28,18 +28,18 @@ BuildRequires: libconfig17-devel
 BuildRequires: libwebp13-devel
 BuildRequires: smartmet-utils-devel >= 26.9.3
 BuildRequires: smartmet-library-macgyver-devel >= 26.10.11
-BuildRequires: smartmet-library-spine-devel >= 26.10.11
-BuildRequires: smartmet-library-grid-files-devel >= 26.10.11
-BuildRequires: smartmet-library-grid-content-devel >= 26.10.11
-BuildRequires: smartmet-engine-grid-devel >= 26.10.11
+BuildRequires: smartmet-library-spine-devel >= 26.10.13
+BuildRequires: smartmet-library-grid-files-devel >= 26.10.13
+BuildRequires: smartmet-library-grid-content-devel >= 26.10.13
+BuildRequires: smartmet-engine-grid-devel >= 26.10.13
 BuildRequires: gdal312-devel
 Requires: libconfig17
 Requires: smartmet-library-macgyver >= 26.10.11
-Requires: smartmet-library-grid-files >= 26.10.11
-Requires: smartmet-library-grid-content >= 26.10.11
-Requires: smartmet-library-spine >= 26.10.11
+Requires: smartmet-library-grid-files >= 26.10.13
+Requires: smartmet-library-grid-content >= 26.10.13
+Requires: smartmet-library-spine >= 26.10.13
 Requires: smartmet-server >= 26.10.11
-Requires: smartmet-engine-grid >= 26.10.11
+Requires: smartmet-engine-grid >= 26.10.13
 Provides: %{SPECNAME}
 
 %description
@@ -64,6 +64,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/plugins/%{DIRNAME}.so
 
 %changelog
+* Tue Oct 13 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> - 26.10.13-1.fmi
+- Declare member functions and parameters const where nothing is modified (const correctness), no functional changes
+- Requires 26.10.13 versions of spine, grid-files, grid-content, engine-grid due to their ABI changes
+
 * Sun Oct 11 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> - 26.10.11-1.fmi
 - Removed the Access-Control-Allow-Origin: * header
 - Reject non-positive image dimensions before allocating the image buffers
