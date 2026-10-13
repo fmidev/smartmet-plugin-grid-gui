@@ -1048,6 +1048,8 @@ void Plugin::saveImage(ImagePaintParameters& params,
         for (int x=0; x<width; x++)
         {
           uint pixpos = yy*width + x;
+          // codechecker_false_positive [security.ArrayBound] pixpos < size = width * height, the
+          // size of the image
           valImage[pixpos] = 0x00000000;
 
           T::ParamValue val = values[c];
@@ -1247,6 +1249,8 @@ void Plugin::saveImage(ImagePaintParameters& params,
         {
           for (int x=0; x<width; x++)
           {
+            // codechecker_false_positive [security.ArrayBound] idx < size = width * height, the
+            // size of the array
             direction[idx] = values[idx];
             idx++;
           }
@@ -1260,6 +1264,8 @@ void Plugin::saveImage(ImagePaintParameters& params,
           uint idx2 = (height-y-1) * width;
           for (int x=0; x<width; x++)
           {
+            // codechecker_false_positive [security.ArrayBound] idx < size = width * height, the
+            // size of the array
             direction[idx] = values[idx2];
             idx++;
             idx2++;
