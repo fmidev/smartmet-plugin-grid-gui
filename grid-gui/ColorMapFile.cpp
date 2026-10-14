@@ -394,7 +394,7 @@ bool ColorMapFile::hasName(const char *name)
 
 /*! \brief GridGui: Print. */
 
-void ColorMapFile::print(std::ostream& stream,uint level,uint optionFlags)
+void ColorMapFile::print(std::ostream& /*stream*/,uint /*level*/,uint /*optionFlags*/)
 {
   try
   {

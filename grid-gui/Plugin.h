@@ -214,7 +214,7 @@ class Plugin : public SmartMetPlugin
     void loadProducerFile();
     bool loadImage(const char *fname,Spine::HTTP::Response &theResponse);
 
-  private:
+  
 
     const std::string         itsModuleName;                    //!< Plugin name returned by getPluginName().
     Spine::Reactor*           itsReactor;                       //!< Back-pointer to the server reactor (not owned).

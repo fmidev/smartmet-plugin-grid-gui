@@ -15,6 +15,7 @@
 #include <macgyver/Hash.h>
 #include <macgyver/TimeFormatter.h>
 #include <macgyver/FastMath.h>
+#include <algorithm>
 #include <boost/bind/bind.hpp>
 #include <macgyver/DateTime.h>
 #include <boost/lexical_cast.hpp>
@@ -122,7 +123,7 @@ bool isSafeRequestValue(const std::string& value)
 /*! \brief GridGui: Constructor. */
 
 Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
-    : SmartMetPlugin(), itsModuleName("GridGui")
+    :  itsModuleName("GridGui")
 {
   using namespace boost::placeholders;
   try
@@ -515,10 +516,8 @@ void Plugin::computeValueRangeForMap(const T::ParamValue_vec& values,
     {
       total = total + val;
       cnt++;
-      if (val < minValue)
-        minValue = val;
-      if (val > maxValue)
-        maxValue = val;
+      minValue = std::min(val, minValue);
+      maxValue = std::max(val, maxValue);
     }
   }
   double avg = total / (double)cnt;
@@ -850,10 +849,7 @@ void Plugin::saveImage(ImagePaintParameters& params,
     }
 
     bool rotate = true;
-    if (coordinates.size() > C_UINT(10*width)  &&  coordinates[0].y() < coordinates[10*width].y())
-      rotate = true;
-    else
-      rotate = false;
+    rotate = coordinates.size() > C_UINT(10*width)  &&  coordinates[0].y() < coordinates[10*width].y();
 
 
     uint *finalImage = new uint[size];
@@ -898,16 +894,14 @@ void Plugin::saveImage(ImagePaintParameters& params,
               if (m < 0)
               {
                 uint pp = (uint)(-(double)params.seaShading_shadow*m);
-                if (pp > 255)
-                  pp = 255;
+                pp = std::min<SmartMet::uint>(pp, 255);
 
                 seaShadingImage[pixpos] = pp << 24;
               }
               else
               {
                 uint pp = (uint)((double)params.seaShading_light*m);
-                if (pp > 255)
-                  pp = 255;
+                pp = std::min<SmartMet::uint>(pp, 255);
 
                 seaShadingImage[pixpos] = (pp << 24) + 0xFFFFFF;
               }
@@ -963,16 +957,14 @@ void Plugin::saveImage(ImagePaintParameters& params,
               if (m < 0)
               {
                 uint pp = (uint)(-(double)params.landShading_shadow*m);
-                if (pp > 255)
-                  pp = 255;
+                pp = std::min<SmartMet::uint>(pp, 255);
 
                 landShadingImage[pixpos] = pp << 24;
               }
               else
               {
                 uint pp = (uint)((double)params.landShading_light*m);
-                if (pp > 255)
-                  pp = 255;
+                pp = std::min<SmartMet::uint>(pp, 255);
 
                 landShadingImage[pixpos] = (pp << 24) + 0xFFFFFF;
               }
@@ -1019,11 +1011,9 @@ void Plugin::saveImage(ImagePaintParameters& params,
         {
           total = total + val;
           cnt++;
-          if (val < minValue)
-            minValue = val;
+          minValue = std::min(val, minValue);
 
-          if (val > maxValue)
-            maxValue = val;
+          maxValue = std::max(val, maxValue);
         }
       }
 
@@ -1191,7 +1181,7 @@ void Plugin::saveImage(ImagePaintParameters& params,
     }
 
 
-    if ((params.coordinateLine_color & 0xFF000000)  &&  lineCoordinates  &&  lineCoordinates->size() > 0)
+    if ((params.coordinateLine_color & 0xFF000000)  &&  lineCoordinates  &&  !lineCoordinates->empty())
     {
       ImagePaint imagePaint(finalImage,width,height,0x0,params.coordinateLine_color,0xFFFFFFFF,false,rotate);
 
@@ -1383,8 +1373,8 @@ void Plugin::saveImage(ImagePaintParameters& params,
 
 /*! \brief GridGui: Page info. */
 
-int Plugin::page_info(const Spine::Reactor &theReactor,
-                            const HTTP::Request &theRequest,
+int Plugin::page_info(const Spine::Reactor & /*theReactor*/,
+                            const HTTP::Request & /*theRequest*/,
                             HTTP::Response &theResponse,
                             Session& session)
 {
@@ -1555,8 +1545,8 @@ int Plugin::page_info(const Spine::Reactor &theReactor,
 
 /*! \brief GridGui: Page message. */
 
-int Plugin::page_message(const Spine::Reactor &theReactor,
-                            const HTTP::Request &theRequest,
+int Plugin::page_message(const Spine::Reactor & /*theReactor*/,
+                            const HTTP::Request & /*theRequest*/,
                             HTTP::Response &theResponse,
                             Session& session)
 {
@@ -1594,8 +1584,7 @@ int Plugin::page_message(const Spine::Reactor &theReactor,
     if ((size % 16) != 0)
       rows++;
 
-    if (rows > 1000)
-      rows = 1000;
+    rows = std::min<SmartMet::uint>(rows, 1000);
 
     char tmp[2000];
     char tmp2[2000];
@@ -1684,8 +1673,8 @@ int Plugin::page_message(const Spine::Reactor &theReactor,
 
 /*! \brief GridGui: Page download. */
 
-int Plugin::page_download(const Spine::Reactor &theReactor,
-                            const HTTP::Request &theRequest,
+int Plugin::page_download(const Spine::Reactor & /*theReactor*/,
+                            const HTTP::Request & /*theRequest*/,
                             HTTP::Response &theResponse,
                             Session& session)
 {
@@ -1763,8 +1752,8 @@ int Plugin::page_download(const Spine::Reactor &theReactor,
 
 /*! \brief GridGui: Page table. */
 
-int Plugin::page_table(const Spine::Reactor &theReactor,
-                            const HTTP::Request &theRequest,
+int Plugin::page_table(const Spine::Reactor & /*theReactor*/,
+                            const HTTP::Request & /*theRequest*/,
                             HTTP::Response &theResponse,
                             Session& session)
 {
@@ -1818,11 +1807,9 @@ int Plugin::page_table(const Spine::Reactor &theReactor,
       return HTTP::Status::ok;
     }
 
-    if (width > 100)
-      width = 100;
+    width = std::min<SmartMet::uint>(width, 100);
 
-    if (height > 100)
-      height = 100;
+    height = std::min<SmartMet::uint>(height, 100);
 
     ostr << "<HTML><BODY>\n";
     ostr << "<TABLE border=\"1\" style=\"text-align:right; font-size:10pt;\">\n";
@@ -1924,8 +1911,8 @@ int Plugin::page_table(const Spine::Reactor &theReactor,
 
 /*! \brief GridGui: Page coordinates. */
 
-int Plugin::page_coordinates(const Spine::Reactor &theReactor,
-                            const HTTP::Request &theRequest,
+int Plugin::page_coordinates(const Spine::Reactor & /*theReactor*/,
+                            const HTTP::Request & /*theRequest*/,
                             HTTP::Response &theResponse,
                             Session& session)
 {
@@ -1961,11 +1948,9 @@ int Plugin::page_coordinates(const Spine::Reactor &theReactor,
     uint height = coordinates.mRows;
     uint width = coordinates.mColumns;
 
-    if (width > 100)
-      width = 100;
+    width = std::min<SmartMet::uint>(width, 100);
 
-    if (height > 100)
-      height = 100;
+    height = std::min<SmartMet::uint>(height, 100);
 
     ostr << "<HTML><BODY>\n";
     ostr << "<TABLE border=\"1\" style=\"text-align:right; font-size:10pt;\">\n";
@@ -2028,8 +2013,8 @@ int Plugin::page_coordinates(const Spine::Reactor &theReactor,
 
 /*! \brief GridGui: Page value. */
 
-int Plugin::page_value(const Spine::Reactor &theReactor,
-                            const HTTP::Request &theRequest,
+int Plugin::page_value(const Spine::Reactor & /*theReactor*/,
+                            const HTTP::Request & /*theRequest*/,
                             HTTP::Response &theResponse,
                             Session& session)
 {
@@ -2078,16 +2063,13 @@ int Plugin::page_value(const Spine::Reactor &theReactor,
       // Same rotate test as Plugin::saveImage(): if rows run south-to-north in the
       // coordinate array, the image is flipped vertically so that north is at the top.
       bool rotate = true;
-      if (coords.size() > C_UINT(10*cols)  &&  coords[0].y() < coords[10*cols].y())
-        rotate = true;
-      else
-        rotate = false;
+      rotate = coords.size() > C_UINT(10*cols)  &&  coords[0].y() < coords[10*cols].y();
 
       int col = static_cast<int>(xPos * cols);
       int row = static_cast<int>(yPos * rows);
-      if (col < 0) col = 0;
+      col = std::max(col, 0);
       if (col >= static_cast<int>(cols)) col = static_cast<int>(cols) - 1;
-      if (row < 0) row = 0;
+      row = std::max(row, 0);
       if (row >= static_cast<int>(rows)) row = static_cast<int>(rows) - 1;
 
       int dataRow = rotate ? static_cast<int>(rows) - row - 1 : row;
@@ -2179,7 +2161,7 @@ bool Plugin::loadImage(const char *fname,Spine::HTTP::Response &theResponse)
       FILE *file = fopen(fname,"re");
       if (file != nullptr)
       {
-        int n;
+        int n = 0;
         while ((n = fread(buf,1,10000,file)) > 0)
         {
           for (int t=0; t<n; t++)
@@ -2221,7 +2203,7 @@ bool Plugin::loadImage(const char *fname,Spine::HTTP::Response &theResponse)
 
 /*! \brief GridGui: Page image. */
 
-int Plugin::page_image(const Spine::Reactor &theReactor,
+int Plugin::page_image(const Spine::Reactor & /*theReactor*/,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse,
                             Session& session)
@@ -2273,8 +2255,8 @@ int Plugin::page_image(const Spine::Reactor &theReactor,
     if (projectionIdStr.empty())
       projectionIdStr = geometryIdStr;
 
-    std::string colorMapFileName = "";
-    std::string colorMapModificationTime = "";
+    std::string colorMapFileName;
+    std::string colorMapModificationTime;
     if (!colorMap.empty() &&  strcasecmp(colorMap.c_str(),"None") != 0)
     {
       T::ColorMapFile *colorMapFile = getColorMapFile(colorMap);
@@ -2432,7 +2414,7 @@ int Plugin::page_image(const Spine::Reactor &theReactor,
 
 /*! \brief GridGui: Page streams. */
 
-int Plugin::page_streams(const Spine::Reactor &theReactor,
+int Plugin::page_streams(const Spine::Reactor & /*theReactor*/,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse,
                             Session& session)
@@ -2446,7 +2428,7 @@ int Plugin::page_streams(const Spine::Reactor &theReactor,
 
 /*! \brief GridGui: Page streams animation. */
 
-int Plugin::page_streamsAnimation(const Spine::Reactor &theReactor,
+int Plugin::page_streamsAnimation(const Spine::Reactor & /*theReactor*/,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse,
                             Session& session)
@@ -2508,8 +2490,8 @@ int Plugin::page_streamsImpl(const HTTP::Request &theRequest,
     std::string seaShadingPositionStr = session.getAttribute(ATTR_SEA_SHADING_POS);
     std::string seaColorPosStr = session.getAttribute(ATTR_SEA_COLOR_POS);
 
-    std::string colorMapFileName = "";
-    std::string colorMapModificationTime = "";
+    std::string colorMapFileName;
+    std::string colorMapModificationTime;
     if (!colorMap.empty() &&  strcasecmp(colorMap.c_str(),"None") != 0)
     {
       T::ColorMapFile *colorMapFile = getColorMapFile(colorMap);
@@ -2659,7 +2641,7 @@ int Plugin::page_streamsImpl(const HTTP::Request &theRequest,
 
 /*! \brief GridGui: Page map. */
 
-int Plugin::page_map(const Spine::Reactor &theReactor,
+int Plugin::page_map(const Spine::Reactor & /*theReactor*/,
                             const HTTP::Request &theRequest,
                             HTTP::Response &theResponse,
                             Session& session)
@@ -2699,8 +2681,8 @@ int Plugin::page_map(const Spine::Reactor &theReactor,
     std::string unitStr = session.getAttribute(ATTR_UNIT);
     std::string fmiKeyStr = session.getAttribute(ATTR_FMI_KEY);
 
-    std::string colorMapFileName = "";
-    std::string colorMapModificationTime = "";
+    std::string colorMapFileName;
+    std::string colorMapModificationTime;
     if (!colorMap.empty() &&  strcasecmp(colorMap.c_str(),"None") != 0)
     {
       T::ColorMapFile *colorMapFile = getColorMapFile(colorMap);
@@ -3270,8 +3252,8 @@ void Plugin::page_main_writeJavascript(std::ostringstream& output)
 
 /*! \brief GridGui: Page main. */
 
-int Plugin::page_main(const Spine::Reactor &theReactor,
-                            const HTTP::Request &theRequest,
+int Plugin::page_main(const Spine::Reactor & /*theReactor*/,
+                            const HTTP::Request & /*theRequest*/,
                             HTTP::Response &theResponse,
                             Session& session)
 {
@@ -3493,9 +3475,9 @@ int Plugin::page_main(const Spine::Reactor &theReactor,
     ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Generation:</TD></TR>\n";
     ostr1 << "<TR height=\"30\"><TD>\n";
 
-    if (generations.size() > 0)
+    if (!generations.empty())
     {
-      std::string disabled = "";
+      std::string disabled;
       if (generations.size() == 1)
         disabled = "disabled";
 
@@ -3507,7 +3489,7 @@ int Plugin::page_main(const Spine::Reactor &theReactor,
         T::GenerationInfo *g = generationInfoList.getGenerationInfoByName(name);
         if (g != nullptr && (g->mDeletionTime == 0 || g->mDeletionTime > requiredAccessTime))
         {
-          std::string status = "";
+          std::string status;
           if (g->mStatus != 1)
             status = " (* not ready *)";
 
@@ -3550,7 +3532,7 @@ int Plugin::page_main(const Spine::Reactor &theReactor,
     ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Parameter:</TD></TR>\n";
     ostr1 << "<TR height=\"30\"><TD>\n";
 
-    if (paramKeyList.size() > 0)
+    if (!paramKeyList.empty())
     {
       ostr1 << R"(<SELECT style="width:280px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_PARAMETER_ID << "=' + this.options[this.selectedIndex].value)\">\n";
       for (const auto& it : paramKeyList)
@@ -3644,9 +3626,9 @@ int Plugin::page_main(const Spine::Reactor &theReactor,
     if (levelIds.find(levelId) == levelIds.end())
       levelId = -1;
 
-    if (levelIds.size() > 0)
+    if (!levelIds.empty())
     {
-      std::string disabled = "";
+      std::string disabled;
       if (levelIds.size() == 1)
         disabled = "disabled";
 
@@ -3695,9 +3677,9 @@ int Plugin::page_main(const Spine::Reactor &theReactor,
     if (levels.find(level) == levels.end())
       level = 0;
 
-    if (levels.size() > 0)
+    if (!levels.empty())
     {
-      std::string disabled = "";
+      std::string disabled;
       if (levels.size() == 1)
         disabled = "disabled";
 
@@ -3739,9 +3721,9 @@ int Plugin::page_main(const Spine::Reactor &theReactor,
     if (forecastTypes.find(forecastType) == forecastTypes.end())
       forecastType = 0;
 
-    if (forecastTypes.size() > 0)
+    if (!forecastTypes.empty())
     {
-      std::string disabled = "";
+      std::string disabled;
       if (forecastTypes.size() == 1)
         disabled = "disabled";
 
@@ -3785,9 +3767,9 @@ int Plugin::page_main(const Spine::Reactor &theReactor,
     if (forecastNumbers.find(forecastNumber) == forecastNumbers.end())
       forecastNumber = 0;
 
-    if (forecastNumbers.size() > 0)
+    if (!forecastNumbers.empty())
     {
-      std::string disabled = "";
+      std::string disabled;
       if (forecastNumbers.size() == 1)
         disabled = "disabled";
 
@@ -3828,9 +3810,9 @@ int Plugin::page_main(const Spine::Reactor &theReactor,
     if (geometries.find(geometryId) == geometries.end())
       geometryId = 0;
 
-    if (geometries.size() > 0)
+    if (!geometries.empty())
     {
-      std::string disabled = "";
+      std::string disabled;
       if (geometries.size() == 1)
         disabled = "disabled";
 
@@ -4236,7 +4218,7 @@ int Plugin::page_main(const Spine::Reactor &theReactor,
       if (projections.find(projectionId) == projections.end())
         projectionId = geometryId;
 
-      if (projections.size() > 0)
+      if (!projections.empty())
       {
         ostr1 << R"(<SELECT style="width:200px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_PROJECTION_ID << "=' + this.options[this.selectedIndex].value)\">\n";
 
