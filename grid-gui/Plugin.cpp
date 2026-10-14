@@ -1327,15 +1327,12 @@ void Plugin::saveImage(ImagePaintParameters& params,
         streamImage = nullptr;
         return;
       }
-      else
+      for (uint t=0; t<size; t++)
       {
-        for (uint t=0; t<size; t++)
+        uint streamCol = streamImage[t];
+        if (streamCol != 0)
         {
-          uint streamCol = streamImage[t];
-          if (streamCol != 0)
-          {
-            finalImage[t] = merge_ARGB(color[(streamCol-1) % lcolors],finalImage[t]);
-          }
+          finalImage[t] = merge_ARGB(color[(streamCol-1) % lcolors],finalImage[t]);
         }
       }
       delete [] direction;
@@ -2178,16 +2175,13 @@ bool Plugin::loadImage(const char *fname,Spine::HTTP::Response &theResponse)
       }
       return false;
     }
-    else
-    {
-      std::ostringstream ostr;
-      ostr << "<HTML><BODY>\n";
-      ostr << "Image does not exist!\n";
-      ostr << "</BODY></HTML>\n";
-      theResponse.setContent(std::string(ostr.str()));
-      theResponse.setHeader("Content-Type", "text/html; charset=UTF-8");
-      return false;
-    }
+    std::ostringstream ostr;
+    ostr << "<HTML><BODY>\n";
+    ostr << "Image does not exist!\n";
+    ostr << "</BODY></HTML>\n";
+    theResponse.setContent(std::string(ostr.str()));
+    theResponse.setHeader("Content-Type", "text/html; charset=UTF-8");
+    return false;
   }
   catch (...)
   {
