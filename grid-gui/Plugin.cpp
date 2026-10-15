@@ -950,7 +950,7 @@ void Plugin::saveImage(ImagePaintParameters& params,
 
             if (!prevLand || !yLand[x])
               landBorderImage[pixpos] = params.landBorder_color;
-;
+
             if (params.landShading_position)
             {
               auto m = (double)Map::topography.getLandShading(lon,lat);
