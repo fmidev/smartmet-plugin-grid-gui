@@ -471,8 +471,7 @@ void ColorMapFile::loadFile()
               auto component = [](const char *str) { return toInt64(str); };
               if (c == 4) // No Alpha
                 color = 0xFF000000 + (component(field[1]) << 16) + (component(field[2]) << 8) + component(field[3]);
-              else
-              if (c == 5)
+              else if (c == 5)
                 color = (component(field[1]) << 24) + (component(field[2]) << 16) + (component(field[3]) << 8) + component(field[4]);
               else
               {

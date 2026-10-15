@@ -1644,7 +1644,7 @@ int Plugin::page_message(const Spine::Reactor & /*theReactor*/,
 
         cnt++;
       }
-      p += sprintf(p,"%s</TR>\n",tmp2);
+      sprintf(p,"%s</TR>\n",tmp2);
       ostr << tmp;
     }
 
@@ -1844,11 +1844,9 @@ int Plugin::page_table(const Spine::Reactor & /*theReactor*/,
     std::string formatStr;
     if (max < 0.00001)
       formatStr = "%.14f";
-    else
-    if (max < 0.001)
+    else if (max < 0.001)
       formatStr = "%.12f";
-    else
-    if (max < 0.1)
+    else if (max < 0.1)
       formatStr = "%.6f";
     else
       formatStr = "%.3f";
@@ -3034,8 +3032,7 @@ std::string Plugin::getFmiKey(const std::string& producerName,const T::ContentIn
 
     if (strlen(contentInfo.getFmiParameterName()) > 0)
       p += sprintf(p,"%s",contentInfo.getFmiParameterName());
-    else
-    if (contentInfo.mFmiParameterId > 0)
+    else if (contentInfo.mFmiParameterId > 0)
       p += sprintf(p,"FMI-%u",contentInfo.mFmiParameterId);
 
     p += sprintf(p,":%s",producerName.c_str());
@@ -3046,7 +3043,7 @@ std::string Plugin::getFmiKey(const std::string& producerName,const T::ContentIn
       p += sprintf(p,":");
 
     if (contentInfo.mFmiParameterLevelId > 0)
-      p += sprintf(p,":%u",contentInfo.mFmiParameterLevelId);
+      p += sprintf(p,":%d",contentInfo.mFmiParameterLevelId);
     else
       p += sprintf(p,":");
 
@@ -3055,9 +3052,9 @@ std::string Plugin::getFmiKey(const std::string& producerName,const T::ContentIn
     if (contentInfo.mForecastType >= 0)
     {
       if (contentInfo.mForecastNumber >= 0)
-        p += sprintf(p,":%d:%d",contentInfo.mForecastType,contentInfo.mForecastNumber);
+        sprintf(p,":%d:%d",contentInfo.mForecastType,contentInfo.mForecastNumber);
       else
-        p += sprintf(p,":%d",contentInfo.mForecastType);
+        sprintf(p,":%d",contentInfo.mForecastType);
     }
 
     return std::string(buf);
@@ -3544,8 +3541,7 @@ int Plugin::page_main(const Spine::Reactor & /*theReactor*/,
             pName = it + " (" + def.mParameterDescription + ")";
           }
         }
-        else
-        if (strncasecmp(it.c_str(),"NB-",3) == 0)
+        else if (strncasecmp(it.c_str(),"NB-",3) == 0)
         {
           std::string key = it.substr(3);
 
@@ -3555,8 +3551,7 @@ int Plugin::page_main(const Spine::Reactor & /*theReactor*/,
             pName = it + " (" + def.mParameterName + ")";
           }
         }
-        else
-        if (strncasecmp(it.c_str(),"FMI-",4) == 0)
+        else if (strncasecmp(it.c_str(),"FMI-",4) == 0)
         {
           std::string key = it.substr(4);
 
@@ -3608,7 +3603,6 @@ int Plugin::page_main(const Spine::Reactor & /*theReactor*/,
 
     T::ContentInfoList contentInfoList;
     contentServer->getContentListByParameterAndGenerationId(0,generationId,T::ParamKeyTypeValue::FMI_NAME,parameterIdStr,-1,0,0,-2,-2,-2,"14000101T000000","30000101T000000",0,contentInfoList);
-    len = contentInfoList.getLength();
     int levelId = toInt32(levelIdStr);
 
     ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Level type and value:</TD></TR>\n";
@@ -3662,7 +3656,6 @@ int Plugin::page_main(const Spine::Reactor & /*theReactor*/,
 
     contentInfoList.clear();
     contentServer->getContentListByParameterAndGenerationId(0,generationId,T::ParamKeyTypeValue::FMI_NAME,parameterIdStr,levelId,0,0x7FFFFFFF,-2,-2,-2,"14000101T000000","30000101T000000",0,contentInfoList);
-    len = contentInfoList.getLength();
     T::ParamLevel level = toInt32(levelStr);
 
     std::set<int> levels;
@@ -4817,39 +4810,33 @@ int Plugin::page_main(const Spine::Reactor & /*theReactor*/,
     {
       ostr2 << R"(<TR><TD style="vertical-align:top;"><IMG id="myimage" style="background:#000000; max-width:1800; height:100%; max-height:1000;" src="/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_PAGE << "=" << presentation << "\" onclick=\"getImageCoords(event,this," << fileIdStr << "," << messageIndexStr << ",'" << presentation << "','" << session.getUrlParameter() << "');\"/></TD></TR>";
     }
-    else
-    if (presentation == "Map")
+    else if (presentation == "Map")
     {
       ostr2 << R"(<TR><TD><IMG id="myimage" style="background:#000000; max-width:1800; height:100%; max-height:1000;" src="/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_PAGE << "=" << presentation << "\"/></TD></TR>";
     }
-    else
-    if (presentation == "Table(sample)" /* || presentation == "table(full)"*/)
+    else if (presentation == "Table(sample)" /* || presentation == "table(full)"*/)
     {
       ostr2 << R"(<TR><TD><IFRAME width="100%" height="100%" src="grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_PAGE << "=table\">";
       ostr2 << "<p>Your browser does not support iframes.</p>\n";
       ostr2 << "</IFRAME></TD></TR>";
     }
-    else
-    if (presentation == "Coordinates(sample)" /* || presentation == "coordinates(full)"*/)
+    else if (presentation == "Coordinates(sample)" /* || presentation == "coordinates(full)"*/)
     {
       ostr2 << R"(<TR><TD><IFRAME width="100%" height="100%" src="grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_PAGE << "=coordinates\">";
       ostr2 << "<p>Your browser does not support iframes.</p>\n";
       ostr2 << "</IFRAME></TD></TR>";
     }
-    else
-    if (presentation == "Info")
+    else if (presentation == "Info")
     {
       ostr2 << R"(<TR><TD><IFRAME width="100%" height="100%" src="grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_PAGE << "=" << presentation << "\">";
       ostr2 << "<p>Your browser does not support iframes.</p>\n";
       ostr2 << "</IFRAME></TD></TR>";
     }
-    else
-    if (presentation == "Streams" || presentation == "StreamsAnimation")
+    else if (presentation == "Streams" || presentation == "StreamsAnimation")
     {
       ostr2 << R"(<TR><TD><IMG id="myimage" style="background:#000000; max-width:1800; height:100%; max-height:1000;" src="/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_PAGE << "=" << presentation << "\" onclick=\"getImageCoords(event,this," << fileIdStr << "," << messageIndexStr << ",'" << presentation << "','" << session.getUrlParameter() << "');\"/></TD></TR>";
     }
-    else
-    if (presentation == "Message")
+    else if (presentation == "Message")
     {
       ostr2 << R"(<TR><TD><IFRAME width="100%" height="100%" src="grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_PAGE << "=" << presentation << "\">";
       ostr2 << "<p>Your browser does not support iframes.</p>\n";
@@ -5015,59 +5002,49 @@ int Plugin::request(const Spine::Reactor &theReactor,
     {
       result = page_main(theReactor,theRequest,theResponse,session);
     }
-    else
-    if (strcasecmp(page.c_str(),"image") == 0)
+    else if (strcasecmp(page.c_str(),"image") == 0)
     {
       result = page_image(theReactor,theRequest,theResponse,session);
       expires_seconds = 600;
     }
-    else
-    if (strcasecmp(page.c_str(),"streams") == 0)
+    else if (strcasecmp(page.c_str(),"streams") == 0)
     {
       result = page_streams(theReactor,theRequest,theResponse,session);
       expires_seconds = 600;
     }
-    else
-    if (strcasecmp(page.c_str(),"streamsAnimation") == 0)
+    else if (strcasecmp(page.c_str(),"streamsAnimation") == 0)
     {
       result = page_streamsAnimation(theReactor,theRequest,theResponse,session);
       expires_seconds = 600;
     }
-    else
-    if (strcasecmp(page.c_str(),"map") == 0)
+    else if (strcasecmp(page.c_str(),"map") == 0)
     {
       result = page_map(theReactor,theRequest,theResponse,session);
       expires_seconds = 600;
     }
-    else
-    if (strcasecmp(page.c_str(),"info") == 0)
+    else if (strcasecmp(page.c_str(),"info") == 0)
     {
       result = page_info(theReactor,theRequest,theResponse,session);
     }
-    else
-    if (strcasecmp(page.c_str(),"message") == 0)
+    else if (strcasecmp(page.c_str(),"message") == 0)
     {
       result = page_message(theReactor,theRequest,theResponse,session);
     }
-    else
-    if (strcasecmp(page.c_str(),"download") == 0)
+    else if (strcasecmp(page.c_str(),"download") == 0)
     {
       result = page_download(theReactor,theRequest,theResponse,session);
     }
-    else
-    if (strcasecmp(page.c_str(),"table") == 0)
+    else if (strcasecmp(page.c_str(),"table") == 0)
     {
       result = page_table(theReactor,theRequest,theResponse,session);
       expires_seconds = 600;
     }
-    else
-    if (strcasecmp(page.c_str(),"coordinates") == 0)
+    else if (strcasecmp(page.c_str(),"coordinates") == 0)
     {
       result = page_coordinates(theReactor,theRequest,theResponse,session);
       expires_seconds = 600;
     }
-    else
-    if (strcasecmp(page.c_str(),"value") == 0)
+    else if (strcasecmp(page.c_str(),"value") == 0)
     {
       result = page_value(theReactor,theRequest,theResponse,session);
     }

@@ -31,6 +31,7 @@ class ColorMapFile
                       ColorMapFile(const std::string& filename);
                       ColorMapFile(const ColorMapFile& colorMapFile);
     virtual           ~ColorMapFile();
+    ColorMapFile& operator=(const ColorMapFile&) = default;
 
     void              init();
     void              init(const std::string& filename);
