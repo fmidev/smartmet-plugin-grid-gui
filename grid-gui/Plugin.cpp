@@ -197,7 +197,7 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
     for (auto& itsColorMapFileName : itsColorMapFileNames)
     {
       T::ColorMapFile colorMapFile;
-      colorMapFile.init(itsColorMapFileName.c_str());
+      colorMapFile.init(itsColorMapFileName);
       itsColorMapFiles.emplace_back(colorMapFile);
     }
 
@@ -5056,11 +5056,11 @@ int Plugin::request(const Spine::Reactor &theReactor,
     std::string expiration = tformat->format(t_expires);
     std::string modification = tformat->format(t_now);
 
-    theResponse.setHeader("Cache-Control", cachecontrol.c_str());
-    theResponse.setHeader("Expires", expiration.c_str());
+    theResponse.setHeader("Cache-Control", cachecontrol);
+    theResponse.setHeader("Expires", expiration);
 
     if (result == HTTP::Status::ok)
-      theResponse.setHeader("Last-Modified", modification.c_str());
+      theResponse.setHeader("Last-Modified", modification);
 
     return result;
   }
@@ -5117,7 +5117,7 @@ void Plugin::requestHandler(Spine::Reactor &theReactor,
       std::string firstMessage = exception.what();
       boost::algorithm::replace_all(firstMessage, "\n", " ");
       firstMessage = firstMessage.substr(0, 300);
-      theResponse.setHeader("X-Content-Error", firstMessage.c_str());
+      theResponse.setHeader("X-Content-Error", firstMessage);
 
     }
   }
