@@ -175,6 +175,13 @@ class Plugin : public SmartMetPlugin
                       Spine::HTTP::Response& theResponse,
                       Session& session);
 
+    int page_dispatch(const std::string& page,
+                      const Spine::Reactor& theReactor,
+                      const Spine::HTTP::Request& theRequest,
+                      Spine::HTTP::Response& theResponse,
+                      Session& session,
+                      int& expires_seconds);
+
 
     void saveImage(ImagePaintParameters& params,int width,int height,
                       T::ParamValue_vec& values,

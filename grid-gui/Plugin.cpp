@@ -4969,6 +4969,81 @@ int Plugin::page_main(const Spine::Reactor & /*theReactor*/,
 
 
 
+namespace
+{
+/*! \brief Updates the session attributes from the request parameters. The previous
+    value of a changed attribute is stored with the '#' prefix. */
+
+void updateSessionAttributes(Session& session,const Spine::HTTP::ParamMap& map)
+{
+  for (const auto& it : map)
+  {
+    //printf("SEARCH [%s][%s]\n",it->first.c_str(),it->second.c_str());
+    std::string value;
+    if (strcasecmp(it.first.c_str(),"session") != 0  &&  session.getAttribute(it.first.c_str(),value))
+    {
+      if (value != it.second)
+      {
+        session.setAttribute(it.first.c_str(),it.second.c_str());
+        std::string name = std::string("#") + it.first;
+        session.setAttribute(name.c_str(),value.c_str());
+      }
+    }
+  }
+}
+}  // namespace
+
+/*! \brief Calls the handler of the requested page. Unknown pages produce an empty
+    response. The cache expiration time of the page is set to expires_seconds. */
+
+int Plugin::page_dispatch(const std::string& page,
+                            const Spine::Reactor &theReactor,
+                            const HTTP::Request &theRequest,
+                            HTTP::Response &theResponse,
+                            Session& session,
+                            int& expires_seconds)
+{
+  using PageHandler = int (Plugin::*)(const Spine::Reactor&,const HTTP::Request&,HTTP::Response&,Session&);
+
+  struct PageInfo
+  {
+    const char *name;
+    PageHandler handler;
+    int expires_seconds;   // 0 = keep the default
+  };
+
+  static const PageInfo pages[] =
+  {
+    {"main",&Plugin::page_main,0},
+    {"image",&Plugin::page_image,600},
+    {"streams",&Plugin::page_streams,600},
+    {"streamsAnimation",&Plugin::page_streamsAnimation,600},
+    {"map",&Plugin::page_map,600},
+    {"info",&Plugin::page_info,0},
+    {"message",&Plugin::page_message,0},
+    {"download",&Plugin::page_download,0},
+    {"table",&Plugin::page_table,600},
+    {"coordinates",&Plugin::page_coordinates,600},
+    {"value",&Plugin::page_value,0}
+  };
+
+  for (const auto& info : pages)
+  {
+    if (strcasecmp(page.c_str(),info.name) == 0)
+    {
+      int result = (this->*info.handler)(theReactor,theRequest,theResponse,session);
+      if (info.expires_seconds > 0)
+        expires_seconds = info.expires_seconds;
+      return result;
+    }
+  }
+  return HTTP::Status::ok;
+}
+
+
+
+
+
 /*! \brief GridGui: Request. */
 
 int Plugin::request(const Spine::Reactor &theReactor,
@@ -5005,20 +5080,7 @@ int Plugin::request(const Spine::Reactor &theReactor,
     else
       initSession(session);
 
-    for (auto& it : map)
-    {
-      //printf("SEARCH [%s][%s]\n",it->first.c_str(),it->second.c_str());
-      std::string value;
-      if (strcasecmp(it.first.c_str(),"session") != 0  &&  session.getAttribute(it.first.c_str(),value))
-      {
-        if (value != it.second)
-        {
-          session.setAttribute(it.first.c_str(),it.second.c_str());
-          std::string name = std::string("#") + it.first;
-          session.setAttribute(name.c_str(),value.c_str());
-        }
-      }
-    }
+    updateSessionAttributes(session,map);
 
 
     if (!itsGridEngine->isEnabled())
@@ -5036,56 +5098,7 @@ int Plugin::request(const Spine::Reactor &theReactor,
     std::string page = "main";
     session.getAttribute(ATTR_PAGE,page);
 
-    if (strcasecmp(page.c_str(),"main") == 0)
-    {
-      result = page_main(theReactor,theRequest,theResponse,session);
-    }
-    else if (strcasecmp(page.c_str(),"image") == 0)
-    {
-      result = page_image(theReactor,theRequest,theResponse,session);
-      expires_seconds = 600;
-    }
-    else if (strcasecmp(page.c_str(),"streams") == 0)
-    {
-      result = page_streams(theReactor,theRequest,theResponse,session);
-      expires_seconds = 600;
-    }
-    else if (strcasecmp(page.c_str(),"streamsAnimation") == 0)
-    {
-      result = page_streamsAnimation(theReactor,theRequest,theResponse,session);
-      expires_seconds = 600;
-    }
-    else if (strcasecmp(page.c_str(),"map") == 0)
-    {
-      result = page_map(theReactor,theRequest,theResponse,session);
-      expires_seconds = 600;
-    }
-    else if (strcasecmp(page.c_str(),"info") == 0)
-    {
-      result = page_info(theReactor,theRequest,theResponse,session);
-    }
-    else if (strcasecmp(page.c_str(),"message") == 0)
-    {
-      result = page_message(theReactor,theRequest,theResponse,session);
-    }
-    else if (strcasecmp(page.c_str(),"download") == 0)
-    {
-      result = page_download(theReactor,theRequest,theResponse,session);
-    }
-    else if (strcasecmp(page.c_str(),"table") == 0)
-    {
-      result = page_table(theReactor,theRequest,theResponse,session);
-      expires_seconds = 600;
-    }
-    else if (strcasecmp(page.c_str(),"coordinates") == 0)
-    {
-      result = page_coordinates(theReactor,theRequest,theResponse,session);
-      expires_seconds = 600;
-    }
-    else if (strcasecmp(page.c_str(),"value") == 0)
-    {
-      result = page_value(theReactor,theRequest,theResponse,session);
-    }
+    result = page_dispatch(page,theReactor,theRequest,theResponse,session,expires_seconds);
 
     Fmi::DateTime t_now = Fmi::SecondClock::universal_time();
     Fmi::DateTime t_expires = t_now + Fmi::Seconds(expires_seconds);
