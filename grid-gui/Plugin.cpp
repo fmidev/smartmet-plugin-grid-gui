@@ -1540,6 +1540,59 @@ int Plugin::page_info(const Spine::Reactor & /*theReactor*/,
 
 
 
+namespace
+{
+/*! \brief Appends one 16-byte row of the message hex dump. The section counter
+    and the section color are carried over from one row to the next. */
+
+void appendMessageByteRow(std::ostringstream& ostr,uint r,const std::vector<uchar>& messageBytes,const std::vector<uint>& messageSections,uint& cnt,uint& scnt,std::string& color)
+{
+  uint size = messageBytes.size();
+  uint ssize = messageSections.size();
+
+  char tmp[2000];
+  char tmp2[2000];
+
+  uint a = r*16;
+  char *p = tmp;
+  char *p2 = tmp2;
+  p2 += sprintf(p2,"<TD bgColor=\"#C0C0C0\"></TD>");
+
+  p += sprintf(p,R"(<TR><TD bgColor="#C0C0C0" width="50">%08X</TD>)",a);
+  for (uint c=0; c<16; c++)
+  {
+    if (scnt < ssize  &&  cnt == messageSections[scnt])
+    {
+      if ((scnt % 2) == 1)
+        color = " bgColor=\"E0E0E0\"";
+      else
+        color = "";
+
+      scnt++;
+    }
+
+    if (cnt < size)
+    {
+      p += sprintf(p,"<TD width=\"20\"%s>%02X</TD>",color.c_str(),messageBytes[cnt]);
+
+      if (isalnum(messageBytes[cnt]))
+        p2 += sprintf(p2,"<TD%s>%c</TD>",color.c_str(),messageBytes[cnt]);
+      else
+        p2 += sprintf(p2,"<TD%s>.</TD>",color.c_str());
+    }
+    else
+    {
+      p += sprintf(p,"<TD width=\"20\"%s></TD>",color.c_str());
+      p2 += sprintf(p2,"<TD%s>.</TD>",color.c_str());
+    }
+
+    cnt++;
+  }
+  sprintf(p,"%s</TR>\n",tmp2);
+  ostr << tmp;
+}
+}  // namespace
+
 /*! \brief GridGui: Page message. */
 
 int Plugin::page_message(const Spine::Reactor & /*theReactor*/,
@@ -1575,7 +1628,6 @@ int Plugin::page_message(const Spine::Reactor & /*theReactor*/,
     }
 
     uint size = messageBytes.size();
-    uint ssize = messageSections.size();
 
     uint rows = size / 16;
     if ((size % 16) != 0)
@@ -1584,7 +1636,6 @@ int Plugin::page_message(const Spine::Reactor & /*theReactor*/,
     rows = std::min<SmartMet::uint>(rows, 1000);
 
     char tmp[2000];
-    char tmp2[2000];
     char *p = tmp;
 
     ostr << "<HTML><BODY>\n";
@@ -1608,45 +1659,7 @@ int Plugin::page_message(const Spine::Reactor & /*theReactor*/,
     uint cnt = 0;
     uint scnt = 0;
     for (uint r=0; r<rows; r++)
-    {
-      uint a = r*16;
-      char *p = tmp;
-      char *p2 = tmp2;
-      p2 += sprintf(p2,"<TD bgColor=\"#C0C0C0\"></TD>");
-
-      p += sprintf(p,R"(<TR><TD bgColor="#C0C0C0" width="50">%08X</TD>)",a);
-      for (uint c=0; c<16; c++)
-      {
-        if (scnt < ssize  &&  cnt == messageSections[scnt])
-        {
-          if ((scnt % 2) == 1)
-            color = " bgColor=\"E0E0E0\"";
-          else
-            color = "";
-
-          scnt++;
-        }
-
-        if (cnt < size)
-        {
-          p += sprintf(p,"<TD width=\"20\"%s>%02X</TD>",color.c_str(),messageBytes[cnt]);
-
-          if (isalnum(messageBytes[cnt]))
-            p2 += sprintf(p2,"<TD%s>%c</TD>",color.c_str(),messageBytes[cnt]);
-          else
-            p2 += sprintf(p2,"<TD%s>.</TD>",color.c_str());
-        }
-        else
-        {
-          p += sprintf(p,"<TD width=\"20\"%s></TD>",color.c_str());
-          p2 += sprintf(p2,"<TD%s>.</TD>",color.c_str());
-        }
-
-        cnt++;
-      }
-      sprintf(p,"%s</TR>\n",tmp2);
-      ostr << tmp;
-    }
+      appendMessageByteRow(ostr,r,messageBytes,messageSections,cnt,scnt,color);
 
     ostr << "</TABLE>\n";
 
@@ -1747,6 +1760,46 @@ int Plugin::page_download(const Spine::Reactor & /*theReactor*/,
 
 
 
+namespace
+{
+/*! \brief Returns the printf format for the grid values based on their maximum. */
+
+std::string valueFormatString(const T::ParamValue_vec& values)
+{
+  T::ParamValue max = ParamValueMissing;
+  uint vcnt = values.size();
+  for (uint t=0; t<vcnt; t++)
+  {
+    if (values[t] != ParamValueMissing  &&  (max == ParamValueMissing ||  values[t] > max))
+      max = values[t];
+  }
+
+  if (max < 0.00001)
+    return "%.14f";
+  if (max < 0.001)
+    return "%.12f";
+  if (max < 0.1)
+    return "%.6f";
+  return "%.3f";
+}
+
+/*! \brief Writes a grid value with the given format, or "Null" if it is missing. */
+
+void appendGridValue(std::ostringstream& ostr,T::ParamValue value,const std::string& formatStr)
+{
+  if (value != ParamValueMissing)
+  {
+    char tmp[1000];
+    sprintf(tmp,formatStr.c_str(),value);
+    ostr << tmp;
+  }
+  else
+  {
+    ostr << "Null";
+  }
+}
+}  // namespace
+
 /*! \brief GridGui: Page table. */
 
 int Plugin::page_table(const Spine::Reactor & /*theReactor*/,
@@ -1833,23 +1886,7 @@ int Plugin::page_table(const Spine::Reactor & /*theReactor*/,
     ostr << "</TR>\n";
 
 
-    T::ParamValue max = ParamValueMissing;
-    uint vcnt = gridData.mValues.size();
-    for (uint t=0; t<vcnt; t++)
-    {
-      if (gridData.mValues[t] != ParamValueMissing  &&  (max == ParamValueMissing ||  gridData.mValues[t] > max))
-        max = gridData.mValues[t];
-    }
-
-    std::string formatStr;
-    if (max < 0.00001)
-      formatStr = "%.14f";
-    else if (max < 0.001)
-      formatStr = "%.12f";
-    else if (max < 0.1)
-      formatStr = "%.6f";
-    else
-      formatStr = "%.3f";
+    std::string formatStr = valueFormatString(gridData.mValues);
 
     // ### Rows:
 
@@ -1868,17 +1905,7 @@ int Plugin::page_table(const Spine::Reactor & /*theReactor*/,
       {
         ostr << "<TD>";
         if (c < sz)
-        {
-          if (gridData.mValues[c] != ParamValueMissing)
-          {
-            sprintf(tmp,formatStr.c_str(),gridData.mValues[c]);
-            ostr << tmp;
-          }
-          else
-          {
-            ostr << "Null";
-          }
-        }
+          appendGridValue(ostr,gridData.mValues[c],formatStr);
         c++;
         ostr << "</TD>";
       }
@@ -2006,6 +2033,31 @@ int Plugin::page_coordinates(const Spine::Reactor & /*theReactor*/,
 
 
 
+namespace
+{
+/*! \brief Maps a relative position (0..1) to a cell index clamped into 0..count-1. */
+
+int clampedCellIndex(float pos,uint count)
+{
+  int idx = static_cast<int>(pos * count);
+  idx = std::max(idx, 0);
+  if (idx >= static_cast<int>(count)) idx = static_cast<int>(count) - 1;
+  return idx;
+}
+
+/*! \brief Sets the grid value (or "Not available" if it is missing) as the response. */
+
+void setValueContent(HTTP::Response &theResponse,T::ParamValue value)
+{
+  if (value != ParamValueMissing)
+    theResponse.setContent(std::to_string(value));
+  else
+    theResponse.setContent(std::string("Not available"));
+
+  theResponse.setHeader("Content-Type", "text/html; charset=UTF-8");
+}
+}  // namespace
+
 /*! \brief GridGui: Page value. */
 
 int Plugin::page_value(const Spine::Reactor & /*theReactor*/,
@@ -2060,12 +2112,8 @@ int Plugin::page_value(const Spine::Reactor & /*theReactor*/,
       bool rotate = true;
       rotate = coords.size() > C_UINT(10*cols)  &&  coords[0].y() < coords[10*cols].y();
 
-      int col = static_cast<int>(xPos * cols);
-      int row = static_cast<int>(yPos * rows);
-      col = std::max(col, 0);
-      if (col >= static_cast<int>(cols)) col = static_cast<int>(cols) - 1;
-      row = std::max(row, 0);
-      if (row >= static_cast<int>(rows)) row = static_cast<int>(rows) - 1;
+      int col = clampedCellIndex(xPos,cols);
+      int row = clampedCellIndex(yPos,rows);
 
       int dataRow = rotate ? static_cast<int>(rows) - row - 1 : row;
       std::size_t idx = static_cast<std::size_t>(dataRow) * cols + static_cast<std::size_t>(col);
@@ -2075,12 +2123,7 @@ int Plugin::page_value(const Spine::Reactor & /*theReactor*/,
       const auto& p = coords[idx];
       dataServer->getGridValueByPoint(0,fileId,messageIndex,T::CoordinateTypeValue::LATLON_COORDINATES,p.x(),p.y(),T::AreaInterpolationMethod::Linear,0,modificationParameters,value);
 
-      if (value != ParamValueMissing)
-        theResponse.setContent(std::to_string(value));
-      else
-        theResponse.setContent(std::string("Not available"));
-
-      theResponse.setHeader("Content-Type", "text/html; charset=UTF-8");
+      setValueContent(theResponse,value);
       return HTTP::Status::ok;
     }
 
@@ -2115,12 +2158,7 @@ int Plugin::page_value(const Spine::Reactor & /*theReactor*/,
     double_vec modificationParameters;
     dataServer->getGridValueByPoint(0,fileId,messageIndex,T::CoordinateTypeValue::GRID_COORDINATES,xx,yy,T::AreaInterpolationMethod::Nearest,0,modificationParameters,value);
 
-    if (value != ParamValueMissing)
-      theResponse.setContent(std::to_string(value));
-    else
-      theResponse.setContent(std::string("Not available"));
-
-    theResponse.setHeader("Content-Type", "text/html; charset=UTF-8");
+    setValueContent(theResponse,value);
 
     return HTTP::Status::ok;
   }
