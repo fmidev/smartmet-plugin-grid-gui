@@ -220,6 +220,9 @@ class Plugin : public SmartMetPlugin
     void loadColorFile();
     void loadProducerFile();
     bool loadImage(const char *fname,Spine::HTTP::Response &theResponse);
+    bool loadCachedImage(const std::string& hash,Spine::HTTP::Response &theResponse);
+    bool isImageUnderConstruction(const std::string& hash);
+    uint startImageConstruction(const std::string& hash);
 
   
 

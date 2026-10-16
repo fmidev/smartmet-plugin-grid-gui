@@ -2224,6 +2224,60 @@ bool Plugin::loadImage(const char *fname,Spine::HTTP::Response &theResponse)
 
 
 
+/*! \brief GridGui: Loads the image with the given hash into the response if it has
+    already been generated. Returns true if the image was found. */
+
+bool Plugin::loadCachedImage(const std::string& hash,Spine::HTTP::Response &theResponse)
+{
+  AutoThreadLock lock(&itsThreadLock);
+  auto it = itsImages.find(hash);
+  if (it == itsImages.end())
+    return false;
+
+  loadImage(it->second.c_str(),theResponse);
+  return true;
+}
+
+
+
+
+
+/*! \brief GridGui: Tests whether another thread is generating the image with the given hash. */
+
+bool Plugin::isImageUnderConstruction(const std::string& hash)
+{
+  AutoThreadLock lock(&itsThreadLock);
+  bool found = false;
+  for (const auto& t : itsImagesUnderConstruction)
+  {
+    if (t == hash)
+    {
+      found = true;
+    }
+  }
+  return found;
+}
+
+
+
+
+
+/*! \brief GridGui: Marks the image with the given hash to be under construction. Returns
+    the slot index which must be cleared when the construction ends. */
+
+uint Plugin::startImageConstruction(const std::string& hash)
+{
+  AutoThreadLock lock(&itsThreadLock);
+  uint idx = itsImageCounter % 100;
+  itsImagesUnderConstruction[idx] = hash;
+  itsImageCounter++;
+  return idx;
+}
+
+
+
+
+
 /*! \brief GridGui: Page image. */
 
 int Plugin::page_image(const Spine::Reactor & /*theReactor*/,
@@ -2310,33 +2364,16 @@ int Plugin::page_image(const Spine::Reactor & /*theReactor*/,
 
     while (ind  &&  time(nullptr) < endTime)
     {
-      {
-        AutoThreadLock lock(&itsThreadLock);
-        auto it = itsImages.find(hash);
-        if (it != itsImages.end())
-        {
-          // ### The requested image has been generated earlier. We can use it.
+      // ### Use the requested image if it has been generated earlier.
 
-          loadImage(it->second.c_str(),theResponse);
-          return HTTP::Status::ok;
-        }
-      }
+      if (loadCachedImage(hash,theResponse))
+        return HTTP::Status::ok;
 
       if (!found)
       {
         // ### Let's check if another thread is already generating the requested image
 
-        {
-          AutoThreadLock lock(&itsThreadLock);
-          for (const auto& t : itsImagesUnderConstruction)
-          {
-            if (t == hash)
-            {
-              found = true;
-            }
-          }
-        }
-
+        found = isImageUnderConstruction(hash);
         if (!found)
           ind = false;
       }
@@ -2353,13 +2390,7 @@ int Plugin::page_image(const Spine::Reactor & /*theReactor*/,
 
     // ### It seems that we should generated the requested image by ourselves.
 
-    uint idx = 0;
-    {
-      AutoThreadLock lock(&itsThreadLock);
-      idx = itsImageCounter % 100;
-      itsImagesUnderConstruction[idx] = hash;
-      itsImageCounter++;
-    }
+    uint idx = startImageConstruction(hash);
 
     try
     {
@@ -2548,28 +2579,12 @@ int Plugin::page_streamsImpl(const HTTP::Request &theRequest,
 
     while (ind)
     {
-      {
-        AutoThreadLock lock(&itsThreadLock);
-        auto it = itsImages.find(hash);
-        if (it != itsImages.end())
-        {
-          loadImage(it->second.c_str(),theResponse);
-          return HTTP::Status::ok;
-        }
-      }
+      if (loadCachedImage(hash,theResponse))
+        return HTTP::Status::ok;
 
       if (!found)
       {
-        {
-          AutoThreadLock lock(&itsThreadLock);
-          for (const auto& t : itsImagesUnderConstruction)
-          {
-            if (t == hash)
-            {
-              found = true;
-            }
-          }
-        }
+        found = isImageUnderConstruction(hash);
         if (!found)
           ind = false;
       }
@@ -2578,13 +2593,7 @@ int Plugin::page_streamsImpl(const HTTP::Request &theRequest,
         time_usleep(0,10000);
     }
 
-    uint idx = 0;
-    {
-      AutoThreadLock lock(&itsThreadLock);
-      idx = itsImageCounter % 100;
-      itsImagesUnderConstruction[idx] = hash;
-      itsImageCounter++;
-    }
+    uint idx = startImageConstruction(hash);
 
     try
     {
@@ -2732,28 +2741,12 @@ int Plugin::page_map(const Spine::Reactor & /*theReactor*/,
 
     while (ind)
     {
-      {
-        AutoThreadLock lock(&itsThreadLock);
-        auto it = itsImages.find(hash);
-        if (it != itsImages.end())
-        {
-          loadImage(it->second.c_str(),theResponse);
-          return HTTP::Status::ok;
-        }
-      }
+      if (loadCachedImage(hash,theResponse))
+        return HTTP::Status::ok;
 
       if (!found)
       {
-        {
-          AutoThreadLock lock(&itsThreadLock);
-          for (const auto& t : itsImagesUnderConstruction)
-          {
-            if (t == hash)
-            {
-              found = true;
-            }
-          }
-        }
+        found = isImageUnderConstruction(hash);
         if (!found)
           ind = false;
       }
@@ -2762,13 +2755,7 @@ int Plugin::page_map(const Spine::Reactor & /*theReactor*/,
         time_usleep(0,10000);
     }
 
-    uint idx = 0;
-    {
-      AutoThreadLock lock(&itsThreadLock);
-      idx = itsImageCounter % 100;
-      itsImagesUnderConstruction[idx] = hash;
-      itsImageCounter++;
-    }
+    uint idx = startImageConstruction(hash);
 
     try
     {
