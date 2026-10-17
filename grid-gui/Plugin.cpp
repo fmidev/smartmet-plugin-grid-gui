@@ -4658,6 +4658,108 @@ void Plugin::page_main_presentation(PageMainState& ps,Session& session)
 
 /*! \brief GridGui: The projection selection. */
 
+/*! \brief GridGui: The projection lock selection. */
+
+void Plugin::page_main_projectionLock(PageMainState& ps,Session& session)
+{
+  FUNCTION_TRACE
+  try
+  {
+    const char *projectionLockTypes[] = {"","Lock",nullptr};
+
+    ps.ostr1 << R"(<SELECT style="width:70px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_PROJECTION_LOCK << "=' + this.options[this.selectedIndex].value)\">\n";
+
+    uint a = 0;
+    while (projectionLockTypes[a] != nullptr)
+    {
+      if (ps.projectionLockStr == projectionLockTypes[a])
+      {
+        ps.ostr1 << "<OPTION selected value=\"" << projectionLockTypes[a] << "\">" <<  projectionLockTypes[a] << "</OPTION>\n";
+        session.setAttribute(ATTR_PROJECTION_LOCK,projectionLockTypes[a]);
+      }
+      else
+      {
+        ps.ostr1 << "<OPTION value=\"" <<  projectionLockTypes[a] << "\">" <<  projectionLockTypes[a] << "</OPTION>\n";
+      }
+      a++;
+    }
+    ps.ostr1 << "</SELECT>\n";
+  }
+  catch (...)
+  {
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
+    exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
+    throw exception;
+  }
+}
+
+
+
+
+/*! \brief GridGui: The label of a projection in the projection selection. */
+
+void Plugin::page_main_projectionLabel(int projection,std::string& st)
+{
+  FUNCTION_TRACE
+  try
+  {
+    std::string gName;
+    uint cols = 0;
+    uint rows = 0;
+
+    Identification::gridDef.getGeometryNameById(projection,gName);
+
+    if (Identification::gridDef.getGridDimensionsByGeometryId(projection,cols,rows))
+      st = std::to_string(projection) + ":" + gName + " (" + std::to_string(cols) + " x " + std::to_string(rows) + ")";
+    else
+      st = std::to_string(projection) + ":" + gName;
+  }
+  catch (...)
+  {
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
+    exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
+    throw exception;
+  }
+}
+
+
+
+
+/*! \brief GridGui: The option of one projection in the projection selection. */
+
+void Plugin::page_main_projectionOption(PageMainState& ps,Session& session,int projection,const std::string& st,T::GeometryId& projectionId)
+{
+  FUNCTION_TRACE
+  try
+  {
+    if (projectionId == 0)
+    {
+      projectionId = projection;
+      ps.projectionIdStr = std::to_string(projectionId);
+      //printf("EMPTY => PROJECTION %s\n",projectionIdStr.c_str());
+    }
+
+    if (projectionId == projection)
+    {
+      ps.ostr1 << "<OPTION selected value=\"" <<  projection << "\">" <<  st << "</OPTION>\n";
+      session.setAttribute(ATTR_PROJECTION_ID,projectionId);
+    }
+    else
+    {
+      ps.ostr1 << "<OPTION value=\"" <<  projection << "\">" <<  st << "</OPTION>\n";
+    }
+  }
+  catch (...)
+  {
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
+    exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
+    throw exception;
+  }
+}
+
+
+
+
 void Plugin::page_main_projections(PageMainState& ps,Session& session)
 {
   FUNCTION_TRACE
@@ -4693,57 +4795,14 @@ void Plugin::page_main_projections(PageMainState& ps,Session& session)
 
           if (projectionId == projection || itsBlockedProjections.find(projection) == itsBlockedProjections.end())
           {
-            std::string gName;
-            uint cols = 0;
-            uint rows = 0;
-
-            Identification::gridDef.getGeometryNameById(projection,gName);
-
-            if (Identification::gridDef.getGridDimensionsByGeometryId(projection,cols,rows))
-              st = std::to_string(projection) + ":" + gName + " (" + std::to_string(cols) + " x " + std::to_string(rows) + ")";
-            else
-              st = std::to_string(projection) + ":" + gName;
-
-            if (projectionId == 0)
-            {
-              projectionId = projection;
-              ps.projectionIdStr = std::to_string(projectionId);
-              //printf("EMPTY => PROJECTION %s\n",projectionIdStr.c_str());
-            }
-
-            if (projectionId == projection)
-            {
-              ps.ostr1 << "<OPTION selected value=\"" <<  projection << "\">" <<  st << "</OPTION>\n";
-              session.setAttribute(ATTR_PROJECTION_ID,projectionId);
-            }
-            else
-            {
-              ps.ostr1 << "<OPTION value=\"" <<  projection << "\">" <<  st << "</OPTION>\n";
-            }
+            page_main_projectionLabel(projection,st);
+            page_main_projectionOption(ps,session,projection,st,projectionId);
           }
         }
         ps.ostr1 << "</SELECT>\n";
       }
 
-      const char *projectionLockTypes[] = {"","Lock",nullptr};
-
-      ps.ostr1 << R"(<SELECT style="width:70px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_PROJECTION_LOCK << "=' + this.options[this.selectedIndex].value)\">\n";
-
-      uint a = 0;
-      while (projectionLockTypes[a] != nullptr)
-      {
-        if (ps.projectionLockStr == projectionLockTypes[a])
-        {
-          ps.ostr1 << "<OPTION selected value=\"" << projectionLockTypes[a] << "\">" <<  projectionLockTypes[a] << "</OPTION>\n";
-          session.setAttribute(ATTR_PROJECTION_LOCK,projectionLockTypes[a]);
-        }
-        else
-        {
-          ps.ostr1 << "<OPTION value=\"" <<  projectionLockTypes[a] << "\">" <<  projectionLockTypes[a] << "</OPTION>\n";
-        }
-        a++;
-      }
-      ps.ostr1 << "</SELECT>\n";
+      page_main_projectionLock(ps,session);
 
       ps.ostr1 << "</TD></TR>\n";
     }
