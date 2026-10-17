@@ -524,6 +524,90 @@ void Plugin::computeValueRangeForMap(const T::ParamValue_vec& values,
 
 
 
+namespace
+{
+
+// Colour of a map value: from the colour map, or a hue ramp over minValue..
+
+uint mapValueColor(T::ColorMapFile *colorMapFile,T::ParamValue val,double minValue,double step,unsigned char hue,unsigned char saturation,unsigned char blur)
+{
+  uint col = 0xFFFFFFFF;
+  if (colorMapFile)
+  {
+    col = colorMapFile->getSmoothColor(val);
+  }
+  else
+  {
+    uint vv = ((val - minValue) / step);
+    uint v = 200 - vv;
+    if (vv > 200)
+      v = 0;
+
+    v = v / blur;
+    v = v * blur;
+    v = v + 55;
+    col = 0xFF000000 + hsv_to_rgb(hue,saturation,C_UCHAR(v));
+  }
+  return col;
+}
+
+
+
+// Paint the land border: the first land pixel of a row or a column gets the
+// border colour, and a sea pixel recolours its land neighbours on the left
+// and above.
+
+void paintLandBorder(uint *image,int width,int x,int y,bool land,bool prevLand,bool landAbove,uint landBorder,uint coordinateLines,uint& col,uint& lbcol)
+{
+  if (land & (!prevLand || !landAbove))
+  {
+    col = landBorder;
+    lbcol = col;
+  }
+
+  if (!land)
+  {
+    if (prevLand  &&  x > 0  &&  image[y*width + x-1] != coordinateLines)
+      image[y*width + x-1] = lbcol;
+
+    if (landAbove &&  y > 0  && image[(y-1)*width + x] != coordinateLines)
+      image[(y-1)*width + x] = lbcol;
+  }
+}
+
+
+
+// Does the missing value option say that zeros are missing values?
+
+bool isZeroMissing(const std::string& missingStr)
+{
+  return !missingStr.empty() &&  strcasecmp(missingStr.c_str(),"Zero") == 0;
+}
+
+
+
+// The value of a map pixel, a zero is missing when zeroIsMissingValue is set
+
+T::ParamValue mapValue(T::ParamValue val,bool zeroIsMissingValue)
+{
+  if (val == 0.0   &&  zeroIsMissingValue)
+    return ParamValueMissing;
+  return val;
+}
+
+
+
+// Is pixel (x,y) on a drawn coordinate line (every xx'th column, every yy'th row)?
+
+bool onCoordinateLine(uint coordinateLines,int x,int y,uint xx,uint yy)
+{
+  return (coordinateLines & 0xFF000000) && ((x % xx) == 0  ||  (y % yy) == 0);
+}
+
+}  // namespace
+
+
+
 /*! \brief GridGui: Save map. */
 
 void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_vec&  values,unsigned char hue,unsigned char saturation,unsigned char blur,uint coordinateLines,uint landBorder,const std::string& landMask,const std::string& seaMask,const std::string& colorMapName,const std::string& missingStr)
@@ -531,9 +615,7 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
   FUNCTION_TRACE
   try
   {
-    bool zeroIsMissingValue = false;
-    if (!missingStr.empty() &&  strcasecmp(missingStr.c_str(),"Zero") == 0)
-      zeroIsMissingValue = true;
+    const bool zeroIsMissingValue = isZeroMissing(missingStr);
 
     uint landColor = getColorValue(landMask);
     uint seaColor = getColorValue(seaMask);
@@ -597,61 +679,23 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
       bool prevLand = false;
       for (int x=0; x<width; x++)
       {
-        T::ParamValue val = values[c];
-        if (val == 0.0   &&  zeroIsMissingValue)
-          val = ParamValueMissing;
+        T::ParamValue val = mapValue(values[c],zeroIsMissingValue);
 
-        uint col = 0xFFFFFFFF;
-        if (colorMapFile)
-        {
-          col = colorMapFile->getSmoothColor(val);
-        }
-        else
-        {
-          uint vv = ((val - minValue) / step);
-          uint v = 200 - vv;
-          if (vv > 200)
-            v = 0;
-
-          v = v / blur;
-          v = v * blur;
-          v = v + 55;
-          col = 0xFF000000 + hsv_to_rgb(hue,saturation,C_UCHAR(v));
-        }
+        uint col = mapValueColor(colorMapFile,val,minValue,step,hue,saturation,blur);
 
         double xc = xd*(x-(dWidth/2));
         double yc = yd*((dHeight-y-1)-(dHeight/2));
 
         bool land = Map::topography.isLand(xc,yc);
 
-        if (land  &&  (val == ParamValueMissing || ((col & 0xFF000000) == 0)))
-          col = landColor;
-
-        if (!land &&  (val == ParamValueMissing || ((col & 0xFF000000) == 0)))
-          col = seaColor;
+        if (val == ParamValueMissing || ((col & 0xFF000000) == 0))
+          col = land ? landColor : seaColor;
 
         if (landBorder & 0xFF000000)
-        {
-          if (land & (!prevLand || !yLand[x]))
-          {
-            col = landBorder;
-            lbcol = col;
-          }
+          paintLandBorder(image,width,x,y,land,prevLand,yLand[x],landBorder,coordinateLines,col,lbcol);
 
-          if (!land)
-          {
-            if (prevLand  &&  x > 0  &&  image[y*width + x-1] != coordinateLines)
-              image[y*width + x-1] = lbcol;
-
-            if (yLand[x] &&  y > 0  && image[(y-1)*width + x] != coordinateLines)
-              image[(y-1)*width + x] = lbcol;
-          }
-        }
-
-        if ((coordinateLines & 0xFF000000) && ((x % xx) == 0  ||  (y % yy) == 0))
-        {
+        if (onCoordinateLine(coordinateLines,x,y,xx,yy))
           col = coordinateLines;
-        }
 
         yLand[x] = land;
         prevLand = land;
