@@ -853,6 +853,517 @@ void Plugin::saveImage(ImagePaintParameters& params)
 
 
 
+namespace
+{
+
+// Shading pixel: black with alpha shadow * -m for m < 0, white with alpha light * m otherwise
+
+uint shadingPixel(double m,uint shadow,uint light)
+{
+  if (m < 0)
+  {
+    uint pp = (uint)(-(double)shadow*m);
+    pp = std::min<SmartMet::uint>(pp, 255);
+
+    return pp << 24;
+  }
+  uint pp = (uint)((double)light*m);
+  pp = std::min<SmartMet::uint>(pp, 255);
+
+  return (pp << 24) + 0xFFFFFF;
+}
+
+
+
+// Is the image size usable, and are there enough values for it?
+
+bool validImageSize(int width,int height,std::size_t sz)
+{
+  if (width <= 0 || height <= 0)
+    return false;
+
+  uint size = width*height;
+
+  if (size == 0 || size > 100000000)
+    return false;
+
+  if (sz < size)
+  {
+    printf("ERROR: There are not enough values (= %zu) for the grid (%d x %d)!\n",sz,width,height);
+    return false;
+  }
+  return true;
+}
+
+
+
+// Sea colour and sea shading layers of the image
+
+void buildSeaImages(const ImagePaintParameters& params,int width,int height,uint size,const T::Coordinate_vec& coordinates,bool rotate,uint *&seaShadingImage,uint *&seaImage)
+{
+  std::vector<float> seaShadings;
+  seaShadingImage = new uint[size];
+  seaImage = new uint[size];
+  uint c = 0;
+  for (int y=0; y<height; y++)
+  {
+    int yy = y;
+    if (rotate)
+      yy = height-y-1;
+
+    for (int x=0; x<width; x++)
+    {
+      uint pixpos = yy*width + x;
+      seaShadingImage[pixpos] = 0x000000;
+      seaImage[pixpos] = 0x00000000;
+
+      double lon = coordinates[c].x();
+      double lat = coordinates[c].y();
+      bool land = Map::topography.isLand(lon,lat);
+
+
+      if (!land)
+      {
+        if (params.seaColor_position)
+          seaImage[pixpos] = params.seaColor;
+
+        if (params.seaShading_position)
+        {
+          seaShadingImage[pixpos] = shadingPixel(Map::topography.getSeaShading(lon,lat),params.seaShading_shadow,params.seaShading_light);
+        }
+      }
+      c++;
+    }
+  }
+}
+
+
+
+// A sea pixel marks its land neighbours on the left and above as land border
+
+void markSeaSideBorder(uint *landBorderImage,int width,int x,int yy,bool prevLand,bool landAbove,uint borderColor)
+{
+  if (prevLand  &&  x > 0)
+  {
+    int ppos = yy*width + (x-1);
+    landBorderImage[ppos] = borderColor;
+  }
+
+  if (landAbove &&  yy > 0)
+  {
+    int ppos = (yy-1)*width + x;
+    landBorderImage[ppos] = borderColor;
+  }
+}
+
+
+
+// Land colour, land shading and land border layers of the image
+
+void buildLandImages(const ImagePaintParameters& params,int width,int height,uint size,const T::Coordinate_vec& coordinates,bool rotate,uint *&landShadingImage,uint *&landImage,uint *&landBorderImage)
+{
+  // Counting land topography.
+
+  // Heap-allocated rather than a stack VLA (width comes from the grid geometry).
+  std::vector<bool> yLand(width, false);
+
+  landShadingImage = new uint[size];
+  landImage = new uint[size];
+  landBorderImage = new uint[size];
+
+  uint c = 0;
+  for (int y=0; y<height; y++)
+  {
+    bool prevLand = false;
+    int yy = y;
+    if (rotate)
+      yy = height-y-1;
+
+    for (int x=0; x<width; x++)
+    {
+      uint pixpos = yy*width + x;
+      landShadingImage[pixpos] = 0x000000;
+      landImage[pixpos] = 0x00000000;
+      landBorderImage[pixpos] = 0x00000000;
+
+      double lon = coordinates[c].x();
+      double lat = coordinates[c].y();
+
+      bool land = Map::topography.isLand(lon,lat);
+      if (land)
+      {
+        if (params.landColor_position)
+          landImage[pixpos] = params.landColor;
+
+        if (!prevLand || !yLand[x])
+          landBorderImage[pixpos] = params.landBorder_color;
+
+        if (params.landShading_position)
+        {
+          landShadingImage[pixpos] = shadingPixel((double)Map::topography.getLandShading(lon,lat),params.landShading_shadow,params.landShading_light);
+        }
+      }
+      else
+        markSeaSideBorder(landBorderImage,width,x,yy,prevLand,yLand[x],params.landBorder_color);
+      yLand[x] = land;
+      prevLand = land;
+      c++;
+    }
+  }
+}
+
+
+
+// Value layer coloured with a hue ramp over the value range
+
+uint *hsvValueImage(ImagePaintParameters& params,T::ParamValue_vec& values,int width,int height,uint size,bool rotate,uint alpha)
+{
+  uint *valImage = new uint[size];
+
+  double maxValue = -1000000000;
+  double minValue = 1000000000;
+  double total = 0;
+  uint cnt = 0;
+
+  for (uint t=0; t<size; t++)
+  {
+    double val = values[t];
+    if (val != ParamValueMissing)
+    {
+      total = total + val;
+      cnt++;
+      minValue = std::min(val, minValue);
+
+      maxValue = std::max(val, maxValue);
+    }
+  }
+
+  double avg = total / (double)cnt;
+  double dd = maxValue - minValue;
+  double ddd = avg-minValue;
+  double step = dd / 200;
+  if (maxValue > (minValue + 5*ddd))
+    step = 5*ddd / 200;
+
+  if (params.paint_blur == 0)
+    params.paint_blur = 1;
+
+
+  uint c = 0;
+  for (int y=0; y<height; y++)
+  {
+    int yy = y;
+    if (rotate)
+      yy = height-y-1;
+
+    for (int x=0; x<width; x++)
+    {
+      uint pixpos = yy*width + x;
+      // codechecker_false_positive [security.ArrayBound] pixpos < size = width * height, the
+      // size of the image
+      valImage[pixpos] = 0x00000000;
+
+      T::ParamValue val = values[c];
+
+      if (val == 0.0   &&  params.zeroIsMissing)
+        val = ParamValueMissing;
+
+      uint vv = ((val - minValue) / step);
+      uint v = 200 - vv;
+      if (vv > 200)
+        v = 0;
+
+      v = v / params.paint_blur;
+      v = v * params.paint_blur;
+      v = v + 55;
+
+      if (val != ParamValueMissing)
+        valImage[pixpos] = alpha + hsv_to_rgb(params.paint_hue,params.paint_saturation,C_UCHAR(v));
+
+      c++;
+    }
+  }
+  return valImage;
+}
+
+
+
+// Value layer coloured with the colour map, its alpha scaled by the paint alpha
+
+uint *colorMapValueImage(const ImagePaintParameters& params,T::ColorMapFile& colorMapFile,T::ParamValue_vec& values,int width,int height,uint size,bool rotate,uint alpha)
+{
+  uint *valImage = new uint[size];
+
+  double amp = (double)params.paint_alpha/255.0;
+
+
+  uint c = 0;
+  ModificationLock *modificationLock = colorMapFile.getModificationLock();
+  AutoReadLock lock(modificationLock);
+
+  for (int y=0; y<height; y++)
+  {
+    int yy = y;
+    if (rotate)
+      yy = height-y-1;
+
+    for (int x=0; x<width; x++)
+    {
+      uint pixpos = yy*width + x;
+      valImage[pixpos] = 0x00000000;
+
+      T::ParamValue val = values[c];
+      if (val == 0.0   &&  params.zeroIsMissing)
+        val = ParamValueMissing;
+
+      uint col = colorMapFile.getSmoothColor(val);
+      if (params.paint_alpha != 255)
+      {
+        uint current_alpha = col & 0xFF000000;
+        uint current_color = col & 0x00FFFFFF;
+        if (current_alpha == 0xFF000000)
+        {
+          col = alpha | current_color;
+        }
+        else
+        {
+          uint new_alpha = ((uint)((double)current_alpha *amp)) & 0xFF000000;
+          col = new_alpha | current_color;
+        }
+      }
+      valImage[pixpos] = col;
+      c++;
+    }
+  }
+  return valImage;
+}
+
+
+
+// Final colour of pixel t: the layers merged in their configured order
+
+uint composePixel(const ImagePaintParameters& params,uint t,const uint *landImage,const uint *seaImage,const uint *landShadingImage,const uint *seaShadingImage,const uint *valImage,const uint *landBorderImage)
+{
+  uint col = 0x00000000;
+  uint landcol = 0x00000000;
+  uint seacol = 0x00000000;
+  uint lscol = 0x00000000;
+  uint sscol = 0x00000000;
+  uint vcol = 0x00000000;
+  uint lbcol = 0x00000000;
+
+  if (landImage)
+    landcol = landImage[t];
+
+  if (seaImage)
+    seacol = seaImage[t];
+
+  if (landShadingImage)
+    lscol = landShadingImage[t];
+
+  if (seaShadingImage)
+    sscol = seaShadingImage[t];
+
+  if (valImage)
+    vcol = valImage[t];
+
+  if (landBorderImage)
+    lbcol = landBorderImage[t];
+
+  if ((landcol & 0xFF000000) &&  params.landColor_position == 1)
+    col = landcol;
+
+  if ((seacol & 0xFF000000) &&  params.seaColor_position == 1)
+    col = seacol;
+
+  if ((lscol & 0xFF000000)  &&  params.landShading_position == 1)
+    col = merge_ARGB(lscol,col);
+
+  if ((sscol & 0xFF000000) &&  params.seaShading_position == 1)
+    col = merge_ARGB(sscol,col);
+
+
+  if (vcol & 0xFF000000)
+    col = merge_ARGB(vcol,col);
+
+
+  if ((landcol & 0xFF000000)  &&  params.landColor_position == 2)
+    col = merge_ARGB(landcol,col);
+
+  if ((seacol & 0xFF000000)  &&  params.seaColor_position == 2)
+    col = merge_ARGB(seacol,col);
+
+  if ((lscol & 0xFF000000)  &&  params.landShading_position == 2)
+    col = merge_ARGB(lscol,col);
+
+  if ((sscol & 0xFF000000) &&  params.seaShading_position == 2)
+    col = merge_ARGB(sscol,col);
+
+  if (lbcol & 0xFF000000)
+    col = merge_ARGB(lbcol,col);
+
+  //if (lbcol & 0xFF000000)
+  //  col = merge_ARGB(lbcol,col);
+
+  return col;
+}
+
+
+
+// Delete a layer image
+
+void deleteImage(uint *&image)
+{
+  if (image)
+  {
+    delete [] image;
+    image = nullptr;
+  }
+}
+
+
+
+// The stream directions in row order from the north, a new array of size values
+
+float *streamDirections(T::ParamValue_vec& values,int width,int height,uint size,bool rotate)
+{
+  auto *direction = new float[size];
+  if (!rotate)
+  {
+    uint idx = 0;
+    for (int y=0; y<height; y++)
+    {
+      for (int x=0; x<width; x++)
+      {
+        // codechecker_false_positive [security.ArrayBound] idx < size = width * height, the
+        // size of the array
+        direction[idx] = values[idx];
+        idx++;
+      }
+    }
+  }
+  else
+  {
+    uint idx = 0;
+    for (int y=0; y<height; y++)
+    {
+      uint idx2 = (height-y-1) * width;
+      for (int x=0; x<width; x++)
+      {
+        // codechecker_false_positive [security.ArrayBound] idx < size = width * height, the
+        // size of the array
+        direction[idx] = values[idx2];
+        idx++;
+        idx2++;
+      }
+    }
+  }
+  return direction;
+}
+
+
+
+// Save the stream lines over the final image as a webp animation of lcolors frames
+
+void saveStreamAnimation(const ImagePaintParameters& params,const uint *finalImage,const uint *streamImage,int width,int height,uint size,const uint *color,uint lcolors,std::vector<int>& timeVect)
+{
+  uint *wimage[lcolors];
+  for (uint t=0; t<lcolors; t++)
+    wimage[t] = new uint[size];
+
+  uint idx = 0;
+  for (int y = 0; y < height; y++)
+  {
+    for (int x=0; x < width; x++)
+    {
+      uint streamCol = streamImage[idx];
+      for (uint t=0; t<lcolors; t++)
+      {
+        uint fcol = finalImage[idx];
+
+        if (streamCol != 0)
+        {
+          uint lcol = color[(streamCol-1+t) % lcolors];
+          fcol = merge_ARGB(lcol,fcol);
+        }
+        // ARGB to RGBA
+        uint newCol = (fcol & 0xFF000000) + ((fcol & 0xFF0000) >> 16) + (fcol & 0x00FF00) + ((fcol & 0xFF) << 16);
+        wimage[t][idx] = newCol;
+      }
+      idx++;
+    }
+  }
+
+  webp_anim_save(params.imageFile.c_str(),wimage,width,height,lcolors,timeVect);
+
+  for (uint t=0; t<lcolors; t++)
+  {
+    delete [] wimage[t];
+    wimage[t] = nullptr;
+  }
+}
+
+
+
+// Draw stream lines over the final image; true if they were saved as an animation
+
+bool drawStreamLines(const ImagePaintParameters& params,T::ParamValue_vec& values,int width,int height,uint size,bool rotate,uint *finalImage)
+{
+  float *direction = streamDirections(values,width,height,size,rotate);
+
+  //uint *img = finalImage; //imagePaint.getImage();
+  uint *streamImage = new uint[size];
+
+  getStreamlineImage(direction,nullptr,streamImage,width,height,params.stream_step,params.stream_step,params.stream_minLength,params.stream_maxLength);
+
+  uint lcolmax = 0xD0;
+  uint lcolors = 16;
+  uint color[lcolors];
+
+  uint sc = params.stream_color & 0x00FFFFFF;
+
+  double mp = (double)lcolmax / (double)lcolors;
+  std::vector<int> timeVect;
+  for (uint t=0; t<lcolors; t++)
+  {
+    uint cc = lcolmax - (uint)(t*mp);
+    color[t] = (cc << 24) + sc;
+    timeVect.push_back(50);
+  }
+
+  if (params.stream_animation)
+  {
+    saveStreamAnimation(params,finalImage,streamImage,width,height,size,color,lcolors,timeVect);
+
+    delete [] direction;
+    direction = nullptr;
+
+    delete [] streamImage;
+    streamImage = nullptr;
+    return true;
+  }
+  for (uint t=0; t<size; t++)
+  {
+    uint streamCol = streamImage[t];
+    if (streamCol != 0)
+    {
+      finalImage[t] = merge_ARGB(color[(streamCol-1) % lcolors],finalImage[t]);
+    }
+  }
+  delete [] direction;
+  direction = nullptr;
+
+  delete [] streamImage;
+  streamImage = nullptr;
+  return false;
+}
+
+
+
+}  // namespace
+
+
+
 /*! \brief GridGui: Save image. */
 
 void Plugin::saveImage(ImagePaintParameters& params,
@@ -870,20 +1381,10 @@ void Plugin::saveImage(ImagePaintParameters& params,
     if (!params.paint_colorMapName.empty() &&  strcasecmp(params.paint_colorMapName.c_str(),"None") != 0)
       colorMapFile = getColorMapFile(params.paint_colorMapName);
 
-    if (width <= 0 || height <= 0)
+    if (!validImageSize(width,height,values.size()))
       return;
 
     uint size = width*height;
-    std::size_t sz = values.size();
-
-    if (size == 0 || size > 100000000)
-      return;
-
-    if (sz < size)
-    {
-      printf("ERROR: There are not enough values (= %zu) for the grid (%d x %d)!\n",sz,width,height);
-      return;
-    }
 
     bool rotate = true;
     rotate = coordinates.size() > C_UINT(10*width)  &&  coordinates[0].y() < coordinates[10*width].y();
@@ -898,324 +1399,28 @@ void Plugin::saveImage(ImagePaintParameters& params,
     uint *seaImage = nullptr;
 
     if (size == coordinates.size() && (params.seaShading_light || params.seaShading_shadow))
-    {
-      std::vector<float> seaShadings;
-      seaShadingImage = new uint[size];
-      seaImage = new uint[size];
-      uint c = 0;
-      for (int y=0; y<height; y++)
-      {
-        int yy = y;
-        if (rotate)
-          yy = height-y-1;
-
-        for (int x=0; x<width; x++)
-        {
-          uint pixpos = yy*width + x;
-          seaShadingImage[pixpos] = 0x000000;
-          seaImage[pixpos] = 0x00000000;
-
-          double lon = coordinates[c].x();
-          double lat = coordinates[c].y();
-          bool land = Map::topography.isLand(lon,lat);
-
-
-          if (!land)
-          {
-            if (params.seaColor_position)
-              seaImage[pixpos] = params.seaColor;
-
-            if (params.seaShading_position)
-            {
-              double m = Map::topography.getSeaShading(lon,lat);
-              if (m < 0)
-              {
-                uint pp = (uint)(-(double)params.seaShading_shadow*m);
-                pp = std::min<SmartMet::uint>(pp, 255);
-
-                seaShadingImage[pixpos] = pp << 24;
-              }
-              else
-              {
-                uint pp = (uint)((double)params.seaShading_light*m);
-                pp = std::min<SmartMet::uint>(pp, 255);
-
-                seaShadingImage[pixpos] = (pp << 24) + 0xFFFFFF;
-              }
-            }
-          }
-          c++;
-        }
-      }
-    }
+      buildSeaImages(params,width,height,size,coordinates,rotate,seaShadingImage,seaImage);
 
 
     if (size == coordinates.size() && (params.landShading_light || params.landShading_shadow || (params.landBorder_color & 0xFF000000)))
-    {
-      // Counting land topography.
-
-      // Heap-allocated rather than a stack VLA (width comes from the grid geometry).
-      std::vector<bool> yLand(width, false);
-
-      landShadingImage = new uint[size];
-      landImage = new uint[size];
-      landBorderImage = new uint[size];
-
-      uint c = 0;
-      for (int y=0; y<height; y++)
-      {
-        bool prevLand = false;
-        int yy = y;
-        if (rotate)
-          yy = height-y-1;
-
-        for (int x=0; x<width; x++)
-        {
-          uint pixpos = yy*width + x;
-          landShadingImage[pixpos] = 0x000000;
-          landImage[pixpos] = 0x00000000;
-          landBorderImage[pixpos] = 0x00000000;
-
-          double lon = coordinates[c].x();
-          double lat = coordinates[c].y();
-
-          bool land = Map::topography.isLand(lon,lat);
-          if (land)
-          {
-            if (params.landColor_position)
-              landImage[pixpos] = params.landColor;
-
-            if (!prevLand || !yLand[x])
-              landBorderImage[pixpos] = params.landBorder_color;
-
-            if (params.landShading_position)
-            {
-              auto m = (double)Map::topography.getLandShading(lon,lat);
-              if (m < 0)
-              {
-                uint pp = (uint)(-(double)params.landShading_shadow*m);
-                pp = std::min<SmartMet::uint>(pp, 255);
-
-                landShadingImage[pixpos] = pp << 24;
-              }
-              else
-              {
-                uint pp = (uint)((double)params.landShading_light*m);
-                pp = std::min<SmartMet::uint>(pp, 255);
-
-                landShadingImage[pixpos] = (pp << 24) + 0xFFFFFF;
-              }
-            }
-          }
-          else
-          {
-            if (prevLand  &&  x > 0)
-            {
-              int ppos = yy*width + (x-1);
-              landBorderImage[ppos] = params.landBorder_color;
-            }
-
-            if (yLand[x] &&  yy > 0)
-            {
-              int ppos = (yy-1)*width + x;
-              landBorderImage[ppos] = params.landBorder_color;
-            }
-          }
-          yLand[x] = land;
-          prevLand = land;
-          c++;
-        }
-      }
-    }
+      buildLandImages(params,width,height,size,coordinates,rotate,landShadingImage,landImage,landBorderImage);
 
     uint alpha = (uint)params.paint_alpha << 24;
 
     if (!colorMapFile && params.stream_step == 0)
     {
       // We do not have colormap - using HSV instead
-
-      valImage = new uint[size];
-
-      double maxValue = -1000000000;
-      double minValue = 1000000000;
-      double total = 0;
-      uint cnt = 0;
-
-      for (uint t=0; t<size; t++)
-      {
-        double val = values[t];
-        if (val != ParamValueMissing)
-        {
-          total = total + val;
-          cnt++;
-          minValue = std::min(val, minValue);
-
-          maxValue = std::max(val, maxValue);
-        }
-      }
-
-      double avg = total / (double)cnt;
-      double dd = maxValue - minValue;
-      double ddd = avg-minValue;
-      double step = dd / 200;
-      if (maxValue > (minValue + 5*ddd))
-        step = 5*ddd / 200;
-
-      if (params.paint_blur == 0)
-        params.paint_blur = 1;
-
-
-      uint c = 0;
-      for (int y=0; y<height; y++)
-      {
-        int yy = y;
-        if (rotate)
-          yy = height-y-1;
-
-        for (int x=0; x<width; x++)
-        {
-          uint pixpos = yy*width + x;
-          // codechecker_false_positive [security.ArrayBound] pixpos < size = width * height, the
-          // size of the image
-          valImage[pixpos] = 0x00000000;
-
-          T::ParamValue val = values[c];
-
-          if (val == 0.0   &&  params.zeroIsMissing)
-            val = ParamValueMissing;
-
-          uint vv = ((val - minValue) / step);
-          uint v = 200 - vv;
-          if (vv > 200)
-            v = 0;
-
-          v = v / params.paint_blur;
-          v = v * params.paint_blur;
-          v = v + 55;
-
-          if (val != ParamValueMissing)
-            valImage[pixpos] = alpha + hsv_to_rgb(params.paint_hue,params.paint_saturation,C_UCHAR(v));
-
-          c++;
-        }
-      }
+      valImage = hsvValueImage(params,values,width,height,size,rotate,alpha);
     }
 
 
     T::ByteData_vec contours;
 
     if (colorMapFile && params.stream_step == 0)
-    {
-      valImage = new uint[size];
-
-      double amp = (double)params.paint_alpha/255.0;
-
-
-      uint c = 0;
-      ModificationLock *modificationLock = colorMapFile->getModificationLock();
-      AutoReadLock lock(modificationLock);
-
-      for (int y=0; y<height; y++)
-      {
-        int yy = y;
-        if (rotate)
-          yy = height-y-1;
-
-        for (int x=0; x<width; x++)
-        {
-          uint pixpos = yy*width + x;
-          valImage[pixpos] = 0x00000000;
-
-          T::ParamValue val = values[c];
-          if (val == 0.0   &&  params.zeroIsMissing)
-            val = ParamValueMissing;
-
-          uint col = colorMapFile->getSmoothColor(val);
-          if (params.paint_alpha != 255)
-          {
-            uint current_alpha = col & 0xFF000000;
-            uint current_color = col & 0x00FFFFFF;
-            if (current_alpha == 0xFF000000)
-            {
-              col = alpha | current_color;
-            }
-            else
-            {
-              uint new_alpha = ((uint)((double)current_alpha *amp)) & 0xFF000000;
-              col = new_alpha | current_color;
-            }
-          }
-          valImage[pixpos] = col;
-          c++;
-        }
-      }
-    }
+      valImage = colorMapValueImage(params,*colorMapFile,values,width,height,size,rotate,alpha);
 
     for (uint t=0; t<size; t++)
-    {
-      uint col = 0x00000000;
-      uint landcol = 0x00000000;
-      uint seacol = 0x00000000;
-      uint lscol = 0x00000000;
-      uint sscol = 0x00000000;
-      uint vcol = 0x00000000;
-      uint lbcol = 0x00000000;
-
-      if (landImage)
-        landcol = landImage[t];
-
-      if (seaImage)
-        seacol = seaImage[t];
-
-      if (landShadingImage)
-        lscol = landShadingImage[t];
-
-      if (seaShadingImage)
-        sscol = seaShadingImage[t];
-
-      if (valImage)
-        vcol = valImage[t];
-
-      if (landBorderImage)
-        lbcol = landBorderImage[t];
-
-      if ((landcol & 0xFF000000) &&  params.landColor_position == 1)
-        col = landcol;
-
-      if ((seacol & 0xFF000000) &&  params.seaColor_position == 1)
-        col = seacol;
-
-      if ((lscol & 0xFF000000)  &&  params.landShading_position == 1)
-        col = merge_ARGB(lscol,col);
-
-      if ((sscol & 0xFF000000) &&  params.seaShading_position == 1)
-        col = merge_ARGB(sscol,col);
-
-
-      if (vcol & 0xFF000000)
-        col = merge_ARGB(vcol,col);
-
-
-      if ((landcol & 0xFF000000)  &&  params.landColor_position == 2)
-        col = merge_ARGB(landcol,col);
-
-      if ((seacol & 0xFF000000)  &&  params.seaColor_position == 2)
-        col = merge_ARGB(seacol,col);
-
-      if ((lscol & 0xFF000000)  &&  params.landShading_position == 2)
-        col = merge_ARGB(lscol,col);
-
-      if ((sscol & 0xFF000000) &&  params.seaShading_position == 2)
-        col = merge_ARGB(sscol,col);
-
-      if (lbcol & 0xFF000000)
-        col = merge_ARGB(lbcol,col);
-
-      //if (lbcol & 0xFF000000)
-      //  col = merge_ARGB(lbcol,col);
-
-      finalImage[t] = col;
-    }
+      finalImage[t] = composePixel(params,t,landImage,seaImage,landShadingImage,seaShadingImage,valImage,landBorderImage);
 
 
     if ((params.coordinateLine_color & 0xFF000000)  &&  lineCoordinates  &&  !lineCoordinates->empty())
@@ -1227,157 +1432,17 @@ void Plugin::saveImage(ImagePaintParameters& params,
     }
 
 
-    if (landImage)
-    {
-      delete [] landImage;
-      landImage = nullptr;
-    }
-
-    if (seaImage)
-    {
-      delete [] seaImage;
-      seaImage = nullptr;
-    }
-
-    if (landShadingImage)
-    {
-      delete [] landShadingImage;
-      landShadingImage = nullptr;
-    }
-
-    if (seaShadingImage)
-    {
-      delete [] seaShadingImage;
-      seaShadingImage = nullptr;
-    }
-
-    if (valImage)
-    {
-      delete [] valImage;
-      valImage = nullptr;
-    }
-
-    if (landBorderImage)
-    {
-      delete [] landBorderImage;
-      landBorderImage = nullptr;
-    }
+    deleteImage(landImage);
+    deleteImage(seaImage);
+    deleteImage(landShadingImage);
+    deleteImage(seaShadingImage);
+    deleteImage(valImage);
+    deleteImage(landBorderImage);
 
 
-    if (params.stream_step > 0)
-    {
-      // Draw stream lines
-
-      auto *direction = new float[size];
-      if (!rotate)
-      {
-        uint idx = 0;
-        for (int y=0; y<height; y++)
-        {
-          for (int x=0; x<width; x++)
-          {
-            // codechecker_false_positive [security.ArrayBound] idx < size = width * height, the
-            // size of the array
-            direction[idx] = values[idx];
-            idx++;
-          }
-        }
-      }
-      else
-      {
-        uint idx = 0;
-        for (int y=0; y<height; y++)
-        {
-          uint idx2 = (height-y-1) * width;
-          for (int x=0; x<width; x++)
-          {
-            // codechecker_false_positive [security.ArrayBound] idx < size = width * height, the
-            // size of the array
-            direction[idx] = values[idx2];
-            idx++;
-            idx2++;
-          }
-        }
-      }
-
-      //uint *img = finalImage; //imagePaint.getImage();
-      uint *streamImage = new uint[size];
-
-      getStreamlineImage(direction,nullptr,streamImage,width,height,params.stream_step,params.stream_step,params.stream_minLength,params.stream_maxLength);
-
-      uint lcolmax = 0xD0;
-      uint lcolors = 16;
-      uint color[lcolors];
-
-      uint sc = params.stream_color & 0x00FFFFFF;
-
-      double mp = (double)lcolmax / (double)lcolors;
-      std::vector<int> timeVect;
-      for (uint t=0; t<lcolors; t++)
-      {
-        uint cc = lcolmax - (uint)(t*mp);
-        color[t] = (cc << 24) + sc;
-        timeVect.push_back(50);
-      }
-
-      if (params.stream_animation)
-      {
-        uint *wimage[lcolors];
-        for (uint t=0; t<lcolors; t++)
-          wimage[t] = new uint[size];
-
-        uint idx = 0;
-        for (int y = 0; y < height; y++)
-        {
-          for (int x=0; x < width; x++)
-          {
-            uint streamCol = streamImage[idx];
-            for (uint t=0; t<lcolors; t++)
-            {
-              uint fcol = finalImage[idx];
-
-              if (streamCol != 0)
-              {
-                uint lcol = color[(streamCol-1+t) % lcolors];
-                fcol = merge_ARGB(lcol,fcol);
-              }
-              // ARGB to RGBA
-              uint newCol = (fcol & 0xFF000000) + ((fcol & 0xFF0000) >> 16) + (fcol & 0x00FF00) + ((fcol & 0xFF) << 16);
-              wimage[t][idx] = newCol;
-            }
-            idx++;
-          }
-        }
-
-        webp_anim_save(params.imageFile.c_str(),wimage,width,height,lcolors,timeVect);
-
-        for (uint t=0; t<lcolors; t++)
-        {
-          delete [] wimage[t];
-          wimage[t] = nullptr;
-        }
-
-        delete [] direction;
-        direction = nullptr;
-
-        delete [] streamImage;
-        streamImage = nullptr;
-        return;
-      }
-      for (uint t=0; t<size; t++)
-      {
-        uint streamCol = streamImage[t];
-        if (streamCol != 0)
-        {
-          finalImage[t] = merge_ARGB(color[(streamCol-1) % lcolors],finalImage[t]);
-        }
-      }
-      delete [] direction;
-      direction = nullptr;
-
-      delete [] streamImage;
-      streamImage = nullptr;
-    }
+    // Draw stream lines. An animation is saved there and then.
+    if (params.stream_step > 0 && drawStreamLines(params,values,width,height,size,rotate,finalImage))
+      return;
 
 
     if (finalImage)
