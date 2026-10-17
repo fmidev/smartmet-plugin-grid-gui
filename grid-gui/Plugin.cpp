@@ -3543,6 +3543,19 @@ void writeNumberOptions(std::ostringstream& out,Session& session,const char *att
   }
 }
 
+// Is the content of the selected geometry, forecast type and number, later
+// than the previous time and in the selected time group?
+
+bool isSelectableTime(const PageMainState& ps,T::ContentInfo& g)
+{
+  if (g.mGeometryId != ps.geometryId)
+    return false;
+  std::string ft = g.getForecastTime();
+  if (!(ps.prevTime < ft  &&  (!ps.useTimeGroup  || (ps.useTimeGroup  &&  ft.substr(0,timeGroupLen[ps.timeGroupType]) == ps.timeGroupStr))))
+    return false;
+  return ps.forecastType == g.mForecastType  &&  ps.forecastNumber == g.mForecastNumber;
+}
+
 }  // namespace
 
 
@@ -4323,7 +4336,51 @@ void Plugin::page_main_geometries(PageMainState& ps,Session& session)
 
 /*! \brief GridGui: The time selection. */
 
-void Plugin::page_main_times(PageMainState& ps,Session& session)
+/*! \brief GridGui: The time group selection. */
+
+/*! \brief GridGui: Collect the time groups of the selected geometry, forecast type and number. */
+
+void Plugin::page_main_collectTimeGroups(PageMainState& ps)
+{
+  FUNCTION_TRACE
+  try
+  {
+    if (ps.timeGroupType > 0)
+    {
+      for (uint a=0; a<ps.len; a++)
+      {
+        T::ContentInfo *g = ps.contentInfoList.getContentInfoByIndex(a);
+
+        if (g->mGeometryId == ps.geometryId)
+        {
+          if (ps.prevTime < g->getForecastTime())
+          {
+            if (ps.forecastType == g->mForecastType)
+            {
+              if (ps.forecastNumber == g->mForecastNumber)
+              {
+                std::string ft = g->getForecastTime();
+                ps.timeGroupStrList.insert(ft.substr(0,timeGroupLen[ps.timeGroupType]));
+                ps.tCount++;
+              }
+            }
+          }
+        }
+      }
+    }
+  }
+  catch (...)
+  {
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
+    exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
+    throw exception;
+  }
+}
+
+
+
+
+void Plugin::page_main_timeGroups(PageMainState& ps,Session& session)
 {
   FUNCTION_TRACE
   try
@@ -4374,29 +4431,7 @@ void Plugin::page_main_times(PageMainState& ps,Session& session)
     ps.prevTime = "14000101T0000";
     ps.tCount = 0;
 
-    if (ps.timeGroupType > 0)
-    {
-      for (uint a=0; a<ps.len; a++)
-      {
-        T::ContentInfo *g = ps.contentInfoList.getContentInfoByIndex(a);
-
-        if (g->mGeometryId == ps.geometryId)
-        {
-          if (ps.prevTime < g->getForecastTime())
-          {
-            if (ps.forecastType == g->mForecastType)
-            {
-              if (ps.forecastNumber == g->mForecastNumber)
-              {
-                std::string ft = g->getForecastTime();
-                ps.timeGroupStrList.insert(ft.substr(0,timeGroupLen[ps.timeGroupType]));
-                ps.tCount++;
-              }
-            }
-          }
-        }
-      }
-    }
+    page_main_collectTimeGroups(ps);
 
     if (ps.timeGroupStrList.size() > 1)
     {
@@ -4424,9 +4459,116 @@ void Plugin::page_main_times(PageMainState& ps,Session& session)
       ps.ostr1 << "</SELECT></TD>\n";
     }
     ps.ostr1 << "</TR></TABLE></TD></TR>\n";
+  }
+  catch (...)
+  {
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
+    exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
+    throw exception;
+  }
+}
 
 
 
+
+/*! \brief GridGui: The time selection and the time bar. */
+
+/*! \brief GridGui: The option and the time bar cell of one time. */
+
+void Plugin::page_main_timeOption(PageMainState& ps,Session& session,T::ContentInfo *g,const std::string& u,uint& daySwitch,uint& cc)
+{
+  FUNCTION_TRACE
+  try
+  {
+    std::ostringstream out;
+    out << "&" << ATTR_TIME << "=" << g->getForecastTime() << "&" << ATTR_FILE_ID << "=" << g->mFileId << "&" << ATTR_MESSAGE_INDEX << "=" << g->mMessageIndex << "&" << ATTR_FORECAST_TYPE << "=" << ps.forecastTypeStr << "&" << ATTR_FORECAST_NUMBER << "=" << ps.forecastNumberStr;
+    std::string url = out.str();
+    const std::string& uu = url;
+
+    if (ps.currentCont != nullptr  &&  ps.nextCont == nullptr)
+      ps.nextCont = g;
+
+    if (ps.timeStr.empty())
+    {
+      ps.timeStr = g->getForecastTime();
+      ps.prevTime = ps.timeStr;
+      //printf("EMPTY => TIME %s\n",timeStr.c_str());
+    }
+
+    std::string bg = "#E0E0E0";
+
+    if (strncmp(g->getForecastTime(),ps.pTime.c_str(),8) != 0)
+      daySwitch++;
+
+    if ((daySwitch % 2) == 1)
+      bg = "#D0D0D0";
+
+    if (ps.timeStr == g->getForecastTime())
+      bg = "#0000FF";
+
+    if (ps.tCount < 124  ||  (g->getForecastTime() >= ps.timeStr  &&  cc < 124))
+    {
+      if (cc == 0)
+      {
+        ps.ostr3 << "<TD style=\"text-align:center; font-size:12;width:30;background:#000000;color:#FFFFFF;\">UTC</TD>\n";
+        ps.ostr3 << R"(<TD style="text-align:center; font-size:12;width:120;background:#F0F0F0;" id="ftime">)" + ps.timeStr + "</TD><TD style=\"width:1;\"> </TD>\n";
+      }
+
+      if (u > " ")
+      {
+        ps.ostr3 << "<TD style=\"width:5; background:" << bg << ";\" ";
+        ps.ostr3 << " onmouseout=\"this.style='width:5;background:"<< bg << ";'\"";
+        ps.ostr3 << " onmouseover=\"this.style='width:5;height:30;background:#FF0000;'; setText('ftime','" << g->getForecastTime() << "');setText('flevel','" << g->mParameterLevel << "');setImage(document.getElementById('myimage'),'" << u << uu << "');\"";
+        ps.ostr3 << " onClick=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << ";" << ATTR_TIME << "=" << g->getForecastTime() << ";" << ATTR_FILE_ID << "=" << g->mFileId << ";" << ATTR_MESSAGE_INDEX << "=" << g->mMessageIndex << ";" << ATTR_FORECAST_TYPE << "=" << g->mForecastType << ";" << ATTR_FORECAST_NUMBER << "=" << g->mForecastNumber << "');\" > </TD>\n";
+
+      }
+      else
+        ps.ostr3 << "<TD style=\"width:5; background:"+bg+";\"> </TD>\n";
+
+      ps.prevTime = g->getForecastTime();
+      cc++;
+    }
+
+    if (ps.timeStr == g->getForecastTime())
+    {
+      //printf("## SELECTED TIME  [%s][%s]\n",timeStr.c_str(),g->getForecastTime());
+      ps.ostr1 << "<OPTION selected value=\"" <<  url << "\">" <<  g->getForecastTime() << "</OPTION>\n";
+      ps.currentCont = g;
+      ps.fmiKeyStr = getFmiKey(ps.producerNameStr,*g);
+      ps.fileIdStr = std::to_string(g->mFileId);
+      ps.messageIndexStr = std::to_string(g->mMessageIndex);
+
+      session.setAttribute(ATTR_FMI_KEY,ps.fmiKeyStr);
+      session.setAttribute(ATTR_FILE_ID,g->mFileId);
+      session.setAttribute(ATTR_MESSAGE_INDEX,g->mMessageIndex);
+      session.setAttribute(ATTR_TIME,g->getForecastTime());
+    }
+    else
+    {
+      ps.ostr1 << "<OPTION value=\"" <<  url << "\">" <<  g->getForecastTime() << "</OPTION>\n";
+    }
+
+    if (ps.currentCont == nullptr)
+      ps.prevCont = g;
+
+    ps.pTime = g->getForecastTime();
+  }
+  catch (...)
+  {
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
+    exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
+    throw exception;
+  }
+}
+
+
+
+
+void Plugin::page_main_timeSelection(PageMainState& ps,Session& session)
+{
+  FUNCTION_TRACE
+  try
+  {
     ps.prevTime = "14000101T0000";
 
     ps.ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Time (UTC):</TD></TR>\n";
@@ -4459,91 +4601,8 @@ void Plugin::page_main_times(PageMainState& ps,Session& session)
 
         //printf("**** TIME %s (%s)  geom=%u %u  ft=%u %u   fn=%d %d \n",g->getForecastTime(),prevTime.c_str(),g->mGeometryId,geometryId,forecastType,g->mForecastType,forecastNumber,g->mForecastNumber);
 
-        if (g->mGeometryId == ps.geometryId)
-        {
-          std::string ft = g->getForecastTime();
-          if (ps.prevTime < ft  &&  (!ps.useTimeGroup  || (ps.useTimeGroup  &&  ft.substr(0,timeGroupLen[ps.timeGroupType]) == ps.timeGroupStr)))
-          {
-            if (ps.forecastType == g->mForecastType)
-            {
-              if (ps.forecastNumber == g->mForecastNumber)
-              {
-                std::ostringstream out;
-                out << "&" << ATTR_TIME << "=" << g->getForecastTime() << "&" << ATTR_FILE_ID << "=" << g->mFileId << "&" << ATTR_MESSAGE_INDEX << "=" << g->mMessageIndex << "&" << ATTR_FORECAST_TYPE << "=" << ps.forecastTypeStr << "&" << ATTR_FORECAST_NUMBER << "=" << ps.forecastNumberStr;
-                std::string url = out.str();
-                const std::string& uu = url;
-
-                if (ps.currentCont != nullptr  &&  ps.nextCont == nullptr)
-                  ps.nextCont = g;
-
-                if (ps.timeStr.empty())
-                {
-                  ps.timeStr = g->getForecastTime();
-                  ps.prevTime = ps.timeStr;
-                  //printf("EMPTY => TIME %s\n",timeStr.c_str());
-                }
-
-                std::string bg = "#E0E0E0";
-
-                if (strncmp(g->getForecastTime(),ps.pTime.c_str(),8) != 0)
-                  daySwitch++;
-
-                if ((daySwitch % 2) == 1)
-                  bg = "#D0D0D0";
-
-                if (ps.timeStr == g->getForecastTime())
-                  bg = "#0000FF";
-
-                if (ps.tCount < 124  ||  (g->getForecastTime() >= ps.timeStr  &&  cc < 124))
-                {
-                  if (cc == 0)
-                  {
-                    ps.ostr3 << "<TD style=\"text-align:center; font-size:12;width:30;background:#000000;color:#FFFFFF;\">UTC</TD>\n";
-                    ps.ostr3 << R"(<TD style="text-align:center; font-size:12;width:120;background:#F0F0F0;" id="ftime">)" + ps.timeStr + "</TD><TD style=\"width:1;\"> </TD>\n";
-                  }
-
-                  if (u > " ")
-                  {
-                    ps.ostr3 << "<TD style=\"width:5; background:" << bg << ";\" ";
-                    ps.ostr3 << " onmouseout=\"this.style='width:5;background:"<< bg << ";'\"";
-                    ps.ostr3 << " onmouseover=\"this.style='width:5;height:30;background:#FF0000;'; setText('ftime','" << g->getForecastTime() << "');setText('flevel','" << g->mParameterLevel << "');setImage(document.getElementById('myimage'),'" << u << uu << "');\"";
-                    ps.ostr3 << " onClick=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << ";" << ATTR_TIME << "=" << g->getForecastTime() << ";" << ATTR_FILE_ID << "=" << g->mFileId << ";" << ATTR_MESSAGE_INDEX << "=" << g->mMessageIndex << ";" << ATTR_FORECAST_TYPE << "=" << g->mForecastType << ";" << ATTR_FORECAST_NUMBER << "=" << g->mForecastNumber << "');\" > </TD>\n";
-
-                  }
-                  else
-                    ps.ostr3 << "<TD style=\"width:5; background:"+bg+";\"> </TD>\n";
-
-                  ps.prevTime = g->getForecastTime();
-                  cc++;
-                }
-
-                if (ps.timeStr == g->getForecastTime())
-                {
-                  //printf("## SELECTED TIME  [%s][%s]\n",timeStr.c_str(),g->getForecastTime());
-                  ps.ostr1 << "<OPTION selected value=\"" <<  url << "\">" <<  g->getForecastTime() << "</OPTION>\n";
-                  ps.currentCont = g;
-                  ps.fmiKeyStr = getFmiKey(ps.producerNameStr,*g);
-                  ps.fileIdStr = std::to_string(g->mFileId);
-                  ps.messageIndexStr = std::to_string(g->mMessageIndex);
-
-                  session.setAttribute(ATTR_FMI_KEY,ps.fmiKeyStr);
-                  session.setAttribute(ATTR_FILE_ID,g->mFileId);
-                  session.setAttribute(ATTR_MESSAGE_INDEX,g->mMessageIndex);
-                  session.setAttribute(ATTR_TIME,g->getForecastTime());
-                }
-                else
-                {
-                  ps.ostr1 << "<OPTION value=\"" <<  url << "\">" <<  g->getForecastTime() << "</OPTION>\n";
-                }
-
-                if (ps.currentCont == nullptr)
-                  ps.prevCont = g;
-
-                ps.pTime = g->getForecastTime();
-              }
-            }
-          }
-        }
+        if (isSelectableTime(ps,*g))
+          page_main_timeOption(ps,session,g,u,daySwitch,cc);
       }
       ps.ostr1 << "</SELECT>\n";
     }
@@ -4562,9 +4621,25 @@ void Plugin::page_main_times(PageMainState& ps,Session& session)
     ps.ostr1 << "</TR></TABLE></TD></TR>\n";
 
     ps.ostr3 << "<TD></TD></TR></TABLE>\n";
+  }
+  catch (...)
+  {
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
+    exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
+    throw exception;
+  }
+}
 
 
 
+
+/*! \brief GridGui: The level bar and the FMI key. */
+
+void Plugin::page_main_levelBar(PageMainState& ps,Session& session)
+{
+  FUNCTION_TRACE
+  try
+  {
     if (!ps.timeStr.empty())
       ps.contentServer->getContentListByParameterAndGenerationId(0,ps.generationId,T::ParamKeyTypeValue::FMI_NAME,ps.parameterIdStr,ps.levelId,0,1000000000,ps.forecastType,ps.forecastNumber,ps.geometryId,ps.timeStr,ps.timeStr,0,ps.contentInfoListByLevels);
 
@@ -4612,6 +4687,32 @@ void Plugin::page_main_times(PageMainState& ps,Session& session)
     ps.ostr1 << "<TR height=\"15\"><TD><HR/></TD></TR>\n";
     ps.ostr1 << "<TR height=\"15\" style=\"font-size:12; width:100%;\"><TD>FMI Key:</TD></TR>\n";
     ps.ostr1 << R"(<TR height="30"><TD><INPUT type="text" style="width:280px;background-color:#FFFF00;" value=")" << ps.fmiKeyStr << "\"></TD></TR>\n";
+  }
+  catch (...)
+  {
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
+    exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
+    throw exception;
+  }
+}
+
+
+
+
+void Plugin::page_main_times(PageMainState& ps,Session& session)
+{
+  FUNCTION_TRACE
+  try
+  {
+    page_main_timeGroups(ps,session);
+
+
+
+    page_main_timeSelection(ps,session);
+
+
+
+    page_main_levelBar(ps,session);
   }
   catch (...)
   {
