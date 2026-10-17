@@ -411,6 +411,65 @@ void ColorMapFile::print(std::ostream& /*stream*/,uint /*level*/,uint /*optionFl
 
 /*! \brief GridGui: Load file. */
 
+namespace
+{
+
+// Split a line into at most 99 fields separated by ';', ',' or a newline
+// outside double quotes. Returns the number of fields.
+
+uint splitFields(char *st,char *field[100])
+{
+  bool ind = false;
+  uint c = 1;
+  field[0] = st;
+  char *p = st;
+  while (*p != '\0'  &&  c < 100)
+  {
+    if (*p == '"')
+      ind = !ind;
+
+    if ((*p == ';' || *p == ','  || *p == '\n') && !ind)
+    {
+      *p = '\0';
+      p++;
+      field[c] = p;
+      c++;
+    }
+    else
+    {
+      p++;
+    }
+  }
+  c--;
+  return c;
+}
+
+
+
+// The colour of a colour map line: "R;G;B", "A;R;G;B" or a hexadecimal (A)RGB value
+
+uint parseColor(char *field[100],uint c)
+{
+  uint color = 0;
+  auto component = [](const char *str) { return toInt64(str); };
+  if (c == 4) // No Alpha
+    color = 0xFF000000 + (component(field[1]) << 16) + (component(field[2]) << 8) + component(field[3]);
+  else if (c == 5)
+    color = (component(field[1]) << 24) + (component(field[2]) << 16) + (component(field[3]) << 8) + component(field[4]);
+  else
+  {
+    if (strlen(field[1]) == 8)
+      color = strtoul(field[1],nullptr,16);
+    else // No Alpha
+      color = 0xFF000000 | (strtoul(field[1],nullptr,16) & 0x00FFFFFF);
+  }
+  return color;
+}
+
+}  // namespace
+
+
+
 void ColorMapFile::loadFile()
 {
   try
@@ -432,29 +491,8 @@ void ColorMapFile::loadFile()
     {
       if (st[0] != '#')
       {
-        bool ind = false;
         char *field[100];
-        uint c = 1;
-        field[0] = st;
-        char *p = st;
-        while (*p != '\0'  &&  c < 100)
-        {
-          if (*p == '"')
-            ind = !ind;
-
-          if ((*p == ';' || *p == ','  || *p == '\n') && !ind)
-          {
-            *p = '\0';
-            p++;
-            field[c] = p;
-            c++;
-          }
-          else
-          {
-            p++;
-          }
-        }
-        c--;
+        uint c = splitFields(st,field);
 
         if (c > 1)
         {
@@ -467,19 +505,7 @@ void ColorMapFile::loadFile()
             else
             {
               double val = toDouble(field[0]);
-              uint color = 0;
-              auto component = [](const char *str) { return toInt64(str); };
-              if (c == 4) // No Alpha
-                color = 0xFF000000 + (component(field[1]) << 16) + (component(field[2]) << 8) + component(field[3]);
-              else if (c == 5)
-                color = (component(field[1]) << 24) + (component(field[2]) << 16) + (component(field[3]) << 8) + component(field[4]);
-              else
-              {
-                if (strlen(field[1]) == 8)
-                  color = strtoul(field[1],nullptr,16);
-                else // No Alpha
-                  color = 0xFF000000 | (strtoul(field[1],nullptr,16) & 0x00FFFFFF);
-              }
+              uint color = parseColor(field,c);
 
               mColorMap.insert(std::pair<double,unsigned int>(val,color));
             }
