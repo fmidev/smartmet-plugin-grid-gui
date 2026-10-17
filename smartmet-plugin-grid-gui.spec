@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-plugin-%{DIRNAME}
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
-Version: 26.10.16
+Version: 26.10.17
 Release: 1%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
@@ -34,12 +34,12 @@ BuildRequires: smartmet-library-grid-content-devel >= 26.10.16
 BuildRequires: smartmet-engine-grid-devel >= 26.10.16
 BuildRequires: gdal312-devel
 Requires: libconfig17
-Requires: smartmet-library-macgyver >= 26.10.16
-Requires: smartmet-library-grid-files >= 26.10.16
-Requires: smartmet-library-grid-content >= 26.10.16
-Requires: smartmet-library-spine >= 26.10.16
-Requires: smartmet-server >= 26.10.16
-Requires: smartmet-engine-grid >= 26.10.16
+Requires: smartmet-library-macgyver >= 26.10.17
+Requires: smartmet-library-grid-files >= 26.10.17
+Requires: smartmet-library-grid-content >= 26.10.17
+Requires: smartmet-library-spine >= 26.10.17
+Requires: smartmet-server >= 26.10.17
+Requires: smartmet-engine-grid >= 26.10.17
 Provides: %{SPECNAME}
 
 %description
@@ -64,6 +64,14 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/plugins/%{DIRNAME}.so
 
 %changelog
+* Sat Oct 17 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> - 26.10.17-1.fmi
+- Plugin::page_main: extract aggregationText, processingText, page_main_generationOption and
+  page_main_parameterName
+- Plugin::page_main_projections: extract the projection label, option and lock selection
+- Plugin::page_main_paintOptions: one function per option group
+- saveImage: free the image and check the image cache also after saving a stream animation
+- Split functions with a cognitive complexity above 25 into smaller helpers, no functional changes
+
 * Fri Oct 16 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> - 26.10.16-1.fmi
 - Fixed compiler warnings and clang-tidy findings (unused code, unreachable code, empty statements, member initialization, parameter passing, noexcept), no functional changes
 
