@@ -1442,7 +1442,11 @@ void Plugin::saveImage(ImagePaintParameters& params,
 
     // Draw stream lines. An animation is saved there and then.
     if (params.stream_step > 0 && drawStreamLines(params,values,width,height,size,rotate,finalImage))
+    {
+      delete [] finalImage;
+      checkImageCache();
       return;
+    }
 
 
     if (finalImage)
