@@ -64,7 +64,7 @@ make configtest    # cfgvalidate on cfg/grid-gui-plugin.conf
 
 | File | Contents |
 |------|----------|
-| `grid-gui/Plugin.{h,cpp}` (~5 400 lines) | Everything: configuration, request dispatch, the main page HTML and JavaScript, the page handlers, image rendering, the image cache. `ImagePaintParameters` (in `Plugin.h`) bundles the rendering options for one image. |
+| `grid-gui/Plugin.{h,cpp}` (~6 000 lines) | Everything: configuration, request dispatch, the main page HTML and JavaScript, the page handlers, image rendering, the image cache. `ImagePaintParameters` (in `Plugin.h`) bundles the rendering options for one image. |
 | `grid-gui/ColorMapFile.{h,cpp}` | `T::ColorMapFile`: loads named value → colour tables from CSV and reloads them when the file changes. |
 | `cfg/grid-gui-plugin.conf` | Sample configuration. |
 | `cfg/colors.csv`, `cfg/colors2.csv` | Named colours for the colour drop-downs. |
@@ -112,11 +112,12 @@ grid-gui keeps **no server-side session**. The whole UI state is a string of sho
    resets the selectors that depend on it (a new producer clears the generation, the
    parameter, …).
 3. If the grid engine is disabled, it returns a short HTML notice.
-4. It dispatches on the `pg` attribute (`ATTR_PAGE`): `main`, `image`, `streams`,
-   `streamsAnimation`, `map`, `info`, `message`, `download`, `table`, `coordinates`,
-   `value`.
+4. It dispatches on the `pg` attribute (`ATTR_PAGE`) through the page table in
+   `page_dispatch()`: `main`, `image`, `streams`, `streamsAnimation`, `map`, `info`,
+   `message`, `download`, `table`, `coordinates`, `value`.
 5. It sets `Cache-Control: public, max-age=N`: 600 s for images, maps, streams, tables
-   and coordinates (their URL fully identifies the content), 1 s for the rest.
+   and coordinates (their URL fully identifies the content, the page table gives the
+   time), 1 s for the rest.
 
 `requestHandler()` turns exceptions into `400 Bad Request`.
 
@@ -128,8 +129,10 @@ map), and `hu`, `sa`, `bl`, `op` (hue, saturation, blur, opacity).
 
 ## 6. The main page
 
-`page_main()` (about 1 700 lines) builds a two-part HTML page: the selectors on the
-left, and the presentation on the right.
+`page_main()` builds a two-part HTML page: the selectors on the left, and the
+presentation on the right. It calls one `page_main_xxx()` function per page section
+(`page_main_producers()`, `page_main_generations()`, …, `page_main_paintOptions()`,
+`page_main_imageFrame()`), and they share the page state in a `PageMainState`.
 
 1. **Selectors.** Each drop-down is filled from the Content Server through the engine
    (`getContentServer_sptr()`):
@@ -238,17 +241,18 @@ configuration.
 
 1. Add an `ATTR_…` name (keep it short; it goes into every URL) and a default in
    `initSession()`.
-2. Add the selector in `page_main()`. Copy an existing `<SELECT>` so that its
-   `onchange` carries the session string.
+2. Add the selector in the `page_main_xxx()` function of its section (for the
+   rendering options, one of those called by `page_main_paintOptions()`). Copy an
+   existing `<SELECT>` so that its `onchange` carries the session string.
 3. Read the attribute in the rendering page, pass it through `ImagePaintParameters`,
    and use it in `saveImage()`.
 4. **Add it to the image cache key** in every page that caches ([§8](#8-image-cache)).
 
 ### 11.2 Adding a presentation mode
 
-Add the name to the `modes[]` list in `page_main()`, a branch where `page_main()`
-builds the right-hand side, a `page_xxx()` handler, and a dispatch case in `request()`
-with a suitable `expires_seconds`.
+Add the name to the `modes[]` list used by `page_main_presentation()`, a branch where
+`page_main_imageFrame()` builds the right-hand side, a `page_xxx()` handler, and an
+entry in the page table of `page_dispatch()` with a suitable `expires_seconds`.
 
 ## 12. Known pitfalls
 

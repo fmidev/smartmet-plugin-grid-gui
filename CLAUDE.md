@@ -34,12 +34,12 @@ make doc              # Generate Doxygen HTML documentation in doc/html/
 
 There are only 4 source files — the entire plugin is ~6K lines of C++.
 
-### Plugin.h / Plugin.cpp (~5,200 lines)
+### Plugin.h / Plugin.cpp (~6,000 lines)
 
 The monolithic plugin class inherits `SmartMetPlugin` from spine. It implements:
 
-- **Page handlers** dispatched by the `page` session parameter:
-  - `page_main` — HTML form UI with dropdowns for producer/generation/parameter/level/time selection
+- **Page handlers** dispatched by the `pg` session attribute through the page table in `page_dispatch()`:
+  - `page_main` — HTML form UI with dropdowns for producer/generation/parameter/level/time selection, built by one `page_main_*` function per page section sharing a `PageMainState`
   - `page_image` — renders grid data as color-mapped images
   - `page_streams` / `page_streamsAnimation` — streamline/vector field visualization (WebP animation)
   - `page_map` — grid overlaid on geographic map with borders/coordinates
