@@ -3477,6 +3477,54 @@ const char *layerPosition[] = {"None","Bottom","Top",nullptr};
 const char *timeGroupTypes[] = {"All","Day","Month","Year",nullptr};
 int timeGroupLen[] = {15,8,6,4};
 const char *modes[] = {"Image","Map","Streams","StreamsAnimation","Info","Table(sample)","Coordinates(sample)","Message",nullptr};
+// The aggregation description of the content, or an empty string
+
+std::string aggregationText(const T::ContentInfo& cont)
+{
+  std::string aggregation;
+  if (cont.mAggregationId > 0)
+  {
+    Identification::AggregationDef aggregationDef;
+    if (Identification::gridDef.getFmiAggregationDef(cont.mAggregationId,aggregationDef))
+    {
+      aggregation = " / Aggregation: " + aggregationDef.mDescription;
+      if (cont.mAggregationPeriod)
+      {
+        if ((cont.mAggregationPeriod % 60) == 0)
+          aggregation = aggregation + " (" + std::to_string(cont.mAggregationPeriod/60) + " hours)";
+        else
+          aggregation = aggregation + " (" + std::to_string(cont.mAggregationPeriod) + " minutes)";
+      }
+    }
+  }
+  return aggregation;
+}
+
+
+
+// The processing type description of the content, or an empty string
+
+std::string processingText(const T::ContentInfo& cont)
+{
+  std::string processing;
+  if (cont.mProcessingTypeId > 0)
+  {
+    Identification::ProcessingTypeDef processingTypeDef;
+    if (Identification::gridDef.getFmiProcessingTypeDef(cont.mProcessingTypeId,processingTypeDef))
+    {
+      processing = " / Processing: " + processingTypeDef.mDescription;
+      if (cont.mProcessingTypeValue1 != ParamValueMissing)
+      {
+        processing = processing  + " (" + std::to_string(cont.mProcessingTypeValue1);
+        if (cont.mProcessingTypeValue2 != ParamValueMissing)
+          processing = processing + ", " + std::to_string(cont.mProcessingTypeValue2) + ")";
+        processing = processing + ")";
+      }
+    }
+  }
+  return processing;
+}
+
 }  // namespace
 
 
@@ -3700,6 +3748,51 @@ void Plugin::page_main_producers(PageMainState& ps,Session& session)
 
 /*! \brief GridGui: The generation selection. */
 
+/*! \brief GridGui: The option of one generation in the generation selection. */
+
+void Plugin::page_main_generationOption(PageMainState& ps,Session& session,const std::string& name)
+{
+  FUNCTION_TRACE
+  try
+  {
+    T::GenerationInfo *g = ps.generationInfoList.getGenerationInfoByName(name);
+    if (g != nullptr && (g->mDeletionTime == 0 || g->mDeletionTime > ps.requiredAccessTime))
+    {
+      std::string status;
+      if (g->mStatus != 1)
+        status = " (* not ready *)";
+
+      if (ps.generationId == 0)
+      {
+        ps.generationId = g->mGenerationId;
+        ps.generationIdStr = std::to_string(ps.generationId);
+        //printf("EMPTY => GENERATION %s\n",generationIdStr.c_str());
+      }
+
+      if (ps.generationId == g->mGenerationId)
+      {
+        if (g->mStatus != 1)
+          ps.generationNotReady = true;
+
+        ps.originTime = g->mAnalysisTime;
+        ps.ostr1 << "<OPTION selected value=\"" <<  g->mGenerationId << "\">" <<  g->mName << status << "</OPTION>\n";
+        session.setAttribute(ATTR_GENERATION_ID,ps.generationId);
+      }
+      else
+        ps.ostr1 << "<OPTION value=\"" <<  g->mGenerationId << "\">" << g->mName << status << "</OPTION>\n";
+    }
+  }
+  catch (...)
+  {
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
+    exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
+    throw exception;
+  }
+}
+
+
+
+
 void Plugin::page_main_generations(PageMainState& ps,Session& session)
 {
   FUNCTION_TRACE
@@ -3734,32 +3827,7 @@ void Plugin::page_main_generations(PageMainState& ps,Session& session)
       for (auto it = ps.generations.rbegin(); it != ps.generations.rend(); ++it)
       {
         const std::string& name = *it;
-        T::GenerationInfo *g = ps.generationInfoList.getGenerationInfoByName(name);
-        if (g != nullptr && (g->mDeletionTime == 0 || g->mDeletionTime > ps.requiredAccessTime))
-        {
-          std::string status;
-          if (g->mStatus != 1)
-            status = " (* not ready *)";
-
-          if (ps.generationId == 0)
-          {
-            ps.generationId = g->mGenerationId;
-            ps.generationIdStr = std::to_string(ps.generationId);
-            //printf("EMPTY => GENERATION %s\n",generationIdStr.c_str());
-          }
-
-          if (ps.generationId == g->mGenerationId)
-          {
-            if (g->mStatus != 1)
-              ps.generationNotReady = true;
-
-            ps.originTime = g->mAnalysisTime;
-            ps.ostr1 << "<OPTION selected value=\"" <<  g->mGenerationId << "\">" <<  g->mName << status << "</OPTION>\n";
-            session.setAttribute(ATTR_GENERATION_ID,ps.generationId);
-          }
-          else
-            ps.ostr1 << "<OPTION value=\"" <<  g->mGenerationId << "\">" << g->mName << status << "</OPTION>\n";
-        }
+        page_main_generationOption(ps,session,name);
       }
       ps.ostr1 << "</SELECT>\n";
     }
@@ -3782,6 +3850,69 @@ void Plugin::page_main_generations(PageMainState& ps,Session& session)
 
 /*! \brief GridGui: The parameter selection. */
 
+/*! \brief GridGui: The identifier and the descriptive name of a parameter key. */
+
+void Plugin::page_main_parameterName(PageMainState& ps,const std::string& it,std::string& parameterId,std::string& pName)
+{
+  FUNCTION_TRACE
+  try
+  {
+    if (strncasecmp(it.c_str(),"GRIB-",5) == 0)
+    {
+      std::string key = it.substr(5);
+
+      Identification::GribParameterDef  def;
+      if (Identification::gridDef.getGribParameterDefById(toUInt32(key),def))
+      {
+        pName = it + " (" + def.mParameterDescription + ")";
+      }
+    }
+    else if (strncasecmp(it.c_str(),"NB-",3) == 0)
+    {
+      std::string key = it.substr(3);
+
+      Identification::NewbaseParameterDef  def;
+      if (Identification::gridDef.getNewbaseParameterDefById(toUInt32(key),def))
+      {
+        pName = it + " (" + def.mParameterName + ")";
+      }
+    }
+    else if (strncasecmp(it.c_str(),"FMI-",4) == 0)
+    {
+      std::string key = it.substr(4);
+
+      Identification::FmiParameterDef def;
+      if (Identification::gridDef.getFmiParameterDefById(toUInt32(key),def))
+      {
+        parameterId = def.mParameterName;
+        pName = def.mParameterName + " (" + def.mParameterDescription + ")";
+        if (ps.parameterIdStr == parameterId || ps.parameterIdStr.empty())
+          ps.unitStr = def.mParameterUnits;
+      }
+    }
+    else
+    {
+      Identification::FmiParameterDef def;
+      if (Identification::gridDef.getFmiParameterDefByName(it,def))
+      {
+        parameterId = def.mParameterName;
+        pName = def.mParameterName + " (" + def.mParameterDescription + ")";
+        if (ps.parameterIdStr == parameterId || ps.parameterIdStr.empty())
+          ps.unitStr = def.mParameterUnits;
+      }
+    }
+  }
+  catch (...)
+  {
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
+    exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
+    throw exception;
+  }
+}
+
+
+
+
 void Plugin::page_main_parameters(PageMainState& ps,Session& session)
 {
   FUNCTION_TRACE
@@ -3801,51 +3932,7 @@ void Plugin::page_main_parameters(PageMainState& ps,Session& session)
       {
         std::string parameterId = it;
         std::string pName = it;
-
-        if (strncasecmp(it.c_str(),"GRIB-",5) == 0)
-        {
-          std::string key = it.substr(5);
-
-          Identification::GribParameterDef  def;
-          if (Identification::gridDef.getGribParameterDefById(toUInt32(key),def))
-          {
-            pName = it + " (" + def.mParameterDescription + ")";
-          }
-        }
-        else if (strncasecmp(it.c_str(),"NB-",3) == 0)
-        {
-          std::string key = it.substr(3);
-
-          Identification::NewbaseParameterDef  def;
-          if (Identification::gridDef.getNewbaseParameterDefById(toUInt32(key),def))
-          {
-            pName = it + " (" + def.mParameterName + ")";
-          }
-        }
-        else if (strncasecmp(it.c_str(),"FMI-",4) == 0)
-        {
-          std::string key = it.substr(4);
-
-          Identification::FmiParameterDef def;
-          if (Identification::gridDef.getFmiParameterDefById(toUInt32(key),def))
-          {
-            parameterId = def.mParameterName;
-            pName = def.mParameterName + " (" + def.mParameterDescription + ")";
-            if (ps.parameterIdStr == parameterId || ps.parameterIdStr.empty())
-              ps.unitStr = def.mParameterUnits;
-          }
-        }
-        else
-        {
-          Identification::FmiParameterDef def;
-          if (Identification::gridDef.getFmiParameterDefByName(it,def))
-          {
-            parameterId = def.mParameterName;
-            pName = def.mParameterName + " (" + def.mParameterDescription + ")";
-            if (ps.parameterIdStr == parameterId || ps.parameterIdStr.empty())
-              ps.unitStr = def.mParameterUnits;
-          }
-        }
+        page_main_parameterName(ps,it,parameterId,pName);
 
 
         if (ps.parameterIdStr.empty())
@@ -5319,37 +5406,8 @@ int Plugin::page_main(const Spine::Reactor & /*theReactor*/,
 
     if (ps.currentCont)
     {
-      if (ps.currentCont->mAggregationId > 0)
-      {
-        Identification::AggregationDef aggregationDef;
-        if (Identification::gridDef.getFmiAggregationDef(ps.currentCont->mAggregationId,aggregationDef))
-        {
-          ps.aggregation = " / Aggregation: " + aggregationDef.mDescription;
-          if (ps.currentCont->mAggregationPeriod)
-          {
-            if ((ps.currentCont->mAggregationPeriod % 60) == 0)
-              ps.aggregation = ps.aggregation + " (" + std::to_string(ps.currentCont->mAggregationPeriod/60) + " hours)";
-            else
-              ps.aggregation = ps.aggregation + " (" + std::to_string(ps.currentCont->mAggregationPeriod) + " minutes)";
-          }
-        }
-      }
-
-      if (ps.currentCont->mProcessingTypeId > 0)
-      {
-        Identification::ProcessingTypeDef processingTypeDef;
-        if (Identification::gridDef.getFmiProcessingTypeDef(ps.currentCont->mProcessingTypeId,processingTypeDef))
-        {
-          ps.processing = " / Processing: " + processingTypeDef.mDescription;
-          if (ps.currentCont->mProcessingTypeValue1 != ParamValueMissing)
-          {
-            ps.processing = ps.processing  + " (" + std::to_string(ps.currentCont->mProcessingTypeValue1);
-            if (ps.currentCont->mProcessingTypeValue2 != ParamValueMissing)
-              ps.processing = ps.processing + ", " + std::to_string(ps.currentCont->mProcessingTypeValue2) + ")";
-            ps.processing = ps.processing + ")";
-          }
-        }
-      }
+      ps.aggregation = aggregationText(*ps.currentCont);
+      ps.processing = processingText(*ps.currentCont);
     }
 
     ps.ostr2 << "<TR><TD style=\"height:25; vertical-align:middle; text-align:left; font-size:12;\">" << ps.paramDescription << ps.aggregation << ps.processing << "</TD></TR>\n";
