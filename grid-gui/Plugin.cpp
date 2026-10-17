@@ -3525,6 +3525,24 @@ std::string processingText(const T::ContentInfo& cont)
   return processing;
 }
 
+// Options first, first+step, ... below end for a numeric selection
+
+void writeNumberOptions(std::ostringstream& out,Session& session,const char *attr,uint selected,uint first,uint end,uint step)
+{
+  for (uint a=first; a<end; a = a + step)
+  {
+    if (a == selected)
+    {
+      out << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+      session.setAttribute(attr,a);
+    }
+    else
+    {
+      out << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+    }
+  }
+}
+
 }  // namespace
 
 
@@ -4994,78 +5012,23 @@ void Plugin::page_main_streamOptions(PageMainState& ps,Session& session)
       ps.ostr1 << R"(<SELECT style="width:40px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_STEP << "=' + this.options[this.selectedIndex].value)\">\n";
 
       uint step = toUInt32(ps.stepStr);
-      for (uint a=2; a<100; a = a + 2)
-      {
-        if (a == step)
-        {
-          ps.ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
-          session.setAttribute(ATTR_STEP,a);
-        }
-        else
-        {
-          ps.ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
-        }
-      }
+      writeNumberOptions(ps.ostr1,session,ATTR_STEP,step,2,100,2);
       ps.ostr1 << "</SELECT>\n";
 
 
       uint minLength = toUInt32(ps.minLengthStr);
       ps.ostr1 << R"(<SELECT style="width:50px;"onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_MIN_LENGTH << "=' + this.options[this.selectedIndex].value)\">\n";
 
-      for (uint a=2; a<128; a=a+2)
-      {
-        if (a == minLength)
-        {
-          ps.ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
-          session.setAttribute(ATTR_MIN_LENGTH,a);
-        }
-        else
-        {
-          ps.ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
-        }
-      }
-      for (uint a=128; a<=2048; a=a+64)
-      {
-        if (a == minLength)
-        {
-          ps.ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
-          session.setAttribute(ATTR_MIN_LENGTH,a);
-        }
-        else
-        {
-          ps.ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
-        }
-      }
+      writeNumberOptions(ps.ostr1,session,ATTR_MIN_LENGTH,minLength,2,128,2);
+      writeNumberOptions(ps.ostr1,session,ATTR_MIN_LENGTH,minLength,128,2049,64);
       ps.ostr1 << "</SELECT>\n";
 
 
       ps.ostr1 << R"(<SELECT style="width:50px;"onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_MAX_LENGTH << "=' + this.options[this.selectedIndex].value)\">\n";
 
       uint maxLength = toUInt32(ps.maxLengthStr);
-      for (uint a=8; a<128; a=a+4)
-      {
-        if (a == maxLength)
-        {
-          ps.ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
-          session.setAttribute(ATTR_MAX_LENGTH,a);
-        }
-        else
-        {
-          ps.ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
-        }
-      }
-      for (uint a=128; a<=2048; a=a+64)
-      {
-        if (a == maxLength)
-        {
-          ps.ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
-          session.setAttribute(ATTR_MAX_LENGTH,a);
-        }
-        else
-        {
-          ps.ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
-        }
-      }
+      writeNumberOptions(ps.ostr1,session,ATTR_MAX_LENGTH,maxLength,8,128,4);
+      writeNumberOptions(ps.ostr1,session,ATTR_MAX_LENGTH,maxLength,128,2049,64);
       ps.ostr1 << "</SELECT>\n";
 
       ps.ostr1 << R"(<SELECT style="width:120px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_STREAM_COLOR << "=' + this.options[this.selectedIndex].value)\">\n";
