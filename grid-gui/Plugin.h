@@ -157,6 +157,13 @@ class Plugin : public SmartMetPlugin
      *  hover handlers, page navigation, image swap, XHR helper for grid-value lookup,
      *  etc.).  Writes directly to the given output stream. */
     void page_main_writeJavascript(std::ostringstream& output);
+    void page_main_hueOptions(PageMainState& ps,Session& session);
+    void page_main_streamOptions(PageMainState& ps,Session& session);
+    void page_main_coordinateLineOptions(PageMainState& ps,Session& session);
+    void page_main_landBorderOptions(PageMainState& ps,Session& session);
+    void page_main_landSeaColorOptions(PageMainState& ps,Session& session);
+    void page_main_topologyOptions(PageMainState& ps,Session& session);
+    void page_main_missingValueOptions(PageMainState& ps,Session& session);
     void page_main_projectionOption(PageMainState& ps,Session& session,int projection,const std::string& st,T::GeometryId& projectionId);
     void page_main_projectionLabel(int projection,std::string& st);
     void page_main_projectionLock(PageMainState& ps,Session& session);

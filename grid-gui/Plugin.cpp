@@ -4897,6 +4897,572 @@ void Plugin::page_main_colorMaps(PageMainState& ps,Session& session)
 
 /*! \brief GridGui: The paint options of the presentation. */
 
+/*! \brief GridGui: The hue, saturation and blur selections. */
+
+void Plugin::page_main_hueOptions(PageMainState& ps,Session& session)
+{
+  FUNCTION_TRACE
+  try
+  {
+    if ((ps.colorMap.empty() || ps.colorMap == "None") &&  ps.presentation != "Streams" && ps.presentation != "StreamsAnimation")
+    {
+      // ### Hue, saturation, blur
+
+      ps.ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Hue, saturation and blur</TD></TR>\n";
+      ps.ostr1 << "<TR height=\"30\"><TD>\n";
+      ps.ostr1 << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_HUE << "=' + this.options[this.selectedIndex].value)\">\n";
+
+
+      uint hue = toUInt32(ps.hueStr);
+      for (uint a=0; a<256; a++)
+      {
+        if (a == hue)
+        {
+          ps.ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+          session.setAttribute(ATTR_HUE,a);
+        }
+        else
+        {
+          ps.ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+        }
+      }
+      ps.ostr1 << "</SELECT>\n";
+
+
+      uint saturation = toUInt32(ps.saturationStr);
+      ps.ostr1 << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_SATURATION << "=' + this.options[this.selectedIndex].value)\">\n";
+
+
+      for (uint a=0; a<256; a++)
+      {
+        if (a == saturation)
+        {
+          ps.ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+          session.setAttribute(ATTR_SATURATION,a);
+        }
+        else
+        {
+          ps.ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+        }
+      }
+      ps.ostr1 << "</SELECT>\n";
+
+
+      ps.ostr1 << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_BLUR << "=' + this.options[this.selectedIndex].value)\">\n";
+
+      uint blur = toUInt32(ps.blurStr);
+      for (uint a=1; a<=200; a++)
+      {
+        if (a == blur)
+        {
+          ps.ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+          session.setAttribute(ATTR_BLUR,a);
+        }
+        else
+        {
+          ps.ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+        }
+      }
+      ps.ostr1 << "</SELECT>\n";
+      ps.ostr1 << "</TD></TR>\n";
+    }
+  }
+  catch (...)
+  {
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
+    exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
+    throw exception;
+  }
+}
+
+
+
+
+/*! \brief GridGui: The stream line selections. */
+
+void Plugin::page_main_streamOptions(PageMainState& ps,Session& session)
+{
+  FUNCTION_TRACE
+  try
+  {
+    if (ps.presentation == "Streams" || ps.presentation == "StreamsAnimation")
+    {
+      // ### step, minLength, maxLength, background
+
+      ps.ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Step, min and max length, color</TD></TR>\n";
+      ps.ostr1 << "<TR height=\"30\"><TD>\n";
+      ps.ostr1 << R"(<SELECT style="width:40px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_STEP << "=' + this.options[this.selectedIndex].value)\">\n";
+
+      uint step = toUInt32(ps.stepStr);
+      for (uint a=2; a<100; a = a + 2)
+      {
+        if (a == step)
+        {
+          ps.ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+          session.setAttribute(ATTR_STEP,a);
+        }
+        else
+        {
+          ps.ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+        }
+      }
+      ps.ostr1 << "</SELECT>\n";
+
+
+      uint minLength = toUInt32(ps.minLengthStr);
+      ps.ostr1 << R"(<SELECT style="width:50px;"onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_MIN_LENGTH << "=' + this.options[this.selectedIndex].value)\">\n";
+
+      for (uint a=2; a<128; a=a+2)
+      {
+        if (a == minLength)
+        {
+          ps.ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+          session.setAttribute(ATTR_MIN_LENGTH,a);
+        }
+        else
+        {
+          ps.ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+        }
+      }
+      for (uint a=128; a<=2048; a=a+64)
+      {
+        if (a == minLength)
+        {
+          ps.ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+          session.setAttribute(ATTR_MIN_LENGTH,a);
+        }
+        else
+        {
+          ps.ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+        }
+      }
+      ps.ostr1 << "</SELECT>\n";
+
+
+      ps.ostr1 << R"(<SELECT style="width:50px;"onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_MAX_LENGTH << "=' + this.options[this.selectedIndex].value)\">\n";
+
+      uint maxLength = toUInt32(ps.maxLengthStr);
+      for (uint a=8; a<128; a=a+4)
+      {
+        if (a == maxLength)
+        {
+          ps.ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+          session.setAttribute(ATTR_MAX_LENGTH,a);
+        }
+        else
+        {
+          ps.ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+        }
+      }
+      for (uint a=128; a<=2048; a=a+64)
+      {
+        if (a == maxLength)
+        {
+          ps.ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+          session.setAttribute(ATTR_MAX_LENGTH,a);
+        }
+        else
+        {
+          ps.ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+        }
+      }
+      ps.ostr1 << "</SELECT>\n";
+
+      ps.ostr1 << R"(<SELECT style="width:120px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_STREAM_COLOR << "=' + this.options[this.selectedIndex].value)\">\n";
+
+      for (auto& itsColor : itsColors)
+      {
+        if (ps.streamColorStr == itsColor.first)
+        {
+          ps.ostr1 << "<OPTION selected value=\"" << itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
+          session.setAttribute(ATTR_STREAM_COLOR,ps.streamColorStr);
+        }
+        else
+        {
+          ps.ostr1 << "<OPTION value=\"" <<  itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
+        }
+        ps.a++;
+      }
+      ps.ostr1 << "</SELECT>\n";
+      ps.ostr1 << "</TD></TR>\n";
+    }
+  }
+  catch (...)
+  {
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
+    exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
+    throw exception;
+  }
+}
+
+
+
+
+/*! \brief GridGui: The coordinate line color selection. */
+
+void Plugin::page_main_coordinateLineOptions(PageMainState& ps,Session& session)
+{
+  FUNCTION_TRACE
+  try
+  {
+    // ### Coordinate lines:
+
+    ps.ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Coordinate lines and land border:</TD></TR>\n";
+    ps.ostr1 << "<TR height=\"30\"><TD>\n";
+    ps.ostr1 << R"(<SELECT style="width:280px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_COORDINATE_LINES << "=' + this.options[this.selectedIndex].value)\">\n";
+
+    for (auto& itsColor : itsColors)
+    {
+      if (ps.coordinateLinesStr == itsColor.first)
+      {
+        ps.ostr1 << "<OPTION selected value=\"" << itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
+        session.setAttribute(ATTR_COORDINATE_LINES,ps.coordinateLinesStr);
+      }
+      else
+      {
+        ps.ostr1 << "<OPTION value=\"" <<  itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
+      }
+
+      ps.a++;
+    }
+    ps.ostr1 << "</SELECT>\n";
+  }
+  catch (...)
+  {
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
+    exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
+    throw exception;
+  }
+}
+
+
+
+
+/*! \brief GridGui: The land border color selection. */
+
+void Plugin::page_main_landBorderOptions(PageMainState& ps,Session& session)
+{
+  FUNCTION_TRACE
+  try
+  {
+    // ### Land border:
+
+    ps.ostr1 << R"(<SELECT style="width:280px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_LAND_BORDER << "=' + this.options[this.selectedIndex].value)\">\n";
+
+    for (auto& itsColor : itsColors)
+    {
+      if (ps.landBorderStr == itsColor.first)
+      {
+        ps.ostr1 << "<OPTION selected value=\"" << itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
+        session.setAttribute(ATTR_LAND_BORDER,ps.landBorderStr);
+      }
+      else
+      {
+        ps.ostr1 << "<OPTION value=\"" <<  itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
+      }
+      ps.a++;
+    }
+    ps.ostr1 << "</SELECT>\n";
+    ps.ostr1 << "</TD></TR>\n";
+  }
+  catch (...)
+  {
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
+    exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
+    throw exception;
+  }
+}
+
+
+
+
+/*! \brief GridGui: The land and sea color selections. */
+
+void Plugin::page_main_landSeaColorOptions(PageMainState& ps,Session& session)
+{
+  FUNCTION_TRACE
+  try
+  {
+    // ### Land and sea colors:
+
+    ps.ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Land and sea colors:</TD></TR>\n";
+    ps.ostr1 << "<TR height=\"30\"><TD>\n";
+
+    ps.a = 0;
+    ps.ostr1 << R"(<SELECT style="width:80px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_LAND_COLOR_POS << "=' + this.options[this.selectedIndex].value)\">\n";
+    while (layerPosition[ps.a] != nullptr)
+    {
+      if (ps.landcol_pos == ps.a)
+      {
+        ps.ostr1 << "<OPTION selected value=\"" << ps.a << "\">" <<  layerPosition[ps.a] << "</OPTION>\n";
+        session.setAttribute(ATTR_LAND_COLOR_POS,ps.a);
+      }
+      else
+      {
+        ps.ostr1 << "<OPTION value=\"" <<  ps.a << "\">" << layerPosition[ps.a] << "</OPTION>\n";
+      }
+      ps.a++;
+    }
+    ps.ostr1 << "</SELECT>\n";
+
+
+    ps.a = 0;
+    ps.ostr1 << R"(<SELECT style="width:190px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_LAND_MASK << "=' + this.options[this.selectedIndex].value)\">\n";
+    for (auto& itsColor : itsColors)
+    {
+      if (ps.landMaskStr == itsColor.first)
+      {
+        ps.ostr1 << "<OPTION selected value=\"" << itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
+        session.setAttribute(ATTR_LAND_MASK,ps.landMaskStr);
+      }
+      else
+      {
+        ps.ostr1 << "<OPTION value=\"" <<  itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
+      }
+      ps.a++;
+    }
+    ps.ostr1 << "</SELECT>\n";
+
+
+    ps.a = 0;
+    ps.ostr1 << R"(<SELECT style="width:80px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_SEA_COLOR_POS << "=' + this.options[this.selectedIndex].value)\">\n";
+    while (layerPosition[ps.a] != nullptr)
+    {
+      if (ps.seacol_pos == ps.a)
+      {
+        ps.ostr1 << "<OPTION selected value=\"" << ps.a << "\">" <<  layerPosition[ps.a] << "</OPTION>\n";
+        session.setAttribute(ATTR_SEA_COLOR_POS,ps.a);
+      }
+      else
+      {
+        ps.ostr1 << "<OPTION value=\"" <<  ps.a << "\">" << layerPosition[ps.a] << "</OPTION>\n";
+      }
+      ps.a++;
+    }
+    ps.ostr1 << "</SELECT>\n";
+
+
+    ps.ostr1 << R"(<SELECT style="width:190px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_SEA_MASK << "=' + this.options[this.selectedIndex].value)\">\n";
+    ps.a = 0;
+    for (auto& itsColor : itsColors)
+    {
+      if (ps.seaMaskStr == itsColor.first)
+      {
+        ps.ostr1 << "<OPTION selected value=\"" << itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
+        session.setAttribute(ATTR_SEA_MASK,ps.seaMaskStr);
+      }
+      else
+      {
+        ps.ostr1 << "<OPTION value=\"" <<  itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
+      }
+      ps.a++;
+    }
+    ps.ostr1 << "</SELECT>\n";
+
+    ps.ostr1 << "</TD></TR>\n";
+  }
+  catch (...)
+  {
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
+    exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
+    throw exception;
+  }
+}
+
+
+
+
+/*! \brief GridGui: The land and sea shading selections. */
+
+void Plugin::page_main_topologyOptions(PageMainState& ps,Session& session)
+{
+  FUNCTION_TRACE
+  try
+  {
+    // ### Land and sea topology
+
+    ps.ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Land/sea topography positions and intensity:</TD></TR>\n";
+    ps.ostr1 << "<TR height=\"30\"><TD>\n";
+
+    ps.a = 0;
+    ps.ostr1 << R"(<SELECT style="width:80px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_LAND_SHADING_POS << "=' + this.options[this.selectedIndex].value)\">\n";
+    while (layerPosition[ps.a] != nullptr)
+    {
+      if (ps.landshade_pos == ps.a)
+      {
+        ps.ostr1 << "<OPTION selected value=\"" << ps.a << "\">" <<  layerPosition[ps.a] << "</OPTION>\n";
+        session.setAttribute(ATTR_LAND_SHADING_POS,ps.a);
+      }
+      else
+      {
+        ps.ostr1 << "<OPTION value=\"" <<  ps.a << "\">" << layerPosition[ps.a] << "</OPTION>\n";
+      }
+
+      ps.a++;
+    }
+    ps.ostr1 << "</SELECT>\n";
+
+
+    ps.ostr1 << R"(<SELECT style="width:55px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_LAND_SHADING_LIGHT << "=' + this.options[this.selectedIndex].value)\">\n";
+
+    for (uint t=0; t<=512; t=t+16)
+    {
+      if (ps.landshade_light == t)
+      {
+        ps.ostr1 << "<OPTION selected value=\"" << t << "\">" <<  t << "</OPTION>\n";
+        session.setAttribute(ATTR_LAND_SHADING_LIGHT,t);
+      }
+      else
+      {
+        ps.ostr1 << "<OPTION value=\"" <<  t << "\">" << t << "</OPTION>\n";
+      }
+
+      ps.a++;
+    }
+    ps.ostr1 << "</SELECT>\n";
+
+    ps.ostr1 << R"(<SELECT style="width:55px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_LAND_SHADING_SHADOW << "=' + this.options[this.selectedIndex].value)\">\n";
+
+    for (uint t=0; t<=512; t=t+16)
+    {
+      if (ps.landshade_shadow == t)
+      {
+        ps.ostr1 << "<OPTION selected value=\"" << t << "\">" <<  t << "</OPTION>\n";
+        session.setAttribute(ATTR_LAND_SHADING_SHADOW,t);
+      }
+      else
+      {
+        ps.ostr1 << "<OPTION value=\"" <<  t << "\">" << t << "</OPTION>\n";
+      }
+
+      ps.a++;
+    }
+    ps.ostr1 << "</SELECT>\n";
+
+    ps.ostr1 << "</TD></TR>\n";
+    ps.ostr1 << "<TR><TD>\n";
+
+    ps.a = 0;
+    ps.ostr1 << R"(<SELECT style="width:80px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_SEA_SHADING_POS << "=' + this.options[this.selectedIndex].value)\">\n";
+    while (layerPosition[ps.a] != nullptr)
+    {
+      if (ps.seashade_pos == ps.a)
+      {
+        ps.ostr1 << "<OPTION selected value=\"" << ps.a << "\">" <<  layerPosition[ps.a] << "</OPTION>\n";
+        session.setAttribute(ATTR_SEA_SHADING_POS,ps.a);
+      }
+      else
+      {
+        ps.ostr1 << "<OPTION value=\"" <<  ps.a << "\">" << layerPosition[ps.a] << "</OPTION>\n";
+      }
+
+      ps.a++;
+    }
+    ps.ostr1 << "</SELECT>\n";
+
+
+    ps.ostr1 << R"(<SELECT style="width:55px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_SEA_SHADING_LIGHT << "=' + this.options[this.selectedIndex].value)\">\n";
+
+    for (uint t=0; t<=512; t=t+16)
+    {
+      if (ps.seashade_light == t)
+      {
+        ps.ostr1 << "<OPTION selected value=\"" << t << "\">" <<  t << "</OPTION>\n";
+        session.setAttribute(ATTR_SEA_SHADING_LIGHT,t);
+      }
+      else
+      {
+        ps.ostr1 << "<OPTION value=\"" <<  t << "\">" << t << "</OPTION>\n";
+      }
+
+      ps.a++;
+    }
+    ps.ostr1 << "</SELECT>\n";
+
+
+    ps.ostr1 << R"(<SELECT style="width:55px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_SEA_SHADING_SHADOW << "=' + this.options[this.selectedIndex].value)\">\n";
+
+    for (uint t=0; t<=512; t=t+16)
+    {
+      if (ps.seashade_shadow == t)
+      {
+        ps.ostr1 << "<OPTION selected value=\"" << t << "\">" <<  t << "</OPTION>\n";
+        session.setAttribute(ATTR_SEA_SHADING_SHADOW,t);
+      }
+      else
+      {
+        ps.ostr1 << "<OPTION value=\"" <<  t << "\">" << t << "</OPTION>\n";
+      }
+
+      ps.a++;
+    }
+    ps.ostr1 << "</SELECT>\n";
+
+
+    ps.ostr1 << "</TD></TR>\n";
+  }
+  catch (...)
+  {
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
+    exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
+    throw exception;
+  }
+}
+
+
+
+
+/*! \brief GridGui: The missing value selection and the value field. */
+
+void Plugin::page_main_missingValueOptions(PageMainState& ps,Session& session)
+{
+  FUNCTION_TRACE
+  try
+  {
+    // ### Missing value:
+
+    ps.ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Missing Value:</TD></TR>\n";
+    ps.ostr1 << "<TR height=\"30\"><TD>\n";
+    ps.ostr1 << R"(<SELECT style="width:280px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_MISSING << "=' + this.options[this.selectedIndex].value)\">\n";
+
+    const char *missingValues[] = {"Default","Zero",nullptr};
+
+    ps.a = 0 ;
+    while (missingValues[ps.a] != nullptr)
+    {
+      if (ps.missingStr == missingValues[ps.a])
+      {
+        ps.ostr1 << "<OPTION selected value=\"" << missingValues[ps.a] << "\">" <<  missingValues[ps.a] << "</OPTION>\n";
+        session.setAttribute(ATTR_MISSING,ps.missingStr);
+      }
+      else
+      {
+        ps.ostr1 << "<OPTION value=\"" <<  missingValues[ps.a] << "\">" <<  missingValues[ps.a] << "</OPTION>\n";
+      }
+      ps.a++;
+    }
+    ps.ostr1 << "</SELECT>\n";
+    ps.ostr1 << "</TD></TR>\n";
+
+
+    ps.ostr1 << "<TR height=\"15\"><TD><HR/></TD></TR>\n";
+
+    // ## Value and units:
+
+    ps.ostr1 << "<TR height=\"15\" style=\"font-size:12; width:100%;\"><TD>Value and units:</TD></TR>\n";
+    ps.ostr1 << R"(<TR height="30"><TD><INPUT style="width:200px;" type="text" id="gridValue"><INPUT style="width:80px;"type="text" value=")" << ps.unitStr << "\"></TD></TR>\n";
+  }
+  catch (...)
+  {
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
+    exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
+    throw exception;
+  }
+}
+
+
+
+
 void Plugin::page_main_paintOptions(PageMainState& ps,Session& session)
 {
   FUNCTION_TRACE
@@ -4904,455 +5470,13 @@ void Plugin::page_main_paintOptions(PageMainState& ps,Session& session)
   {
     if (ps.presentation == "Image" || ps.presentation == "Map" || ps.presentation == "Streams" || ps.presentation == "StreamsAnimation")
     {
-      if ((ps.colorMap.empty() || ps.colorMap == "None") &&  ps.presentation != "Streams" && ps.presentation != "StreamsAnimation")
-      {
-        // ### Hue, saturation, blur
-
-        ps.ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Hue, saturation and blur</TD></TR>\n";
-        ps.ostr1 << "<TR height=\"30\"><TD>\n";
-        ps.ostr1 << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_HUE << "=' + this.options[this.selectedIndex].value)\">\n";
-
-
-        uint hue = toUInt32(ps.hueStr);
-        for (uint a=0; a<256; a++)
-        {
-          if (a == hue)
-          {
-            ps.ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
-            session.setAttribute(ATTR_HUE,a);
-          }
-          else
-          {
-            ps.ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
-          }
-        }
-        ps.ostr1 << "</SELECT>\n";
-
-
-        uint saturation = toUInt32(ps.saturationStr);
-        ps.ostr1 << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_SATURATION << "=' + this.options[this.selectedIndex].value)\">\n";
-
-
-        for (uint a=0; a<256; a++)
-        {
-          if (a == saturation)
-          {
-            ps.ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
-            session.setAttribute(ATTR_SATURATION,a);
-          }
-          else
-          {
-            ps.ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
-          }
-        }
-        ps.ostr1 << "</SELECT>\n";
-
-
-        ps.ostr1 << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_BLUR << "=' + this.options[this.selectedIndex].value)\">\n";
-
-        uint blur = toUInt32(ps.blurStr);
-        for (uint a=1; a<=200; a++)
-        {
-          if (a == blur)
-          {
-            ps.ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
-            session.setAttribute(ATTR_BLUR,a);
-          }
-          else
-          {
-            ps.ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
-          }
-        }
-        ps.ostr1 << "</SELECT>\n";
-        ps.ostr1 << "</TD></TR>\n";
-      }
-
-
-
-
-      if (ps.presentation == "Streams" || ps.presentation == "StreamsAnimation")
-      {
-        // ### step, minLength, maxLength, background
-
-        ps.ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Step, min and max length, color</TD></TR>\n";
-        ps.ostr1 << "<TR height=\"30\"><TD>\n";
-        ps.ostr1 << R"(<SELECT style="width:40px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_STEP << "=' + this.options[this.selectedIndex].value)\">\n";
-
-        uint step = toUInt32(ps.stepStr);
-        for (uint a=2; a<100; a = a + 2)
-        {
-          if (a == step)
-          {
-            ps.ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
-            session.setAttribute(ATTR_STEP,a);
-          }
-          else
-          {
-            ps.ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
-          }
-        }
-        ps.ostr1 << "</SELECT>\n";
-
-
-        uint minLength = toUInt32(ps.minLengthStr);
-        ps.ostr1 << R"(<SELECT style="width:50px;"onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_MIN_LENGTH << "=' + this.options[this.selectedIndex].value)\">\n";
-
-        for (uint a=2; a<128; a=a+2)
-        {
-          if (a == minLength)
-          {
-            ps.ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
-            session.setAttribute(ATTR_MIN_LENGTH,a);
-          }
-          else
-          {
-            ps.ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
-          }
-        }
-        for (uint a=128; a<=2048; a=a+64)
-        {
-          if (a == minLength)
-          {
-            ps.ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
-            session.setAttribute(ATTR_MIN_LENGTH,a);
-          }
-          else
-          {
-            ps.ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
-          }
-        }
-        ps.ostr1 << "</SELECT>\n";
-
-
-        ps.ostr1 << R"(<SELECT style="width:50px;"onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_MAX_LENGTH << "=' + this.options[this.selectedIndex].value)\">\n";
-
-        uint maxLength = toUInt32(ps.maxLengthStr);
-        for (uint a=8; a<128; a=a+4)
-        {
-          if (a == maxLength)
-          {
-            ps.ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
-            session.setAttribute(ATTR_MAX_LENGTH,a);
-          }
-          else
-          {
-            ps.ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
-          }
-        }
-        for (uint a=128; a<=2048; a=a+64)
-        {
-          if (a == maxLength)
-          {
-            ps.ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
-            session.setAttribute(ATTR_MAX_LENGTH,a);
-          }
-          else
-          {
-            ps.ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
-          }
-        }
-        ps.ostr1 << "</SELECT>\n";
-
-        ps.ostr1 << R"(<SELECT style="width:120px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_STREAM_COLOR << "=' + this.options[this.selectedIndex].value)\">\n";
-
-        for (auto& itsColor : itsColors)
-        {
-          if (ps.streamColorStr == itsColor.first)
-          {
-            ps.ostr1 << "<OPTION selected value=\"" << itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
-            session.setAttribute(ATTR_STREAM_COLOR,ps.streamColorStr);
-          }
-          else
-          {
-            ps.ostr1 << "<OPTION value=\"" <<  itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
-          }
-          ps.a++;
-        }
-        ps.ostr1 << "</SELECT>\n";
-        ps.ostr1 << "</TD></TR>\n";
-      }
-
-
-      // ### Coordinate lines:
-
-      ps.ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Coordinate lines and land border:</TD></TR>\n";
-      ps.ostr1 << "<TR height=\"30\"><TD>\n";
-      ps.ostr1 << R"(<SELECT style="width:280px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_COORDINATE_LINES << "=' + this.options[this.selectedIndex].value)\">\n";
-
-      for (auto& itsColor : itsColors)
-      {
-        if (ps.coordinateLinesStr == itsColor.first)
-        {
-          ps.ostr1 << "<OPTION selected value=\"" << itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
-          session.setAttribute(ATTR_COORDINATE_LINES,ps.coordinateLinesStr);
-        }
-        else
-        {
-          ps.ostr1 << "<OPTION value=\"" <<  itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
-        }
-
-        ps.a++;
-      }
-      ps.ostr1 << "</SELECT>\n";
-
-
-      // ### Land border:
-
-      ps.ostr1 << R"(<SELECT style="width:280px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_LAND_BORDER << "=' + this.options[this.selectedIndex].value)\">\n";
-
-      for (auto& itsColor : itsColors)
-      {
-        if (ps.landBorderStr == itsColor.first)
-        {
-          ps.ostr1 << "<OPTION selected value=\"" << itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
-          session.setAttribute(ATTR_LAND_BORDER,ps.landBorderStr);
-        }
-        else
-        {
-          ps.ostr1 << "<OPTION value=\"" <<  itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
-        }
-        ps.a++;
-      }
-      ps.ostr1 << "</SELECT>\n";
-      ps.ostr1 << "</TD></TR>\n";
-
-
-
-
-      // ### Land and sea colors:
-
-      ps.ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Land and sea colors:</TD></TR>\n";
-      ps.ostr1 << "<TR height=\"30\"><TD>\n";
-
-      ps.a = 0;
-      ps.ostr1 << R"(<SELECT style="width:80px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_LAND_COLOR_POS << "=' + this.options[this.selectedIndex].value)\">\n";
-      while (layerPosition[ps.a] != nullptr)
-      {
-        if (ps.landcol_pos == ps.a)
-        {
-          ps.ostr1 << "<OPTION selected value=\"" << ps.a << "\">" <<  layerPosition[ps.a] << "</OPTION>\n";
-          session.setAttribute(ATTR_LAND_COLOR_POS,ps.a);
-        }
-        else
-        {
-          ps.ostr1 << "<OPTION value=\"" <<  ps.a << "\">" << layerPosition[ps.a] << "</OPTION>\n";
-        }
-        ps.a++;
-      }
-      ps.ostr1 << "</SELECT>\n";
-
-
-      ps.a = 0;
-      ps.ostr1 << R"(<SELECT style="width:190px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_LAND_MASK << "=' + this.options[this.selectedIndex].value)\">\n";
-      for (auto& itsColor : itsColors)
-      {
-        if (ps.landMaskStr == itsColor.first)
-        {
-          ps.ostr1 << "<OPTION selected value=\"" << itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
-          session.setAttribute(ATTR_LAND_MASK,ps.landMaskStr);
-        }
-        else
-        {
-          ps.ostr1 << "<OPTION value=\"" <<  itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
-        }
-        ps.a++;
-      }
-      ps.ostr1 << "</SELECT>\n";
-
-
-      ps.a = 0;
-      ps.ostr1 << R"(<SELECT style="width:80px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_SEA_COLOR_POS << "=' + this.options[this.selectedIndex].value)\">\n";
-      while (layerPosition[ps.a] != nullptr)
-      {
-        if (ps.seacol_pos == ps.a)
-        {
-          ps.ostr1 << "<OPTION selected value=\"" << ps.a << "\">" <<  layerPosition[ps.a] << "</OPTION>\n";
-          session.setAttribute(ATTR_SEA_COLOR_POS,ps.a);
-        }
-        else
-        {
-          ps.ostr1 << "<OPTION value=\"" <<  ps.a << "\">" << layerPosition[ps.a] << "</OPTION>\n";
-        }
-        ps.a++;
-      }
-      ps.ostr1 << "</SELECT>\n";
-
-
-      ps.ostr1 << R"(<SELECT style="width:190px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_SEA_MASK << "=' + this.options[this.selectedIndex].value)\">\n";
-      ps.a = 0;
-      for (auto& itsColor : itsColors)
-      {
-        if (ps.seaMaskStr == itsColor.first)
-        {
-          ps.ostr1 << "<OPTION selected value=\"" << itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
-          session.setAttribute(ATTR_SEA_MASK,ps.seaMaskStr);
-        }
-        else
-        {
-          ps.ostr1 << "<OPTION value=\"" <<  itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
-        }
-        ps.a++;
-      }
-      ps.ostr1 << "</SELECT>\n";
-
-      ps.ostr1 << "</TD></TR>\n";
-
-
-      // ### Land and sea topology
-
-      ps.ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Land/sea topography positions and intensity:</TD></TR>\n";
-      ps.ostr1 << "<TR height=\"30\"><TD>\n";
-
-      ps.a = 0;
-      ps.ostr1 << R"(<SELECT style="width:80px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_LAND_SHADING_POS << "=' + this.options[this.selectedIndex].value)\">\n";
-      while (layerPosition[ps.a] != nullptr)
-      {
-        if (ps.landshade_pos == ps.a)
-        {
-          ps.ostr1 << "<OPTION selected value=\"" << ps.a << "\">" <<  layerPosition[ps.a] << "</OPTION>\n";
-          session.setAttribute(ATTR_LAND_SHADING_POS,ps.a);
-        }
-        else
-        {
-          ps.ostr1 << "<OPTION value=\"" <<  ps.a << "\">" << layerPosition[ps.a] << "</OPTION>\n";
-        }
-
-        ps.a++;
-      }
-      ps.ostr1 << "</SELECT>\n";
-
-
-      ps.ostr1 << R"(<SELECT style="width:55px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_LAND_SHADING_LIGHT << "=' + this.options[this.selectedIndex].value)\">\n";
-
-      for (uint t=0; t<=512; t=t+16)
-      {
-        if (ps.landshade_light == t)
-        {
-          ps.ostr1 << "<OPTION selected value=\"" << t << "\">" <<  t << "</OPTION>\n";
-          session.setAttribute(ATTR_LAND_SHADING_LIGHT,t);
-        }
-        else
-        {
-          ps.ostr1 << "<OPTION value=\"" <<  t << "\">" << t << "</OPTION>\n";
-        }
-
-        ps.a++;
-      }
-      ps.ostr1 << "</SELECT>\n";
-
-      ps.ostr1 << R"(<SELECT style="width:55px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_LAND_SHADING_SHADOW << "=' + this.options[this.selectedIndex].value)\">\n";
-
-      for (uint t=0; t<=512; t=t+16)
-      {
-        if (ps.landshade_shadow == t)
-        {
-          ps.ostr1 << "<OPTION selected value=\"" << t << "\">" <<  t << "</OPTION>\n";
-          session.setAttribute(ATTR_LAND_SHADING_SHADOW,t);
-        }
-        else
-        {
-          ps.ostr1 << "<OPTION value=\"" <<  t << "\">" << t << "</OPTION>\n";
-        }
-
-        ps.a++;
-      }
-      ps.ostr1 << "</SELECT>\n";
-
-      ps.ostr1 << "</TD></TR>\n";
-      ps.ostr1 << "<TR><TD>\n";
-
-      ps.a = 0;
-      ps.ostr1 << R"(<SELECT style="width:80px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_SEA_SHADING_POS << "=' + this.options[this.selectedIndex].value)\">\n";
-      while (layerPosition[ps.a] != nullptr)
-      {
-        if (ps.seashade_pos == ps.a)
-        {
-          ps.ostr1 << "<OPTION selected value=\"" << ps.a << "\">" <<  layerPosition[ps.a] << "</OPTION>\n";
-          session.setAttribute(ATTR_SEA_SHADING_POS,ps.a);
-        }
-        else
-        {
-          ps.ostr1 << "<OPTION value=\"" <<  ps.a << "\">" << layerPosition[ps.a] << "</OPTION>\n";
-        }
-
-        ps.a++;
-      }
-      ps.ostr1 << "</SELECT>\n";
-
-
-      ps.ostr1 << R"(<SELECT style="width:55px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_SEA_SHADING_LIGHT << "=' + this.options[this.selectedIndex].value)\">\n";
-
-      for (uint t=0; t<=512; t=t+16)
-      {
-        if (ps.seashade_light == t)
-        {
-          ps.ostr1 << "<OPTION selected value=\"" << t << "\">" <<  t << "</OPTION>\n";
-          session.setAttribute(ATTR_SEA_SHADING_LIGHT,t);
-        }
-        else
-        {
-          ps.ostr1 << "<OPTION value=\"" <<  t << "\">" << t << "</OPTION>\n";
-        }
-
-        ps.a++;
-      }
-      ps.ostr1 << "</SELECT>\n";
-
-
-      ps.ostr1 << R"(<SELECT style="width:55px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_SEA_SHADING_SHADOW << "=' + this.options[this.selectedIndex].value)\">\n";
-
-      for (uint t=0; t<=512; t=t+16)
-      {
-        if (ps.seashade_shadow == t)
-        {
-          ps.ostr1 << "<OPTION selected value=\"" << t << "\">" <<  t << "</OPTION>\n";
-          session.setAttribute(ATTR_SEA_SHADING_SHADOW,t);
-        }
-        else
-        {
-          ps.ostr1 << "<OPTION value=\"" <<  t << "\">" << t << "</OPTION>\n";
-        }
-
-        ps.a++;
-      }
-      ps.ostr1 << "</SELECT>\n";
-
-
-      ps.ostr1 << "</TD></TR>\n";
-
-
-      // ### Missing value:
-
-      ps.ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Missing Value:</TD></TR>\n";
-      ps.ostr1 << "<TR height=\"30\"><TD>\n";
-      ps.ostr1 << R"(<SELECT style="width:280px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_MISSING << "=' + this.options[this.selectedIndex].value)\">\n";
-
-      const char *missingValues[] = {"Default","Zero",nullptr};
-
-      ps.a = 0 ;
-      while (missingValues[ps.a] != nullptr)
-      {
-        if (ps.missingStr == missingValues[ps.a])
-        {
-          ps.ostr1 << "<OPTION selected value=\"" << missingValues[ps.a] << "\">" <<  missingValues[ps.a] << "</OPTION>\n";
-          session.setAttribute(ATTR_MISSING,ps.missingStr);
-        }
-        else
-        {
-          ps.ostr1 << "<OPTION value=\"" <<  missingValues[ps.a] << "\">" <<  missingValues[ps.a] << "</OPTION>\n";
-        }
-        ps.a++;
-      }
-      ps.ostr1 << "</SELECT>\n";
-      ps.ostr1 << "</TD></TR>\n";
-
-
-      ps.ostr1 << "<TR height=\"15\"><TD><HR/></TD></TR>\n";
-
-      // ## Value and units:
-
-      ps.ostr1 << "<TR height=\"15\" style=\"font-size:12; width:100%;\"><TD>Value and units:</TD></TR>\n";
-      ps.ostr1 << R"(<TR height="30"><TD><INPUT style="width:200px;" type="text" id="gridValue"><INPUT style="width:80px;"type="text" value=")" << ps.unitStr << "\"></TD></TR>\n";
+      page_main_hueOptions(ps,session);
+      page_main_streamOptions(ps,session);
+      page_main_coordinateLineOptions(ps,session);
+      page_main_landBorderOptions(ps,session);
+      page_main_landSeaColorOptions(ps,session);
+      page_main_topologyOptions(ps,session);
+      page_main_missingValueOptions(ps,session);
     }
   }
   catch (...)
