@@ -3370,130 +3370,238 @@ void Plugin::page_main_writeJavascript(std::ostringstream& output)
 
 /*! \brief GridGui: Page main. */
 
-int Plugin::page_main(const Spine::Reactor & /*theReactor*/,
-                            const HTTP::Request & /*theRequest*/,
-                            HTTP::Response &theResponse,
-                            Session& session)
+// The state shared by the parts of the main page (Plugin::page_main)
+
+struct PageMainState
+{
+  std::shared_ptr<ContentServer::ServiceInterface> contentServer{};
+  std::string producerIdStr{};
+  std::string generationIdStr{};
+  std::string parameterIdStr{};
+  std::string levelIdStr{};
+  std::string levelStr{};
+  std::string geometryIdStr{};
+  std::string producerNameStr{};
+  std::string forecastTypeStr{};
+  std::string forecastNumberStr{};
+  std::string presentation{};
+  std::string projectionIdStr{};
+  std::string fileIdStr{};
+  std::string messageIndexStr{};
+  std::string timeStr{};
+  std::string hueStr{};
+  std::string saturationStr{};
+  std::string blurStr{};
+  std::string coordinateLinesStr{};
+  std::string landBorderStr{};
+  std::string landMaskStr{};
+  std::string seaMaskStr{};
+  std::string colorMap{};
+  std::string opacityStr{};
+  std::string missingStr{};
+  std::string stepStr{};
+  std::string minLengthStr{};
+  std::string maxLengthStr{};
+  std::string streamColorStr{};
+  std::string unitStr{};
+  std::string fmiKeyStr{};
+  std::string timeGroupTypeStr{};
+  std::string timeGroupStr{};
+  std::string projectionLockStr{};
+  std::string landShadingLightStr{};
+  std::string landShadingShadowStr{};
+  std::string landShadingPositionStr{};
+  std::string landColorPosStr{};
+  std::string seaShadingLightStr{};
+  std::string seaShadingShadowStr{};
+  std::string seaShadingPositionStr{};
+  std::string seaColorPosStr{};
+  time_t requiredAccessTime{};
+  uint landshade_light{};
+  uint landshade_shadow{};
+  uint landshade_pos{};
+  uint landcol_pos{};
+  uint seashade_light{};
+  uint seashade_shadow{};
+  uint seashade_pos{};
+  uint seacol_pos{};
+  uint opacity{};
+  std::ostringstream output{};
+  std::ostringstream ostr1{};
+  std::ostringstream ostr2{};
+  std::ostringstream ostr3{};
+  std::ostringstream ostr4{};
+  T::ProducerInfoList producerInfoList{};
+  uint len{};
+  T::ProducerId producerId{};
+  T::GenerationInfoList generationInfoList{};
+  T::GenerationInfoList generationInfoList2{};
+  T::GenerationId generationId{};
+  bool generationNotReady{};
+  std::set<std::string> generations{};
+  std::string originTime{};
+  std::string paramDescription{};
+  std::set<std::string> paramKeyList{};
+  T::ContentInfoList contentInfoList{};
+  int levelId{};
+  std::set<int> levelIds{};
+  T::ParamLevel level{};
+  std::set<int> levels{};
+  short forecastType{};
+  std::set<int> forecastTypes{};
+  short forecastNumber{};
+  std::set<int> forecastNumbers{};
+  T::GeometryId geometryId{};
+  std::set<int> geometries{};
+  std::string pTime{};
+  std::set<std::string> timeGroupStrList{};
+  uint timeGroupType{};
+  bool useTimeGroup{};
+  uint a{};
+  std::string prevTime{};
+  uint tCount{};
+  T::ContentInfo *prevCont = nullptr;
+  T::ContentInfo *currentCont = nullptr;
+  T::ContentInfo *nextCont = nullptr;
+  T::ContentInfoList contentInfoListByLevels{};
+  uint lCount{};
+  std::string aggregation{};
+  std::string processing{};
+};
+
+
+
+namespace
+{
+const char *layerPosition[] = {"None","Bottom","Top",nullptr};
+const char *timeGroupTypes[] = {"All","Day","Month","Year",nullptr};
+int timeGroupLen[] = {15,8,6,4};
+const char *modes[] = {"Image","Map","Streams","StreamsAnimation","Info","Table(sample)","Coordinates(sample)","Message",nullptr};
+}  // namespace
+
+
+
+/*! \brief GridGui: Read the selection attributes of the session, reset the ones depending on a changed selection and start the page. */
+
+void Plugin::page_main_selectionAttributes(PageMainState& ps,Session& session)
 {
   FUNCTION_TRACE
   try
   {
-    const char *layerPosition[] = {"None","Bottom","Top",nullptr};
-
     //session.print(std::cout,0,0);
 
-    auto contentServer = itsGridEngine->getContentServer_sptr();
+    ps.contentServer = itsGridEngine->getContentServer_sptr();
 
-    std::string producerIdStr = session.getAttribute(ATTR_PRODUCER_ID);
-    std::string generationIdStr = session.getAttribute(ATTR_GENERATION_ID);
-    std::string parameterIdStr = session.getAttribute(ATTR_PARAMETER_ID);
-    std::string levelIdStr = session.getAttribute(ATTR_LEVEL_ID);
-    std::string levelStr = session.getAttribute(ATTR_LEVEL);
-    std::string geometryIdStr = session.getAttribute(ATTR_GEOMETRY_ID);
-    std::string producerNameStr = session.getAttribute(ATTR_PRODUCER_NAME);
-    std::string forecastTypeStr = session.getAttribute(ATTR_FORECAST_TYPE);
-    std::string forecastNumberStr = session.getAttribute(ATTR_FORECAST_NUMBER);
-    std::string presentation = session.getAttribute(ATTR_PRESENTATION);
-    std::string projectionIdStr = session.getAttribute(ATTR_PROJECTION_ID);
-    std::string fileIdStr = session.getAttribute(ATTR_FILE_ID);
-    std::string messageIndexStr = session.getAttribute(ATTR_MESSAGE_INDEX);
-    std::string timeStr = session.getAttribute(ATTR_TIME);
-    std::string hueStr = session.getAttribute(ATTR_HUE);
-    std::string saturationStr = session.getAttribute(ATTR_SATURATION);
-    std::string blurStr = session.getAttribute(ATTR_BLUR);
-    std::string coordinateLinesStr = session.getAttribute(ATTR_COORDINATE_LINES);
-    std::string landBorderStr = session.getAttribute(ATTR_LAND_BORDER);
-    std::string landMaskStr = session.getAttribute(ATTR_LAND_MASK);
-    std::string seaMaskStr = session.getAttribute(ATTR_SEA_MASK);
-    std::string colorMap = session.getAttribute(ATTR_COLOR_MAP);
-    std::string opacityStr = session.getAttribute(ATTR_OPACITY);
-    std::string missingStr = session.getAttribute(ATTR_MISSING);
-    std::string stepStr = session.getAttribute(ATTR_STEP);
-    std::string minLengthStr = session.getAttribute(ATTR_MIN_LENGTH);
-    std::string maxLengthStr = session.getAttribute(ATTR_MAX_LENGTH);
-    std::string streamColorStr = session.getAttribute(ATTR_STREAM_COLOR);
-    std::string unitStr = session.getAttribute(ATTR_UNIT);
-    std::string fmiKeyStr = session.getAttribute(ATTR_FMI_KEY);
-    std::string timeGroupTypeStr = session.getAttribute(ATTR_TIME_GROUP_TYPE);
-    std::string timeGroupStr = session.getAttribute(ATTR_TIME_GROUP);
-    std::string projectionLockStr = session.getAttribute(ATTR_PROJECTION_LOCK);
-    std::string landShadingLightStr = session.getAttribute(ATTR_LAND_SHADING_LIGHT);
-    std::string landShadingShadowStr = session.getAttribute(ATTR_LAND_SHADING_SHADOW);
-    std::string landShadingPositionStr = session.getAttribute(ATTR_LAND_SHADING_POS);
-    std::string landColorPosStr = session.getAttribute(ATTR_LAND_COLOR_POS);
-    std::string seaShadingLightStr = session.getAttribute(ATTR_SEA_SHADING_LIGHT);
-    std::string seaShadingShadowStr = session.getAttribute(ATTR_SEA_SHADING_SHADOW);
-    std::string seaShadingPositionStr = session.getAttribute(ATTR_SEA_SHADING_POS);
-    std::string seaColorPosStr = session.getAttribute(ATTR_SEA_COLOR_POS);
+    ps.producerIdStr = session.getAttribute(ATTR_PRODUCER_ID);
+    ps.generationIdStr = session.getAttribute(ATTR_GENERATION_ID);
+    ps.parameterIdStr = session.getAttribute(ATTR_PARAMETER_ID);
+    ps.levelIdStr = session.getAttribute(ATTR_LEVEL_ID);
+    ps.levelStr = session.getAttribute(ATTR_LEVEL);
+    ps.geometryIdStr = session.getAttribute(ATTR_GEOMETRY_ID);
+    ps.producerNameStr = session.getAttribute(ATTR_PRODUCER_NAME);
+    ps.forecastTypeStr = session.getAttribute(ATTR_FORECAST_TYPE);
+    ps.forecastNumberStr = session.getAttribute(ATTR_FORECAST_NUMBER);
+    ps.presentation = session.getAttribute(ATTR_PRESENTATION);
+    ps.projectionIdStr = session.getAttribute(ATTR_PROJECTION_ID);
+    ps.fileIdStr = session.getAttribute(ATTR_FILE_ID);
+    ps.messageIndexStr = session.getAttribute(ATTR_MESSAGE_INDEX);
+    ps.timeStr = session.getAttribute(ATTR_TIME);
+    ps.hueStr = session.getAttribute(ATTR_HUE);
+    ps.saturationStr = session.getAttribute(ATTR_SATURATION);
+    ps.blurStr = session.getAttribute(ATTR_BLUR);
+    ps.coordinateLinesStr = session.getAttribute(ATTR_COORDINATE_LINES);
+    ps.landBorderStr = session.getAttribute(ATTR_LAND_BORDER);
+    ps.landMaskStr = session.getAttribute(ATTR_LAND_MASK);
+    ps.seaMaskStr = session.getAttribute(ATTR_SEA_MASK);
+    ps.colorMap = session.getAttribute(ATTR_COLOR_MAP);
+    ps.opacityStr = session.getAttribute(ATTR_OPACITY);
+    ps.missingStr = session.getAttribute(ATTR_MISSING);
+    ps.stepStr = session.getAttribute(ATTR_STEP);
+    ps.minLengthStr = session.getAttribute(ATTR_MIN_LENGTH);
+    ps.maxLengthStr = session.getAttribute(ATTR_MAX_LENGTH);
+    ps.streamColorStr = session.getAttribute(ATTR_STREAM_COLOR);
+    ps.unitStr = session.getAttribute(ATTR_UNIT);
+    ps.fmiKeyStr = session.getAttribute(ATTR_FMI_KEY);
+    ps.timeGroupTypeStr = session.getAttribute(ATTR_TIME_GROUP_TYPE);
+    ps.timeGroupStr = session.getAttribute(ATTR_TIME_GROUP);
+    ps.projectionLockStr = session.getAttribute(ATTR_PROJECTION_LOCK);
+    ps.landShadingLightStr = session.getAttribute(ATTR_LAND_SHADING_LIGHT);
+    ps.landShadingShadowStr = session.getAttribute(ATTR_LAND_SHADING_SHADOW);
+    ps.landShadingPositionStr = session.getAttribute(ATTR_LAND_SHADING_POS);
+    ps.landColorPosStr = session.getAttribute(ATTR_LAND_COLOR_POS);
+    ps.seaShadingLightStr = session.getAttribute(ATTR_SEA_SHADING_LIGHT);
+    ps.seaShadingShadowStr = session.getAttribute(ATTR_SEA_SHADING_SHADOW);
+    ps.seaShadingPositionStr = session.getAttribute(ATTR_SEA_SHADING_POS);
+    ps.seaColorPosStr = session.getAttribute(ATTR_SEA_COLOR_POS);
 
     if (session.findAttribute("#",ATTR_PRODUCER_ID))
     {
-      generationIdStr = "";
+      ps.generationIdStr = "";
       session.setAttribute(ATTR_GENERATION_ID,"");
     }
 
-    if (generationIdStr.empty() || session.findAttribute("#",ATTR_GENERATION_ID))
+    if (ps.generationIdStr.empty() || session.findAttribute("#",ATTR_GENERATION_ID))
     {
-      parameterIdStr = "";
+      ps.parameterIdStr = "";
       session.setAttribute(ATTR_PARAMETER_ID,"");
     }
 
-    if (parameterIdStr.empty() || session.findAttribute("#",ATTR_PARAMETER_ID))
+    if (ps.parameterIdStr.empty() || session.findAttribute("#",ATTR_PARAMETER_ID))
     {
-      levelIdStr = "";
+      ps.levelIdStr = "";
       session.setAttribute(ATTR_LEVEL_ID,"");
     }
 
-    if (levelIdStr.empty() || session.findAttribute("#",ATTR_LEVEL_ID))
+    if (ps.levelIdStr.empty() || session.findAttribute("#",ATTR_LEVEL_ID))
     {
-      levelStr = "";
+      ps.levelStr = "";
       session.setAttribute(ATTR_LEVEL,"");
     }
 
-    if (levelStr.empty() || session.findAttribute("#",ATTR_LEVEL))
+    if (ps.levelStr.empty() || session.findAttribute("#",ATTR_LEVEL))
     {
-      forecastTypeStr = "";
+      ps.forecastTypeStr = "";
       session.setAttribute(ATTR_FORECAST_TYPE,"");
     }
 
-    if (forecastTypeStr.empty() || session.findAttribute("#",ATTR_FORECAST_TYPE))
+    if (ps.forecastTypeStr.empty() || session.findAttribute("#",ATTR_FORECAST_TYPE))
     {
-      forecastNumberStr = "";
+      ps.forecastNumberStr = "";
       session.setAttribute(ATTR_FORECAST_NUMBER,"");
     }
 
-    if (forecastNumberStr.empty() || session.findAttribute("#",ATTR_FORECAST_NUMBER))
+    if (ps.forecastNumberStr.empty() || session.findAttribute("#",ATTR_FORECAST_NUMBER))
     {
-      geometryIdStr = "";
+      ps.geometryIdStr = "";
       session.setAttribute(ATTR_GEOMETRY_ID,"");
     }
 
-    if (geometryIdStr.empty() || session.findAttribute("#",ATTR_GEOMETRY_ID))
+    if (ps.geometryIdStr.empty() || session.findAttribute("#",ATTR_GEOMETRY_ID))
     {
-      timeGroupStr = "";
+      ps.timeGroupStr = "";
       session.setAttribute(ATTR_TIME_GROUP,"");
-      timeStr = "";
+      ps.timeStr = "";
       session.setAttribute(ATTR_TIME,"");
-      if (projectionLockStr.empty())
+      if (ps.projectionLockStr.empty())
       {
-        projectionIdStr = "";
+        ps.projectionIdStr = "";
         session.setAttribute(ATTR_PROJECTION_ID,"");
       }
-      fileIdStr = "";
+      ps.fileIdStr = "";
       session.setAttribute(ATTR_FILE_ID,"");
-      messageIndexStr = "0";
+      ps.messageIndexStr = "0";
       session.setAttribute(ATTR_MESSAGE_INDEX,"0");
     }
 
-    if (timeGroupTypeStr.empty() || session.findAttribute("#",ATTR_TIME_GROUP_TYPE))
+    if (ps.timeGroupTypeStr.empty() || session.findAttribute("#",ATTR_TIME_GROUP_TYPE))
     {
-      timeGroupStr = "";
+      ps.timeGroupStr = "";
       session.setAttribute(ATTR_TIME_GROUP,"");
-      timeStr = "";
+      ps.timeStr = "";
       session.setAttribute(ATTR_TIME,"");
     }
 
-    time_t requiredAccessTime = time(nullptr) + 120;
+    ps.requiredAccessTime = time(nullptr) + 120;
 
     if (getFileModificationTime(itsColorFile.c_str()) != itsColors_lastModified)
     {
@@ -3502,158 +3610,194 @@ int Plugin::page_main(const Spine::Reactor & /*theReactor*/,
 
     loadProducerFile();
 
-    uint landshade_light = toUInt32(landShadingLightStr);
-    uint landshade_shadow = toUInt32(landShadingShadowStr);
-    uint landshade_pos = toUInt32(landShadingPositionStr);
-    uint landcol_pos = toUInt32(landColorPosStr);
+    ps.landshade_light = toUInt32(ps.landShadingLightStr);
+    ps.landshade_shadow = toUInt32(ps.landShadingShadowStr);
+    ps.landshade_pos = toUInt32(ps.landShadingPositionStr);
+    ps.landcol_pos = toUInt32(ps.landColorPosStr);
 
-    uint seashade_light = toUInt32(seaShadingLightStr);
-    uint seashade_shadow = toUInt32(seaShadingShadowStr);
-    uint seashade_pos = toUInt32(seaShadingPositionStr);
-    uint seacol_pos = toUInt32(seaColorPosStr);
-    uint opacity = toUInt32(opacityStr);
-
-
-    std::ostringstream output;
-    std::ostringstream ostr1;
-    std::ostringstream ostr2;
-    std::ostringstream ostr3;
-    std::ostringstream ostr4;
-
-    output << "<HTML>\n";
-    output << "<BODY>\n";
-
-    page_main_writeJavascript(output);
+    ps.seashade_light = toUInt32(ps.seaShadingLightStr);
+    ps.seashade_shadow = toUInt32(ps.seaShadingShadowStr);
+    ps.seashade_pos = toUInt32(ps.seaShadingPositionStr);
+    ps.seacol_pos = toUInt32(ps.seaColorPosStr);
+    ps.opacity = toUInt32(ps.opacityStr);
 
 
-    ostr1 << "<TABLE width=\"100%\" height=\"100%\">\n";
+
+    ps.output << "<HTML>\n";
+    ps.output << "<BODY>\n";
+
+    page_main_writeJavascript(ps.output);
 
 
+    ps.ostr1 << "<TABLE width=\"100%\" height=\"100%\">\n";
+  }
+  catch (...)
+  {
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
+    exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
+    throw exception;
+  }
+}
+
+
+
+/*! \brief GridGui: The producer selection. */
+
+void Plugin::page_main_producers(PageMainState& ps,Session& session)
+{
+  FUNCTION_TRACE
+  try
+  {
     // ### Producers:
 
-    T::ProducerInfoList producerInfoList;
-    contentServer->getProducerInfoList(0,producerInfoList);
-    uint len = producerInfoList.getLength();
-    producerInfoList.sortByName();
-    T::ProducerId producerId = toUInt32(producerIdStr);
+    ps.contentServer->getProducerInfoList(0,ps.producerInfoList);
+    ps.len = ps.producerInfoList.getLength();
+    ps.producerInfoList.sortByName();
+    ps.producerId = toUInt32(ps.producerIdStr);
 
-    ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Producer:</TD></TR>\n";
-    ostr1 << "<TR height=\"30\"><TD>\n";
+    ps.ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Producer:</TD></TR>\n";
+    ps.ostr1 << "<TR height=\"30\"><TD>\n";
 
-    if (len > 0)
+    if (ps.len > 0)
     {
-      ostr1 << R"(<SELECT style="width:280px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_PRODUCER_ID << "=' + this.options[this.selectedIndex].value)\">\n";
-      for (uint t=0; t<len; t++)
+      ps.ostr1 << R"(<SELECT style="width:280px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_PRODUCER_ID << "=' + this.options[this.selectedIndex].value)\">\n";
+      for (uint t=0; t<ps.len; t++)
       {
-        T::ProducerInfo *p = producerInfoList.getProducerInfoByIndex(t);
+        T::ProducerInfo *p = ps.producerInfoList.getProducerInfoByIndex(t);
 
-        if (producerId == 0)
+        if (ps.producerId == 0)
         {
-          producerId = p->mProducerId;
-          producerIdStr = std::to_string(producerId);
+          ps.producerId = p->mProducerId;
+          ps.producerIdStr = std::to_string(ps.producerId);
           //printf("EMPTY => PRODUCER %s\n",producerIdStr.c_str());
         }
 
-        if (producerId == p->mProducerId)
+        if (ps.producerId == p->mProducerId)
         {
-          producerNameStr = p->mName;
-          session.setAttribute(ATTR_PRODUCER_ID,producerId);
-          session.setAttribute(ATTR_PRODUCER_NAME,producerNameStr);
-          ostr1 << "<OPTION selected value=\"" <<  p->mProducerId << "\">" <<  p->mName << "</OPTION>\n";
+          ps.producerNameStr = p->mName;
+          session.setAttribute(ATTR_PRODUCER_ID,ps.producerId);
+          session.setAttribute(ATTR_PRODUCER_NAME,ps.producerNameStr);
+          ps.ostr1 << "<OPTION selected value=\"" <<  p->mProducerId << "\">" <<  p->mName << "</OPTION>\n";
         }
         else
         {
-          ostr1 << "<OPTION value=\"" <<  p->mProducerId << "\">" <<  p->mName << "</OPTION>\n";
+          ps.ostr1 << "<OPTION value=\"" <<  p->mProducerId << "\">" <<  p->mName << "</OPTION>\n";
         }
       }
-      ostr1 << "</SELECT>\n";
+      ps.ostr1 << "</SELECT>\n";
     }
-    ostr1 << "</TD></TR>\n";
+    ps.ostr1 << "</TD></TR>\n";
+  }
+  catch (...)
+  {
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
+    exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
+    throw exception;
+  }
+}
 
 
+
+/*! \brief GridGui: The generation selection. */
+
+void Plugin::page_main_generations(PageMainState& ps,Session& session)
+{
+  FUNCTION_TRACE
+  try
+  {
     // ### Generations:
 
-    T::GenerationInfoList generationInfoList;
-    T::GenerationInfoList generationInfoList2;
-    contentServer->getGenerationInfoListByProducerId(0,producerId,generationInfoList2);
-    generationInfoList2.getGenerationInfoListByProducerId(producerId,generationInfoList);
+    ps.contentServer->getGenerationInfoListByProducerId(0,ps.producerId,ps.generationInfoList2);
+    ps.generationInfoList2.getGenerationInfoListByProducerId(ps.producerId,ps.generationInfoList);
     //generationInfoList2.getGenerationInfoListByProducerIdAndStatus(producerId,generationInfoList,T::GenerationInfo::Status::Ready);
 
-    T::GenerationId generationId = toUInt64(generationIdStr);
-    bool generationNotReady = false;
+    ps.generationId = toUInt64(ps.generationIdStr);
+    ps.generationNotReady = false;
 
-    if (generationInfoList.getGenerationInfoById(generationId) == nullptr)
-      generationId = 0;
+    if (ps.generationInfoList.getGenerationInfoById(ps.generationId) == nullptr)
+      ps.generationId = 0;
 
-    std::set<std::string> generations;
-    getGenerations(generationInfoList,generations);
-    std::string originTime;
+    getGenerations(ps.generationInfoList,ps.generations);
 
 
-    ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Generation:</TD></TR>\n";
-    ostr1 << "<TR height=\"30\"><TD>\n";
+    ps.ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Generation:</TD></TR>\n";
+    ps.ostr1 << "<TR height=\"30\"><TD>\n";
 
-    if (!generations.empty())
+    if (!ps.generations.empty())
     {
       std::string disabled;
-      if (generations.size() == 1)
+      if (ps.generations.size() == 1)
         disabled = "disabled";
 
-      ostr1 << "<SELECT style=\"width:280px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_GENERATION_ID << "=' + this.options[this.selectedIndex].value)\">\n";
+      ps.ostr1 << "<SELECT style=\"width:280px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_GENERATION_ID << "=' + this.options[this.selectedIndex].value)\">\n";
 
-      for (auto it = generations.rbegin(); it != generations.rend(); ++it)
+      for (auto it = ps.generations.rbegin(); it != ps.generations.rend(); ++it)
       {
         const std::string& name = *it;
-        T::GenerationInfo *g = generationInfoList.getGenerationInfoByName(name);
-        if (g != nullptr && (g->mDeletionTime == 0 || g->mDeletionTime > requiredAccessTime))
+        T::GenerationInfo *g = ps.generationInfoList.getGenerationInfoByName(name);
+        if (g != nullptr && (g->mDeletionTime == 0 || g->mDeletionTime > ps.requiredAccessTime))
         {
           std::string status;
           if (g->mStatus != 1)
             status = " (* not ready *)";
 
-          if (generationId == 0)
+          if (ps.generationId == 0)
           {
-            generationId = g->mGenerationId;
-            generationIdStr = std::to_string(generationId);
+            ps.generationId = g->mGenerationId;
+            ps.generationIdStr = std::to_string(ps.generationId);
             //printf("EMPTY => GENERATION %s\n",generationIdStr.c_str());
           }
 
-          if (generationId == g->mGenerationId)
+          if (ps.generationId == g->mGenerationId)
           {
             if (g->mStatus != 1)
-              generationNotReady = true;
+              ps.generationNotReady = true;
 
-            originTime = g->mAnalysisTime;
-            ostr1 << "<OPTION selected value=\"" <<  g->mGenerationId << "\">" <<  g->mName << status << "</OPTION>\n";
-            session.setAttribute(ATTR_GENERATION_ID,generationId);
+            ps.originTime = g->mAnalysisTime;
+            ps.ostr1 << "<OPTION selected value=\"" <<  g->mGenerationId << "\">" <<  g->mName << status << "</OPTION>\n";
+            session.setAttribute(ATTR_GENERATION_ID,ps.generationId);
           }
           else
-            ostr1 << "<OPTION value=\"" <<  g->mGenerationId << "\">" << g->mName << status << "</OPTION>\n";
+            ps.ostr1 << "<OPTION value=\"" <<  g->mGenerationId << "\">" << g->mName << status << "</OPTION>\n";
         }
       }
-      ostr1 << "</SELECT>\n";
+      ps.ostr1 << "</SELECT>\n";
     }
-    ostr1 << "</TD></TR>\n";
+    ps.ostr1 << "</TD></TR>\n";
 
-    if (generationNotReady)
+    if (ps.generationNotReady)
     {
-      ostr1 << "<TR style=\"text-align:center; font-size:12; font-weight:bold;\"><TD>*** Generation not ready ***</TD></TR>\n";
+      ps.ostr1 << "<TR style=\"text-align:center; font-size:12; font-weight:bold;\"><TD>*** Generation not ready ***</TD></TR>\n";
     }
+  }
+  catch (...)
+  {
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
+    exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
+    throw exception;
+  }
+}
 
 
+
+/*! \brief GridGui: The parameter selection. */
+
+void Plugin::page_main_parameters(PageMainState& ps,Session& session)
+{
+  FUNCTION_TRACE
+  try
+  {
     // ### Parameters:
 
-    std::string paramDescription;
-    std::set<std::string> paramKeyList;
-    contentServer->getContentParamKeyListByGenerationId(0,generationId,T::ParamKeyTypeValue::FMI_NAME,paramKeyList);
+    ps.contentServer->getContentParamKeyListByGenerationId(0,ps.generationId,T::ParamKeyTypeValue::FMI_NAME,ps.paramKeyList);
 
-    ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Parameter:</TD></TR>\n";
-    ostr1 << "<TR height=\"30\"><TD>\n";
+    ps.ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Parameter:</TD></TR>\n";
+    ps.ostr1 << "<TR height=\"30\"><TD>\n";
 
-    if (!paramKeyList.empty())
+    if (!ps.paramKeyList.empty())
     {
-      ostr1 << R"(<SELECT style="width:280px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_PARAMETER_ID << "=' + this.options[this.selectedIndex].value)\">\n";
-      for (const auto& it : paramKeyList)
+      ps.ostr1 << R"(<SELECT style="width:280px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_PARAMETER_ID << "=' + this.options[this.selectedIndex].value)\">\n";
+      for (const auto& it : ps.paramKeyList)
       {
         std::string parameterId = it;
         std::string pName = it;
@@ -3687,8 +3831,8 @@ int Plugin::page_main(const Spine::Reactor & /*theReactor*/,
           {
             parameterId = def.mParameterName;
             pName = def.mParameterName + " (" + def.mParameterDescription + ")";
-            if (parameterIdStr == parameterId || parameterIdStr.empty())
-              unitStr = def.mParameterUnits;
+            if (ps.parameterIdStr == parameterId || ps.parameterIdStr.empty())
+              ps.unitStr = def.mParameterUnits;
           }
         }
         else
@@ -3698,62 +3842,76 @@ int Plugin::page_main(const Spine::Reactor & /*theReactor*/,
           {
             parameterId = def.mParameterName;
             pName = def.mParameterName + " (" + def.mParameterDescription + ")";
-            if (parameterIdStr == parameterId || parameterIdStr.empty())
-              unitStr = def.mParameterUnits;
+            if (ps.parameterIdStr == parameterId || ps.parameterIdStr.empty())
+              ps.unitStr = def.mParameterUnits;
           }
         }
 
 
-        if (parameterIdStr.empty())
+        if (ps.parameterIdStr.empty())
         {
-          parameterIdStr = parameterId;
+          ps.parameterIdStr = parameterId;
           //printf("EMPTY => PARAMETER %s\n",parameterIdStr.c_str());
         }
 
-        if (parameterIdStr == parameterId)
+        if (ps.parameterIdStr == parameterId)
         {
-          ostr1 << "<OPTION selected value=\"" <<  parameterId << "\">" <<  pName << "</OPTION>\n";
+          ps.ostr1 << "<OPTION selected value=\"" <<  parameterId << "\">" <<  pName << "</OPTION>\n";
           session.setAttribute(ATTR_PARAMETER_ID,parameterId);
-          paramDescription = pName;
+          ps.paramDescription = pName;
         }
         else
         {
-          ostr1 << "<OPTION value=\"" <<  parameterId << "\">" <<  pName << "</OPTION>\n";
+          ps.ostr1 << "<OPTION value=\"" <<  parameterId << "\">" <<  pName << "</OPTION>\n";
         }
       }
-      ostr1 << "</SELECT>\n";
+      ps.ostr1 << "</SELECT>\n";
     }
-    ostr1 << "</TD></TR>\n";
+    ps.ostr1 << "</TD></TR>\n";
+  }
+  catch (...)
+  {
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
+    exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
+    throw exception;
+  }
+}
 
 
+
+/*! \brief GridGui: The level type selection. */
+
+void Plugin::page_main_levelIds(PageMainState& ps,Session& session)
+{
+  FUNCTION_TRACE
+  try
+  {
     // ### Level identifiers:
 
-    T::ContentInfoList contentInfoList;
-    contentServer->getContentListByParameterAndGenerationId(0,generationId,T::ParamKeyTypeValue::FMI_NAME,parameterIdStr,-1,0,0,-2,-2,-2,"14000101T000000","30000101T000000",0,contentInfoList);
-    int levelId = toInt32(levelIdStr);
+    ps.contentServer->getContentListByParameterAndGenerationId(0,ps.generationId,T::ParamKeyTypeValue::FMI_NAME,ps.parameterIdStr,-1,0,0,-2,-2,-2,"14000101T000000","30000101T000000",0,ps.contentInfoList);
+    ps.levelId = toInt32(ps.levelIdStr);
 
-    ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Level type and value:</TD></TR>\n";
-    ostr1 << "<TR height=\"30\"><TD>\n";
+    ps.ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Level type and value:</TD></TR>\n";
+    ps.ostr1 << "<TR height=\"30\"><TD>\n";
 
-    std::set<int> levelIds;
-    getLevelIds(contentInfoList,levelIds);
+    getLevelIds(ps.contentInfoList,ps.levelIds);
 
-    if (levelIds.find(levelId) == levelIds.end())
-      levelId = -1;
+    if (ps.levelIds.find(ps.levelId) == ps.levelIds.end())
+      ps.levelId = -1;
 
-    if (!levelIds.empty())
+    if (!ps.levelIds.empty())
     {
       std::string disabled;
-      if (levelIds.size() == 1)
+      if (ps.levelIds.size() == 1)
         disabled = "disabled";
 
-      ostr1 << "<SELECT style=\"width:200px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_LEVEL_ID << "=' + this.options[this.selectedIndex].value) \">\n";
-      for (int it : levelIds)
+      ps.ostr1 << "<SELECT style=\"width:200px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_LEVEL_ID << "=' + this.options[this.selectedIndex].value) \">\n";
+      for (int it : ps.levelIds)
       {
-        if (levelIdStr.empty())
+        if (ps.levelIdStr.empty())
         {
-          levelIdStr = std::to_string(it);
-          levelId = it;
+          ps.levelIdStr = std::to_string(it);
+          ps.levelId = it;
           //printf("EMPTY => LEVEL ID %s\n",levelIdStr.c_str());
         }
 
@@ -3766,88 +3924,119 @@ int Plugin::page_main(const Spine::Reactor & /*theReactor*/,
           else
             lStr = "FMI-" + std::to_string(it) + " : ";
         }
-        if (levelId == it)
+        if (ps.levelId == it)
         {
-          ostr1 << "<OPTION selected value=\"" <<  it << "\">" <<  lStr << "</OPTION>\n";
-          session.setAttribute(ATTR_LEVEL_ID,levelId);
+          ps.ostr1 << "<OPTION selected value=\"" <<  it << "\">" <<  lStr << "</OPTION>\n";
+          session.setAttribute(ATTR_LEVEL_ID,ps.levelId);
         }
         else
         {
-          ostr1 << "<OPTION value=\"" <<  it << "\">" <<  lStr << "</OPTION>\n";
+          ps.ostr1 << "<OPTION value=\"" <<  it << "\">" <<  lStr << "</OPTION>\n";
         }
       }
-      ostr1 << "</SELECT>\n";
+      ps.ostr1 << "</SELECT>\n";
     }
+  }
+  catch (...)
+  {
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
+    exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
+    throw exception;
+  }
+}
 
+
+
+/*! \brief GridGui: The level selection. */
+
+void Plugin::page_main_levels(PageMainState& ps,Session& session)
+{
+  FUNCTION_TRACE
+  try
+  {
     // ### Levels:
 
-    contentInfoList.clear();
-    contentServer->getContentListByParameterAndGenerationId(0,generationId,T::ParamKeyTypeValue::FMI_NAME,parameterIdStr,levelId,0,0x7FFFFFFF,-2,-2,-2,"14000101T000000","30000101T000000",0,contentInfoList);
-    T::ParamLevel level = toInt32(levelStr);
+    ps.contentInfoList.clear();
+    ps.contentServer->getContentListByParameterAndGenerationId(0,ps.generationId,T::ParamKeyTypeValue::FMI_NAME,ps.parameterIdStr,ps.levelId,0,0x7FFFFFFF,-2,-2,-2,"14000101T000000","30000101T000000",0,ps.contentInfoList);
+    ps.level = toInt32(ps.levelStr);
 
-    std::set<int> levels;
-    getLevels(contentInfoList,levelId,levels);
+    getLevels(ps.contentInfoList,ps.levelId,ps.levels);
 
-    if (levels.find(level) == levels.end())
-      level = 0;
+    if (ps.levels.find(ps.level) == ps.levels.end())
+      ps.level = 0;
 
-    if (!levels.empty())
+    if (!ps.levels.empty())
     {
       std::string disabled;
-      if (levels.size() == 1)
+      if (ps.levels.size() == 1)
         disabled = "disabled";
 
-      ostr1 << "<SELECT style=\"width:70px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_LEVEL << "=' + this.options[this.selectedIndex].value)\">\n";
-      for (int it : levels)
+      ps.ostr1 << "<SELECT style=\"width:70px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_LEVEL << "=' + this.options[this.selectedIndex].value)\">\n";
+      for (int it : ps.levels)
       {
-        if (levelStr.empty())
+        if (ps.levelStr.empty())
         {
-          levelStr = std::to_string(it);
-          level = it;
+          ps.levelStr = std::to_string(it);
+          ps.level = it;
           //printf("EMPTY => LEVEL %s\n",levelStr.c_str());
         }
 
-        if (level == it)
+        if (ps.level == it)
         {
-          ostr1 << "<OPTION selected value=\"" <<  it << "\">" <<  it << "</OPTION>\n";
-          session.setAttribute(ATTR_LEVEL,level);
+          ps.ostr1 << "<OPTION selected value=\"" <<  it << "\">" <<  it << "</OPTION>\n";
+          session.setAttribute(ATTR_LEVEL,ps.level);
         }
         else
         {
-          ostr1 << "<OPTION value=\"" <<  it << "\">" <<  it << "</OPTION>\n";
+          ps.ostr1 << "<OPTION value=\"" <<  it << "\">" <<  it << "</OPTION>\n";
         }
       }
-      ostr1 << "</SELECT>\n";
+      ps.ostr1 << "</SELECT>\n";
     }
-    ostr1 << "</TD></TR>\n";
+    ps.ostr1 << "</TD></TR>\n";
+  }
+  catch (...)
+  {
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
+    exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
+    throw exception;
+  }
+}
 
 
+
+/*! \brief GridGui: The forecast type selection. */
+
+void Plugin::page_main_forecastTypes(PageMainState& ps,Session& session)
+{
+  FUNCTION_TRACE
+  try
+  {
     // ### Forecast type:
 
-    short forecastType = toInt16(forecastTypeStr);
+    ps.forecastType = toInt16(ps.forecastTypeStr);
 
-    ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Forecast type and number:</TD></TR>\n";
-    ostr1 << "<TR height=\"30\"><TD>\n";
+    ps.ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Forecast type and number:</TD></TR>\n";
+    ps.ostr1 << "<TR height=\"30\"><TD>\n";
 
-    std::set<int> forecastTypes;
-    getForecastTypes(contentInfoList,levelId,level,forecastTypes);
+    getForecastTypes(ps.contentInfoList,ps.levelId,ps.level,ps.forecastTypes);
 
-    if (forecastTypes.find(forecastType) == forecastTypes.end())
-      forecastType = 0;
+    if (ps.forecastTypes.find(ps.forecastType) == ps.forecastTypes.end())
+      ps.forecastType = 0;
 
-    if (!forecastTypes.empty())
+    if (!ps.forecastTypes.empty())
     {
       std::string disabled;
-      if (forecastTypes.size() == 1)
+      if (ps.forecastTypes.size() == 1)
         disabled = "disabled";
 
-      ostr1 << "<SELECT style=\"width:200px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_FORECAST_TYPE << "=' + this.options[this.selectedIndex].value)\">\n";
-      for (int it : forecastTypes)
+      ps.ostr1 << "<SELECT style=\"width:200px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_FORECAST_TYPE << "=' + this.options[this.selectedIndex].value)\">\n";
+      for (int it : ps.forecastTypes)
       {
-        if (forecastTypeStr.empty())
+        if (ps.forecastTypeStr.empty())
         {
-          forecastTypeStr = std::to_string(it);
-          forecastType = it;
+          ps.forecastTypeStr = std::to_string(it);
+          ps.forecastType = it;
           //printf("EMPTY => FORECAST TYPE %s\n",forecastTypeStr.c_str());
         }
 
@@ -3858,81 +4047,113 @@ int Plugin::page_main(const Spine::Reactor & /*theReactor*/,
         else
           lStr = std::to_string(it) + " : ";
 
-        if (forecastType == it)
+        if (ps.forecastType == it)
         {
-          ostr1 << "<OPTION selected value=\"" <<  it << "\">" <<  lStr << "</OPTION>\n";
-          session.setAttribute(ATTR_FORECAST_TYPE,forecastType);
+          ps.ostr1 << "<OPTION selected value=\"" <<  it << "\">" <<  lStr << "</OPTION>\n";
+          session.setAttribute(ATTR_FORECAST_TYPE,ps.forecastType);
         }
         else
         {
-          ostr1 << "<OPTION value=\"" <<  it << "\">" << lStr << "</OPTION>\n";
+          ps.ostr1 << "<OPTION value=\"" <<  it << "\">" << lStr << "</OPTION>\n";
         }
       }
-      ostr1 << "</SELECT>\n";
+      ps.ostr1 << "</SELECT>\n";
     }
+  }
+  catch (...)
+  {
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
+    exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
+    throw exception;
+  }
+}
 
+
+
+/*! \brief GridGui: The forecast number selection. */
+
+void Plugin::page_main_forecastNumbers(PageMainState& ps,Session& session)
+{
+  FUNCTION_TRACE
+  try
+  {
     // ### Forecast number:
 
-    short forecastNumber = toInt16(forecastNumberStr);
+    ps.forecastNumber = toInt16(ps.forecastNumberStr);
 
-    std::set<int> forecastNumbers;
-    getForecastNumbers(contentInfoList,levelId,level,forecastType,forecastNumbers);
+    getForecastNumbers(ps.contentInfoList,ps.levelId,ps.level,ps.forecastType,ps.forecastNumbers);
 
-    if (forecastNumbers.find(forecastNumber) == forecastNumbers.end())
-      forecastNumber = 0;
+    if (ps.forecastNumbers.find(ps.forecastNumber) == ps.forecastNumbers.end())
+      ps.forecastNumber = 0;
 
-    if (!forecastNumbers.empty())
+    if (!ps.forecastNumbers.empty())
     {
       std::string disabled;
-      if (forecastNumbers.size() == 1)
+      if (ps.forecastNumbers.size() == 1)
         disabled = "disabled";
 
-      ostr1 << "<SELECT style=\"width:70px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_FORECAST_NUMBER << "=' + this.options[this.selectedIndex].value)\">\n";
-      for (int it : forecastNumbers)
+      ps.ostr1 << "<SELECT style=\"width:70px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_FORECAST_NUMBER << "=' + this.options[this.selectedIndex].value)\">\n";
+      for (int it : ps.forecastNumbers)
       {
-        if (forecastNumberStr.empty())
+        if (ps.forecastNumberStr.empty())
         {
-          forecastNumberStr = std::to_string(it);
-          forecastNumber = it;
+          ps.forecastNumberStr = std::to_string(it);
+          ps.forecastNumber = it;
           //printf("EMPTY => FORECAST NUMBER %s\n",forecastNumberStr.c_str());
         }
 
-        if (it == forecastNumber)
+        if (it == ps.forecastNumber)
         {
-          ostr1 << "<OPTION selected value=\"" <<  it << "\">" <<  it << "</OPTION>\n";
-          session.setAttribute(ATTR_FORECAST_NUMBER,forecastNumber);
+          ps.ostr1 << "<OPTION selected value=\"" <<  it << "\">" <<  it << "</OPTION>\n";
+          session.setAttribute(ATTR_FORECAST_NUMBER,ps.forecastNumber);
         }
         else
         {
-          ostr1 << "<OPTION value=\"" <<  it << "\">" <<  it << "</OPTION>\n";
+          ps.ostr1 << "<OPTION value=\"" <<  it << "\">" <<  it << "</OPTION>\n";
         }
       }
-      ostr1 << "</SELECT>\n";
+      ps.ostr1 << "</SELECT>\n";
     }
-    ostr1 << "</TD></TR>\n";
+    ps.ostr1 << "</TD></TR>\n";
+  }
+  catch (...)
+  {
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
+    exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
+    throw exception;
+  }
+}
 
+
+
+/*! \brief GridGui: The geometry selection. */
+
+void Plugin::page_main_geometries(PageMainState& ps,Session& session)
+{
+  FUNCTION_TRACE
+  try
+  {
     // ### Geometries:
 
-    T::GeometryId geometryId  = toInt32(geometryIdStr);
+    ps.geometryId = toInt32(ps.geometryIdStr);
 
-    ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Geometry:</TD></TR>\n";
-    ostr1 << "<TR height=\"30\"><TD>\n";
+    ps.ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Geometry:</TD></TR>\n";
+    ps.ostr1 << "<TR height=\"30\"><TD>\n";
 
-    std::set<int> geometries;
-    getGeometries(contentInfoList,levelId,level,forecastType,forecastNumber,geometries);
+    getGeometries(ps.contentInfoList,ps.levelId,ps.level,ps.forecastType,ps.forecastNumber,ps.geometries);
 
-    if (geometries.find(geometryId) == geometries.end())
-      geometryId = 0;
+    if (ps.geometries.find(ps.geometryId) == ps.geometries.end())
+      ps.geometryId = 0;
 
-    if (!geometries.empty())
+    if (!ps.geometries.empty())
     {
       std::string disabled;
-      if (geometries.size() == 1)
+      if (ps.geometries.size() == 1)
         disabled = "disabled";
 
-      ostr1 << "<SELECT style=\"width:280px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_GEOMETRY_ID << "=' + this.options[this.selectedIndex].value)\">\n";
+      ps.ostr1 << "<SELECT style=\"width:280px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_GEOMETRY_ID << "=' + this.options[this.selectedIndex].value)\">\n";
 
-      for (int geometrie : geometries)
+      for (int geometrie : ps.geometries)
       {
         std::string st = std::to_string(geometrie);
 
@@ -3947,110 +4168,124 @@ int Plugin::page_main(const Spine::Reactor & /*theReactor*/,
         else
           st = std::to_string(geometrie) + ":" + gName;
 
-        if (geometryId == 0)
+        if (ps.geometryId == 0)
         {
-          geometryId = geometrie;
-          geometryIdStr = std::to_string(geometryId);
+          ps.geometryId = geometrie;
+          ps.geometryIdStr = std::to_string(ps.geometryId);
           //printf("EMPTY => GEOMETRY %s\n",geometryIdStr.c_str());
         }
 
-        if (geometryId == geometrie)
+        if (ps.geometryId == geometrie)
         {
-          ostr1 << "<OPTION selected value=\"" <<  geometrie << "\">" <<  st << "</OPTION>\n";
-          session.setAttribute(ATTR_GEOMETRY_ID,geometryId);
+          ps.ostr1 << "<OPTION selected value=\"" <<  geometrie << "\">" <<  st << "</OPTION>\n";
+          session.setAttribute(ATTR_GEOMETRY_ID,ps.geometryId);
         }
         else
         {
-          ostr1 << "<OPTION value=\"" <<  geometrie << "\">" <<  st << "</OPTION>\n";
+          ps.ostr1 << "<OPTION value=\"" <<  geometrie << "\">" <<  st << "</OPTION>\n";
         }
       }
-      ostr1 << "</SELECT>\n";
+      ps.ostr1 << "</SELECT>\n";
     }
-    ostr1 << "</TD></TR>\n";
+    ps.ostr1 << "</TD></TR>\n";
 
 
-    if (geometryId != 0)
+    if (ps.geometryId != 0)
     {
-      std::string tmp = producerNameStr + ":" + std::to_string(geometryId);
+      std::string tmp = ps.producerNameStr + ":" + std::to_string(ps.geometryId);
       if (itsProducerList.find(toUpperString(tmp)) == itsProducerList.end())
       {
-        ostr1 << "<TR style=\"text-align:center; font-size:12; font-weight:bold;\"><TD >*** Search not configured ***</TD></TR>\n";
+        ps.ostr1 << "<TR style=\"text-align:center; font-size:12; font-weight:bold;\"><TD >*** Search not configured ***</TD></TR>\n";
       }
     }
 
 
-    if (projectionIdStr.empty())
+    if (ps.projectionIdStr.empty())
     {
-      projectionIdStr = geometryIdStr;
-      session.setAttribute(ATTR_PROJECTION_ID,projectionIdStr);
+      ps.projectionIdStr = ps.geometryIdStr;
+      session.setAttribute(ATTR_PROJECTION_ID,ps.projectionIdStr);
     }
+  }
+  catch (...)
+  {
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
+    exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
+    throw exception;
+  }
+}
 
+
+
+/*! \brief GridGui: The time selection. */
+
+void Plugin::page_main_times(PageMainState& ps,Session& session)
+{
+  FUNCTION_TRACE
+  try
+  {
     // ### Times:
 
-    contentInfoList.clear();
-    contentServer->getContentListByParameterAndGenerationId(0,generationId,T::ParamKeyTypeValue::FMI_NAME,parameterIdStr,levelId,level,level,-2,-2,-2,"14000101T000000","30000101T000000",0,contentInfoList);
-    len = contentInfoList.getLength();
+    ps.contentInfoList.clear();
+    ps.contentServer->getContentListByParameterAndGenerationId(0,ps.generationId,T::ParamKeyTypeValue::FMI_NAME,ps.parameterIdStr,ps.levelId,ps.level,ps.level,-2,-2,-2,"14000101T000000","30000101T000000",0,ps.contentInfoList);
+    ps.len = ps.contentInfoList.getLength();
 
-    std::string pTime = timeStr;
-    std::set<std::string> timeGroupStrList;
+    ps.pTime = ps.timeStr;
 
-    uint timeGroupType = 0;
-    bool useTimeGroup = false;
-    const char *timeGroupTypes[] = {"All","Day","Month","Year",nullptr};
-    int timeGroupLen[] = {15,8,6,4};
+    ps.timeGroupType = 0;
+    ps.useTimeGroup = false;
 
 
-    ostr1 << "<TR height=\"15\"><TD><HR/></TD></TR>\n";
-    ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Time group:</TD></TR>\n";
-    ostr1 << "<TR height=\"30\"><TD><TABLE><TR><TD>\n";
+    ps.ostr1 << "<TR height=\"15\"><TD><HR/></TD></TR>\n";
+    ps.ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Time group:</TD></TR>\n";
+    ps.ostr1 << "<TR height=\"30\"><TD><TABLE><TR><TD>\n";
 
-    ostr1 << R"(<SELECT style="width:80px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_TIME_GROUP << "=&" << ATTR_TIME_GROUP_TYPE << "=' + this.options[this.selectedIndex].value)\">\n";
+    ps.ostr1 << R"(<SELECT style="width:80px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_TIME_GROUP << "=&" << ATTR_TIME_GROUP_TYPE << "=' + this.options[this.selectedIndex].value)\">\n";
 
-    uint a = 0;
-    while (timeGroupTypes[a] != nullptr)
+    ps.a = 0;
+    while (timeGroupTypes[ps.a] != nullptr)
     {
-      if (timeGroupTypeStr == timeGroupTypes[a])
+      if (ps.timeGroupTypeStr == timeGroupTypes[ps.a])
       {
-        timeGroupType = a;
-        ostr1 << "<OPTION selected value=\"" << timeGroupTypes[a] << "\">" <<  timeGroupTypes[a] << "</OPTION>\n";
-        session.setAttribute(ATTR_TIME_GROUP_TYPE,timeGroupTypeStr);
+        ps.timeGroupType = ps.a;
+        ps.ostr1 << "<OPTION selected value=\"" << timeGroupTypes[ps.a] << "\">" <<  timeGroupTypes[ps.a] << "</OPTION>\n";
+        session.setAttribute(ATTR_TIME_GROUP_TYPE,ps.timeGroupTypeStr);
       }
       else
       {
-        ostr1 << "<OPTION value=\"" <<  timeGroupTypes[a] << "\">" <<  timeGroupTypes[a] << "</OPTION>\n";
+        ps.ostr1 << "<OPTION value=\"" <<  timeGroupTypes[ps.a] << "\">" <<  timeGroupTypes[ps.a] << "</OPTION>\n";
       }
-      a++;
+      ps.a++;
     }
-    ostr1 << "</SELECT></TD>\n";
+    ps.ostr1 << "</SELECT></TD>\n";
 
-    if (timeStr.empty() &&  len > 0)
+    if (ps.timeStr.empty() &&  ps.len > 0)
     {
-      T::ContentInfo *g = contentInfoList.getContentInfoByIndex(0);
+      T::ContentInfo *g = ps.contentInfoList.getContentInfoByIndex(0);
       std::string ft = g->getForecastTime();
-      if (timeGroupStr.empty())
-        timeGroupStr = ft.substr(0,timeGroupLen[timeGroupType]);
+      if (ps.timeGroupStr.empty())
+        ps.timeGroupStr = ft.substr(0,timeGroupLen[ps.timeGroupType]);
     }
 
-    std::string prevTime = "14000101T0000";
-    uint tCount = 0;
+    ps.prevTime = "14000101T0000";
+    ps.tCount = 0;
 
-    if (timeGroupType > 0)
+    if (ps.timeGroupType > 0)
     {
-      for (uint a=0; a<len; a++)
+      for (uint a=0; a<ps.len; a++)
       {
-        T::ContentInfo *g = contentInfoList.getContentInfoByIndex(a);
+        T::ContentInfo *g = ps.contentInfoList.getContentInfoByIndex(a);
 
-        if (g->mGeometryId == geometryId)
+        if (g->mGeometryId == ps.geometryId)
         {
-          if (prevTime < g->getForecastTime())
+          if (ps.prevTime < g->getForecastTime())
           {
-            if (forecastType == g->mForecastType)
+            if (ps.forecastType == g->mForecastType)
             {
-              if (forecastNumber == g->mForecastNumber)
+              if (ps.forecastNumber == g->mForecastNumber)
               {
                 std::string ft = g->getForecastTime();
-                timeGroupStrList.insert(ft.substr(0,timeGroupLen[timeGroupType]));
-                tCount++;
+                ps.timeGroupStrList.insert(ft.substr(0,timeGroupLen[ps.timeGroupType]));
+                ps.tCount++;
               }
             }
           }
@@ -4058,283 +4293,312 @@ int Plugin::page_main(const Spine::Reactor & /*theReactor*/,
       }
     }
 
-    if (timeGroupStrList.size() > 1)
+    if (ps.timeGroupStrList.size() > 1)
     {
-      useTimeGroup = true;
+      ps.useTimeGroup = true;
 
-      ostr1 << R"(<TD><SELECT id="yearselect" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() + "' + this.options[this.selectedIndex].value)\"";
-      ostr1 << " >\n";
+      ps.ostr1 << R"(<TD><SELECT id="yearselect" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() + "' + this.options[this.selectedIndex].value)\"";
+      ps.ostr1 << " >\n";
 
-      for (const auto& it : timeGroupStrList)
+      for (const auto& it : ps.timeGroupStrList)
       {
         std::ostringstream out;
-        out << "&" << ATTR_TIME_GROUP << "=" << it << "&" << ATTR_FORECAST_TYPE << "=" << forecastTypeStr << "&" << ATTR_FORECAST_NUMBER << "=" << forecastNumberStr;
+        out << "&" << ATTR_TIME_GROUP << "=" << it << "&" << ATTR_FORECAST_TYPE << "=" << ps.forecastTypeStr << "&" << ATTR_FORECAST_NUMBER << "=" << ps.forecastNumberStr;
         std::string url = out.str();
 
-        if (it == timeGroupStr)
+        if (it == ps.timeGroupStr)
         {
-          ostr1 << "<OPTION selected value=\"" <<  url << "\">" <<  it << "</OPTION>\n";
-          session.setAttribute(ATTR_TIME_GROUP,timeGroupStr);
+          ps.ostr1 << "<OPTION selected value=\"" <<  url << "\">" <<  it << "</OPTION>\n";
+          session.setAttribute(ATTR_TIME_GROUP,ps.timeGroupStr);
         }
         else
         {
-          ostr1 << "<OPTION value=\"" <<  url << "\">" <<  it << "</OPTION>\n";
+          ps.ostr1 << "<OPTION value=\"" <<  url << "\">" <<  it << "</OPTION>\n";
         }
       }
-      ostr1 << "</SELECT></TD>\n";
+      ps.ostr1 << "</SELECT></TD>\n";
     }
-    ostr1 << "</TR></TABLE></TD></TR>\n";
+    ps.ostr1 << "</TR></TABLE></TD></TR>\n";
 
 
 
-    prevTime = "14000101T0000";
+    ps.prevTime = "14000101T0000";
 
-    ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Time (UTC):</TD></TR>\n";
-    ostr1 << "<TR height=\"30\"><TD><TABLE><TR><TD>\n";
+    ps.ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Time (UTC):</TD></TR>\n";
+    ps.ostr1 << "<TR height=\"30\"><TD><TABLE><TR><TD>\n";
 
-    ostr3 << "<TABLE style=\"border-width:0;border-spacing:0;height:30;\"><TR>\n";
+    ps.ostr3 << "<TABLE style=\"border-width:0;border-spacing:0;height:30;\"><TR>\n";
 
 
-    T::ContentInfo *prevCont = nullptr;
-    T::ContentInfo *currentCont = nullptr;
-    T::ContentInfo *nextCont = nullptr;
+    ps.prevCont = nullptr;
+    ps.currentCont = nullptr;
+    ps.nextCont = nullptr;
 
-    if (len > 0)
+    if (ps.len > 0)
     {
-      contentInfoList.sort(T::ContentInfo::ComparisonMethod::fmiName_producer_generation_level_time);
+      ps.contentInfoList.sort(T::ContentInfo::ComparisonMethod::fmiName_producer_generation_level_time);
 
-      ostr1 << R"(<SELECT id="timeselect" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() + "' + this.options[this.selectedIndex].value)\">\n";
+      ps.ostr1 << R"(<SELECT id="timeselect" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() + "' + this.options[this.selectedIndex].value)\">\n";
 
       std::string u;
-      if (presentation == "Image" ||  presentation == "Map"  ||  presentation == "Streams")
+      if (ps.presentation == "Image" ||  ps.presentation == "Map"  ||  ps.presentation == "Streams")
       {
-        u = "/grid-gui?session=" + session.getUrlParameter() + "&" + ATTR_PAGE + "=" + presentation;
+        u = "/grid-gui?session=" + session.getUrlParameter() + "&" + ATTR_PAGE + "=" + ps.presentation;
       }
 
       uint daySwitch = 0;
       uint cc = 0;
-      for (uint a=0; a<len; a++)
+      for (uint a=0; a<ps.len; a++)
       {
-        T::ContentInfo *g = contentInfoList.getContentInfoByIndex(a);
+        T::ContentInfo *g = ps.contentInfoList.getContentInfoByIndex(a);
 
         //printf("**** TIME %s (%s)  geom=%u %u  ft=%u %u   fn=%d %d \n",g->getForecastTime(),prevTime.c_str(),g->mGeometryId,geometryId,forecastType,g->mForecastType,forecastNumber,g->mForecastNumber);
 
-        if (g->mGeometryId == geometryId)
+        if (g->mGeometryId == ps.geometryId)
         {
           std::string ft = g->getForecastTime();
-          if (prevTime < ft  &&  (!useTimeGroup  || (useTimeGroup  &&  ft.substr(0,timeGroupLen[timeGroupType]) == timeGroupStr)))
+          if (ps.prevTime < ft  &&  (!ps.useTimeGroup  || (ps.useTimeGroup  &&  ft.substr(0,timeGroupLen[ps.timeGroupType]) == ps.timeGroupStr)))
           {
-            if (forecastType == g->mForecastType)
+            if (ps.forecastType == g->mForecastType)
             {
-              if (forecastNumber == g->mForecastNumber)
+              if (ps.forecastNumber == g->mForecastNumber)
               {
                 std::ostringstream out;
-                out << "&" << ATTR_TIME << "=" << g->getForecastTime() << "&" << ATTR_FILE_ID << "=" << g->mFileId << "&" << ATTR_MESSAGE_INDEX << "=" << g->mMessageIndex << "&" << ATTR_FORECAST_TYPE << "=" << forecastTypeStr << "&" << ATTR_FORECAST_NUMBER << "=" << forecastNumberStr;
+                out << "&" << ATTR_TIME << "=" << g->getForecastTime() << "&" << ATTR_FILE_ID << "=" << g->mFileId << "&" << ATTR_MESSAGE_INDEX << "=" << g->mMessageIndex << "&" << ATTR_FORECAST_TYPE << "=" << ps.forecastTypeStr << "&" << ATTR_FORECAST_NUMBER << "=" << ps.forecastNumberStr;
                 std::string url = out.str();
                 const std::string& uu = url;
 
-                if (currentCont != nullptr  &&  nextCont == nullptr)
-                  nextCont = g;
+                if (ps.currentCont != nullptr  &&  ps.nextCont == nullptr)
+                  ps.nextCont = g;
 
-                if (timeStr.empty())
+                if (ps.timeStr.empty())
                 {
-                  timeStr = g->getForecastTime();
-                  prevTime = timeStr;
+                  ps.timeStr = g->getForecastTime();
+                  ps.prevTime = ps.timeStr;
                   //printf("EMPTY => TIME %s\n",timeStr.c_str());
                 }
 
                 std::string bg = "#E0E0E0";
 
-                if (strncmp(g->getForecastTime(),pTime.c_str(),8) != 0)
+                if (strncmp(g->getForecastTime(),ps.pTime.c_str(),8) != 0)
                   daySwitch++;
 
                 if ((daySwitch % 2) == 1)
                   bg = "#D0D0D0";
 
-                if (timeStr == g->getForecastTime())
+                if (ps.timeStr == g->getForecastTime())
                   bg = "#0000FF";
 
-                if (tCount < 124  ||  (g->getForecastTime() >= timeStr  &&  cc < 124))
+                if (ps.tCount < 124  ||  (g->getForecastTime() >= ps.timeStr  &&  cc < 124))
                 {
                   if (cc == 0)
                   {
-                    ostr3 << "<TD style=\"text-align:center; font-size:12;width:30;background:#000000;color:#FFFFFF;\">UTC</TD>\n";
-                    ostr3 << R"(<TD style="text-align:center; font-size:12;width:120;background:#F0F0F0;" id="ftime">)" + timeStr + "</TD><TD style=\"width:1;\"> </TD>\n";
+                    ps.ostr3 << "<TD style=\"text-align:center; font-size:12;width:30;background:#000000;color:#FFFFFF;\">UTC</TD>\n";
+                    ps.ostr3 << R"(<TD style="text-align:center; font-size:12;width:120;background:#F0F0F0;" id="ftime">)" + ps.timeStr + "</TD><TD style=\"width:1;\"> </TD>\n";
                   }
 
                   if (u > " ")
                   {
-                    ostr3 << "<TD style=\"width:5; background:" << bg << ";\" ";
-                    ostr3 << " onmouseout=\"this.style='width:5;background:"<< bg << ";'\"";
-                    ostr3 << " onmouseover=\"this.style='width:5;height:30;background:#FF0000;'; setText('ftime','" << g->getForecastTime() << "');setText('flevel','" << g->mParameterLevel << "');setImage(document.getElementById('myimage'),'" << u << uu << "');\"";
-                    ostr3 << " onClick=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << ";" << ATTR_TIME << "=" << g->getForecastTime() << ";" << ATTR_FILE_ID << "=" << g->mFileId << ";" << ATTR_MESSAGE_INDEX << "=" << g->mMessageIndex << ";" << ATTR_FORECAST_TYPE << "=" << g->mForecastType << ";" << ATTR_FORECAST_NUMBER << "=" << g->mForecastNumber << "');\" > </TD>\n";
+                    ps.ostr3 << "<TD style=\"width:5; background:" << bg << ";\" ";
+                    ps.ostr3 << " onmouseout=\"this.style='width:5;background:"<< bg << ";'\"";
+                    ps.ostr3 << " onmouseover=\"this.style='width:5;height:30;background:#FF0000;'; setText('ftime','" << g->getForecastTime() << "');setText('flevel','" << g->mParameterLevel << "');setImage(document.getElementById('myimage'),'" << u << uu << "');\"";
+                    ps.ostr3 << " onClick=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << ";" << ATTR_TIME << "=" << g->getForecastTime() << ";" << ATTR_FILE_ID << "=" << g->mFileId << ";" << ATTR_MESSAGE_INDEX << "=" << g->mMessageIndex << ";" << ATTR_FORECAST_TYPE << "=" << g->mForecastType << ";" << ATTR_FORECAST_NUMBER << "=" << g->mForecastNumber << "');\" > </TD>\n";
 
                   }
                   else
-                    ostr3 << "<TD style=\"width:5; background:"+bg+";\"> </TD>\n";
+                    ps.ostr3 << "<TD style=\"width:5; background:"+bg+";\"> </TD>\n";
 
-                  prevTime = g->getForecastTime();
+                  ps.prevTime = g->getForecastTime();
                   cc++;
                 }
 
-                if (timeStr == g->getForecastTime())
+                if (ps.timeStr == g->getForecastTime())
                 {
                   //printf("## SELECTED TIME  [%s][%s]\n",timeStr.c_str(),g->getForecastTime());
-                  ostr1 << "<OPTION selected value=\"" <<  url << "\">" <<  g->getForecastTime() << "</OPTION>\n";
-                  currentCont = g;
-                  fmiKeyStr = getFmiKey(producerNameStr,*g);
-                  fileIdStr = std::to_string(g->mFileId);
-                  messageIndexStr = std::to_string(g->mMessageIndex);
+                  ps.ostr1 << "<OPTION selected value=\"" <<  url << "\">" <<  g->getForecastTime() << "</OPTION>\n";
+                  ps.currentCont = g;
+                  ps.fmiKeyStr = getFmiKey(ps.producerNameStr,*g);
+                  ps.fileIdStr = std::to_string(g->mFileId);
+                  ps.messageIndexStr = std::to_string(g->mMessageIndex);
 
-                  session.setAttribute(ATTR_FMI_KEY,fmiKeyStr);
+                  session.setAttribute(ATTR_FMI_KEY,ps.fmiKeyStr);
                   session.setAttribute(ATTR_FILE_ID,g->mFileId);
                   session.setAttribute(ATTR_MESSAGE_INDEX,g->mMessageIndex);
                   session.setAttribute(ATTR_TIME,g->getForecastTime());
                 }
                 else
                 {
-                  ostr1 << "<OPTION value=\"" <<  url << "\">" <<  g->getForecastTime() << "</OPTION>\n";
+                  ps.ostr1 << "<OPTION value=\"" <<  url << "\">" <<  g->getForecastTime() << "</OPTION>\n";
                 }
 
-                if (currentCont == nullptr)
-                  prevCont = g;
+                if (ps.currentCont == nullptr)
+                  ps.prevCont = g;
 
-                pTime = g->getForecastTime();
+                ps.pTime = g->getForecastTime();
               }
             }
           }
         }
       }
-      ostr1 << "</SELECT>\n";
+      ps.ostr1 << "</SELECT>\n";
     }
-    ostr1 << "</TD>\n";
+    ps.ostr1 << "</TD>\n";
 
-    if (prevCont != nullptr)
-      ostr1 << R"(<TD width="20" > <button type="button" onClick="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_TIME << "=" << prevCont->getForecastTime() << "&" << ATTR_FILE_ID << "=" << prevCont->mFileId << "&" << ATTR_MESSAGE_INDEX << "=" << prevCont->mMessageIndex << "&" << ATTR_FORECAST_TYPE << "=" << forecastTypeStr << "&" << ATTR_FORECAST_NUMBER << "=" << forecastNumberStr << "');\">&lt;</button></TD>\n";
+    if (ps.prevCont != nullptr)
+      ps.ostr1 << R"(<TD width="20" > <button type="button" onClick="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_TIME << "=" << ps.prevCont->getForecastTime() << "&" << ATTR_FILE_ID << "=" << ps.prevCont->mFileId << "&" << ATTR_MESSAGE_INDEX << "=" << ps.prevCont->mMessageIndex << "&" << ATTR_FORECAST_TYPE << "=" << ps.forecastTypeStr << "&" << ATTR_FORECAST_NUMBER << "=" << ps.forecastNumberStr << "');\">&lt;</button></TD>\n";
     else
-      ostr1 << "<TD width=\"20\"><button type=\"button\">&lt;</button></TD>\n";
+      ps.ostr1 << "<TD width=\"20\"><button type=\"button\">&lt;</button></TD>\n";
 
-    if (nextCont != nullptr)
-      ostr1 << R"(<TD width="20"><button type="button" onClick="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_TIME << "=" << nextCont->getForecastTime() << "&" << ATTR_FILE_ID << "=" << nextCont->mFileId << "&" << ATTR_MESSAGE_INDEX << "=" << nextCont->mMessageIndex << "&" << ATTR_FORECAST_TYPE << "=" << forecastTypeStr << "&" << ATTR_FORECAST_NUMBER << "=" << forecastNumberStr + "');\">&gt;</button></TD>\n";
+    if (ps.nextCont != nullptr)
+      ps.ostr1 << R"(<TD width="20"><button type="button" onClick="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_TIME << "=" << ps.nextCont->getForecastTime() << "&" << ATTR_FILE_ID << "=" << ps.nextCont->mFileId << "&" << ATTR_MESSAGE_INDEX << "=" << ps.nextCont->mMessageIndex << "&" << ATTR_FORECAST_TYPE << "=" << ps.forecastTypeStr << "&" << ATTR_FORECAST_NUMBER << "=" << ps.forecastNumberStr + "');\">&gt;</button></TD>\n";
     else
-      ostr1 << "<TD width=\"20\"><button type=\"button\">&gt;</button></TD>\n";
+      ps.ostr1 << "<TD width=\"20\"><button type=\"button\">&gt;</button></TD>\n";
 
-    ostr1 << "</TR></TABLE></TD></TR>\n";
+    ps.ostr1 << "</TR></TABLE></TD></TR>\n";
 
-    ostr3 << "<TD></TD></TR></TABLE>\n";
+    ps.ostr3 << "<TD></TD></TR></TABLE>\n";
 
 
 
-    T::ContentInfoList contentInfoListByLevels;
-    if (!timeStr.empty())
-      contentServer->getContentListByParameterAndGenerationId(0,generationId,T::ParamKeyTypeValue::FMI_NAME,parameterIdStr,levelId,0,1000000000,forecastType,forecastNumber,geometryId,timeStr,timeStr,0,contentInfoListByLevels);
+    if (!ps.timeStr.empty())
+      ps.contentServer->getContentListByParameterAndGenerationId(0,ps.generationId,T::ParamKeyTypeValue::FMI_NAME,ps.parameterIdStr,ps.levelId,0,1000000000,ps.forecastType,ps.forecastNumber,ps.geometryId,ps.timeStr,ps.timeStr,0,ps.contentInfoListByLevels);
 
-    uint lCount = contentInfoListByLevels.getLength();
+    ps.lCount = ps.contentInfoListByLevels.getLength();
 
     std::string u;
-    if (presentation == "Image" ||  presentation == "Map" ||  presentation == "Streams")
+    if (ps.presentation == "Image" ||  ps.presentation == "Map" ||  ps.presentation == "Streams")
     {
-      u = "/grid-gui?session=" + session.getUrlParameter() + "&" + ATTR_PAGE + "=" + presentation;
+      u = "/grid-gui?session=" + session.getUrlParameter() + "&" + ATTR_PAGE + "=" + ps.presentation;
     }
 
     if (itsAnimationEnabled)
     {
-      ostr4 << "<TABLE style=\"border-width:0;border-spacing:0;width:70;\">\n";
-      ostr4 << "<TR><TD style=\"height:35;\"> </TD></TR>\n";
-      ostr4 << "<TR><TD style=\"height:35;text-align:center; font-size:12;background:#000000;color:#FFFFFF;\">Level</TD></TR>\n";
-      ostr4 << R"(<TR><TD style="text-align:center; font-size:12;background:#F0F0F0;" id="flevel">)" << levelStr << "</TD></TR>\n";
+      ps.ostr4 << "<TABLE style=\"border-width:0;border-spacing:0;width:70;\">\n";
+      ps.ostr4 << "<TR><TD style=\"height:35;\"> </TD></TR>\n";
+      ps.ostr4 << "<TR><TD style=\"height:35;text-align:center; font-size:12;background:#000000;color:#FFFFFF;\">Level</TD></TR>\n";
+      ps.ostr4 << R"(<TR><TD style="text-align:center; font-size:12;background:#F0F0F0;" id="flevel">)" << ps.levelStr << "</TD></TR>\n";
 
-      for (uint a=0; a<lCount; a++)
+      for (uint a=0; a<ps.lCount; a++)
       {
-        T::ContentInfo *g = contentInfoListByLevels.getContentInfoByIndex(a);
+        T::ContentInfo *g = ps.contentInfoListByLevels.getContentInfoByIndex(a);
 
         std::ostringstream out;
-        out << "&" << ATTR_TIME << "=" << timeStr << "&" << ATTR_FILE_ID << "=" << g->mFileId << "&" << ATTR_MESSAGE_INDEX << "=" << g->mMessageIndex << "&" << ATTR_FORECAST_TYPE << "=" << forecastTypeStr << "&" << ATTR_FORECAST_NUMBER << "=" << forecastNumberStr;
+        out << "&" << ATTR_TIME << "=" << ps.timeStr << "&" << ATTR_FILE_ID << "=" << g->mFileId << "&" << ATTR_MESSAGE_INDEX << "=" << g->mMessageIndex << "&" << ATTR_FORECAST_TYPE << "=" << ps.forecastTypeStr << "&" << ATTR_FORECAST_NUMBER << "=" << ps.forecastNumberStr;
         std::string url = out.str();
         const std::string& uu = url;
 
         std::string bg = "#E0E0E0";
-        if (g->mParameterLevel == level)
+        if (g->mParameterLevel == ps.level)
           bg = "#0000FF";
 
         if (u > " ")
         {
-          ostr4 << R"(<TR style="height:5;"><TD style=" background:)" << bg << ";\"";
-          ostr4 << " onmouseout=\"this.style='background:"+bg+";'\"";
-          ostr4 << " onmouseover=\"this.style='background:#FF0000;';setText('ftime','" << g->getForecastTime() << "');setText('flevel','" << g->mParameterLevel << "');setImage(document.getElementById('myimage'),'" << u << uu << "');\"";
-          ostr4 << " onClick=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << ";" << ATTR_TIME << "=" << g->getForecastTime() << ";" << ATTR_FILE_ID << "=" << g->mFileId << ";" << ATTR_MESSAGE_INDEX << "=" << g->mMessageIndex << ";" << ATTR_FORECAST_TYPE << "=" << g->mForecastType << ";" << ATTR_FORECAST_NUMBER << "=" << g->mForecastNumber << ";" << ATTR_LEVEL << "=" << g->mParameterLevel << "');\"> </TD></TR>\n";
+          ps.ostr4 << R"(<TR style="height:5;"><TD style=" background:)" << bg << ";\"";
+          ps.ostr4 << " onmouseout=\"this.style='background:"+bg+";'\"";
+          ps.ostr4 << " onmouseover=\"this.style='background:#FF0000;';setText('ftime','" << g->getForecastTime() << "');setText('flevel','" << g->mParameterLevel << "');setImage(document.getElementById('myimage'),'" << u << uu << "');\"";
+          ps.ostr4 << " onClick=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << ";" << ATTR_TIME << "=" << g->getForecastTime() << ";" << ATTR_FILE_ID << "=" << g->mFileId << ";" << ATTR_MESSAGE_INDEX << "=" << g->mMessageIndex << ";" << ATTR_FORECAST_TYPE << "=" << g->mForecastType << ";" << ATTR_FORECAST_NUMBER << "=" << g->mForecastNumber << ";" << ATTR_LEVEL << "=" << g->mParameterLevel << "');\"> </TD></TR>\n";
         }
         else
-          ostr4 << R"(<TR style="height:5;"><TD style=" background:)" << bg <<";\"> </TD></TR>\n";
+          ps.ostr4 << R"(<TR style="height:5;"><TD style=" background:)" << bg <<";\"> </TD></TR>\n";
       }
-      ostr4 << "</TABLE>\n";
+      ps.ostr4 << "</TABLE>\n";
     }
 
-    ostr1 << "<TR height=\"15\"><TD><HR/></TD></TR>\n";
-    ostr1 << "<TR height=\"15\" style=\"font-size:12; width:100%;\"><TD>FMI Key:</TD></TR>\n";
-    ostr1 << R"(<TR height="30"><TD><INPUT type="text" style="width:280px;background-color:#FFFF00;" value=")" << fmiKeyStr << "\"></TD></TR>\n";
+    ps.ostr1 << "<TR height=\"15\"><TD><HR/></TD></TR>\n";
+    ps.ostr1 << "<TR height=\"15\" style=\"font-size:12; width:100%;\"><TD>FMI Key:</TD></TR>\n";
+    ps.ostr1 << R"(<TR height="30"><TD><INPUT type="text" style="width:280px;background-color:#FFFF00;" value=")" << ps.fmiKeyStr << "\"></TD></TR>\n";
+  }
+  catch (...)
+  {
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
+    exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
+    throw exception;
+  }
+}
 
 
+
+/*! \brief GridGui: The presentation selection. */
+
+void Plugin::page_main_presentation(PageMainState& ps,Session& session)
+{
+  FUNCTION_TRACE
+  try
+  {
     // ### Presentation:
 
-    const char *modes[] = {"Image","Map","Streams","StreamsAnimation","Info","Table(sample)","Coordinates(sample)","Message",nullptr};
 
-    ostr1 << "<TR height=\"15\"><TD><HR/></TD></TR>\n";
-    ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Presentation:</TD></TR>\n";
-    ostr1 << "<TR height=\"30\"><TD>\n";
-    ostr1 << R"(<SELECT style="width:280px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_TIME << "=" << timeStr << "&" << ATTR_FILE_ID << "=" << fileIdStr << "&" << ATTR_MESSAGE_INDEX << "=" << messageIndexStr << "&" << ATTR_FORECAST_TYPE << "=" << forecastTypeStr << "&" << ATTR_FORECAST_NUMBER << "=" << forecastNumberStr << "&" << ATTR_PRESENTATION << "=' + this.options[this.selectedIndex].value)\">\n";
+    ps.ostr1 << "<TR height=\"15\"><TD><HR/></TD></TR>\n";
+    ps.ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Presentation:</TD></TR>\n";
+    ps.ostr1 << "<TR height=\"30\"><TD>\n";
+    ps.ostr1 << R"(<SELECT style="width:280px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_TIME << "=" << ps.timeStr << "&" << ATTR_FILE_ID << "=" << ps.fileIdStr << "&" << ATTR_MESSAGE_INDEX << "=" << ps.messageIndexStr << "&" << ATTR_FORECAST_TYPE << "=" << ps.forecastTypeStr << "&" << ATTR_FORECAST_NUMBER << "=" << ps.forecastNumberStr << "&" << ATTR_PRESENTATION << "=' + this.options[this.selectedIndex].value)\">\n";
 
-    a = 0;
-    while (modes[a] != nullptr)
+    ps.a = 0;
+    while (modes[ps.a] != nullptr)
     {
-      if (presentation.empty())
+      if (ps.presentation.empty())
       {
-        presentation = modes[a];
+        ps.presentation = modes[ps.a];
         //printf("EMPTY => PRESENTATION %s\n",presentation.c_str());
       }
 
-      if (presentation == modes[a])
+      if (ps.presentation == modes[ps.a])
       {
-        ostr1 << "<OPTION selected value=\"" <<  modes[a] << "\">" <<  modes[a] << "</OPTION>\n";
-        session.setAttribute(ATTR_PRESENTATION,presentation);
+        ps.ostr1 << "<OPTION selected value=\"" <<  modes[ps.a] << "\">" <<  modes[ps.a] << "</OPTION>\n";
+        session.setAttribute(ATTR_PRESENTATION,ps.presentation);
       }
       else
       {
-        ostr1 << "<OPTION value=\"" <<  modes[a] << "\">" <<  modes[a] << "</OPTION>\n";
+        ps.ostr1 << "<OPTION value=\"" <<  modes[ps.a] << "\">" <<  modes[ps.a] << "</OPTION>\n";
       }
 
-      a++;
+      ps.a++;
     }
 
 
-    ostr1 << "</SELECT>\n";
-    ostr1 << "</TD></TR>\n";
+    ps.ostr1 << "</SELECT>\n";
+    ps.ostr1 << "</TD></TR>\n";
+  }
+  catch (...)
+  {
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
+    exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
+    throw exception;
+  }
+}
 
 
 
-    if (presentation == "Image" || presentation == "Streams" || presentation == "StreamsAnimation")
+/*! \brief GridGui: The projection selection. */
+
+void Plugin::page_main_projections(PageMainState& ps,Session& session)
+{
+  FUNCTION_TRACE
+  try
+  {
+    if (ps.presentation == "Image" || ps.presentation == "Streams" || ps.presentation == "StreamsAnimation")
     {
       // ### Projections:
 
       std::set<T::GeometryId> projections;
       Identification::gridDef.getGeometryIdList(projections);
 
-      T::GeometryId projectionId  = toInt32(projectionIdStr);
+      T::GeometryId projectionId  = toInt32(ps.projectionIdStr);
 
-      ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Projection:</TD></TR>\n";
-      ostr1 << "<TR height=\"30\"><TD>\n";
+      ps.ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Projection:</TD></TR>\n";
+      ps.ostr1 << "<TR height=\"30\"><TD>\n";
 
       if (projectionId == 0)
       {
-        projectionId = geometryId;
+        projectionId = ps.geometryId;
       }
 
       if (projections.find(projectionId) == projections.end())
-        projectionId = geometryId;
+        projectionId = ps.geometryId;
 
       if (!projections.empty())
       {
-        ostr1 << R"(<SELECT style="width:200px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_PROJECTION_ID << "=' + this.options[this.selectedIndex].value)\">\n";
+        ps.ostr1 << R"(<SELECT style="width:200px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_PROJECTION_ID << "=' + this.options[this.selectedIndex].value)\">\n";
 
         for (int projection : projections)
         {
@@ -4356,49 +4620,65 @@ int Plugin::page_main(const Spine::Reactor & /*theReactor*/,
             if (projectionId == 0)
             {
               projectionId = projection;
-              projectionIdStr = std::to_string(projectionId);
+              ps.projectionIdStr = std::to_string(projectionId);
               //printf("EMPTY => PROJECTION %s\n",projectionIdStr.c_str());
             }
 
             if (projectionId == projection)
             {
-              ostr1 << "<OPTION selected value=\"" <<  projection << "\">" <<  st << "</OPTION>\n";
+              ps.ostr1 << "<OPTION selected value=\"" <<  projection << "\">" <<  st << "</OPTION>\n";
               session.setAttribute(ATTR_PROJECTION_ID,projectionId);
             }
             else
             {
-              ostr1 << "<OPTION value=\"" <<  projection << "\">" <<  st << "</OPTION>\n";
+              ps.ostr1 << "<OPTION value=\"" <<  projection << "\">" <<  st << "</OPTION>\n";
             }
           }
         }
-        ostr1 << "</SELECT>\n";
+        ps.ostr1 << "</SELECT>\n";
       }
 
       const char *projectionLockTypes[] = {"","Lock",nullptr};
 
-      ostr1 << R"(<SELECT style="width:70px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_PROJECTION_LOCK << "=' + this.options[this.selectedIndex].value)\">\n";
+      ps.ostr1 << R"(<SELECT style="width:70px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_PROJECTION_LOCK << "=' + this.options[this.selectedIndex].value)\">\n";
 
       uint a = 0;
       while (projectionLockTypes[a] != nullptr)
       {
-        if (projectionLockStr == projectionLockTypes[a])
+        if (ps.projectionLockStr == projectionLockTypes[a])
         {
-          ostr1 << "<OPTION selected value=\"" << projectionLockTypes[a] << "\">" <<  projectionLockTypes[a] << "</OPTION>\n";
+          ps.ostr1 << "<OPTION selected value=\"" << projectionLockTypes[a] << "\">" <<  projectionLockTypes[a] << "</OPTION>\n";
           session.setAttribute(ATTR_PROJECTION_LOCK,projectionLockTypes[a]);
         }
         else
         {
-          ostr1 << "<OPTION value=\"" <<  projectionLockTypes[a] << "\">" <<  projectionLockTypes[a] << "</OPTION>\n";
+          ps.ostr1 << "<OPTION value=\"" <<  projectionLockTypes[a] << "\">" <<  projectionLockTypes[a] << "</OPTION>\n";
         }
         a++;
       }
-      ostr1 << "</SELECT>\n";
+      ps.ostr1 << "</SELECT>\n";
 
-      ostr1 << "</TD></TR>\n";
+      ps.ostr1 << "</TD></TR>\n";
     }
+  }
+  catch (...)
+  {
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
+    exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
+    throw exception;
+  }
+}
 
 
-    if (presentation == "Image" ||  presentation == "Map")
+
+/*! \brief GridGui: The color map selection. */
+
+void Plugin::page_main_colorMaps(PageMainState& ps,Session& session)
+{
+  FUNCTION_TRACE
+  try
+  {
+    if (ps.presentation == "Image" ||  ps.presentation == "Map")
     {
       // ### Color maps:
 
@@ -4411,638 +4691,703 @@ int Plugin::page_main(const Spine::Reactor & /*theReactor*/,
           names.insert(name);
       }
 
-      ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Color map and opacity:</TD></TR>\n";
-      ostr1 << "<TR height=\"30\"><TD>\n";
-      ostr1 << R"(<SELECT style="width:220px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_COLOR_MAP << "=' + this.options[this.selectedIndex].value)\">\n";
+      ps.ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Color map and opacity:</TD></TR>\n";
+      ps.ostr1 << "<TR height=\"30\"><TD>\n";
+      ps.ostr1 << R"(<SELECT style="width:220px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_COLOR_MAP << "=' + this.options[this.selectedIndex].value)\">\n";
 
-      if (colorMap.empty() ||  colorMap == "None")
+      if (ps.colorMap.empty() ||  ps.colorMap == "None")
       {
-        ostr1 << "<OPTION selected value=\"None\">None</OPTION>\n";
+        ps.ostr1 << "<OPTION selected value=\"None\">None</OPTION>\n";
         session.setAttribute(ATTR_COLOR_MAP,"None");
       }
       else
       {
-        ostr1 << "<OPTION value=\"None\">None</OPTION>\n";
+        ps.ostr1 << "<OPTION value=\"None\">None</OPTION>\n";
       }
 
       for (const auto& name : names)
       {
-        if (colorMap == name)
+        if (ps.colorMap == name)
         {
-          ostr1 << "<OPTION selected value=\"" << name << "\">" <<  name << "</OPTION>\n";
-          session.setAttribute(ATTR_COLOR_MAP,colorMap);
+          ps.ostr1 << "<OPTION selected value=\"" << name << "\">" <<  name << "</OPTION>\n";
+          session.setAttribute(ATTR_COLOR_MAP,ps.colorMap);
         }
         else
         {
-          ostr1 << "<OPTION value=\"" <<  name << "\">" <<  name << "</OPTION>\n";
+          ps.ostr1 << "<OPTION value=\"" <<  name << "\">" <<  name << "</OPTION>\n";
         }
       }
-      ostr1 << "</SELECT>\n";
+      ps.ostr1 << "</SELECT>\n";
 
-      ostr1 << R"(<SELECT style="width:50px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_OPACITY << "=' + this.options[this.selectedIndex].value)\">\n";
+      ps.ostr1 << R"(<SELECT style="width:50px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_OPACITY << "=' + this.options[this.selectedIndex].value)\">\n";
 
 
       for (uint a=0; a<256; a++)
       {
-        if (a == opacity)
+        if (a == ps.opacity)
         {
-          ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+          ps.ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
           session.setAttribute(ATTR_OPACITY,a);
         }
         else
         {
-          ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+          ps.ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
         }
       }
-      ostr1 << "</SELECT>\n";
+      ps.ostr1 << "</SELECT>\n";
 
-      ostr1 << "</TD></TR>\n";
+      ps.ostr1 << "</TD></TR>\n";
     }
+  }
+  catch (...)
+  {
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
+    exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
+    throw exception;
+  }
+}
 
 
 
-    if (presentation == "Image" || presentation == "Map" || presentation == "Streams" || presentation == "StreamsAnimation")
+/*! \brief GridGui: The paint options of the presentation. */
+
+void Plugin::page_main_paintOptions(PageMainState& ps,Session& session)
+{
+  FUNCTION_TRACE
+  try
+  {
+    if (ps.presentation == "Image" || ps.presentation == "Map" || ps.presentation == "Streams" || ps.presentation == "StreamsAnimation")
     {
-      if ((colorMap.empty() || colorMap == "None") &&  presentation != "Streams" && presentation != "StreamsAnimation")
+      if ((ps.colorMap.empty() || ps.colorMap == "None") &&  ps.presentation != "Streams" && ps.presentation != "StreamsAnimation")
       {
         // ### Hue, saturation, blur
 
-        ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Hue, saturation and blur</TD></TR>\n";
-        ostr1 << "<TR height=\"30\"><TD>\n";
-        ostr1 << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_HUE << "=' + this.options[this.selectedIndex].value)\">\n";
+        ps.ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Hue, saturation and blur</TD></TR>\n";
+        ps.ostr1 << "<TR height=\"30\"><TD>\n";
+        ps.ostr1 << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_HUE << "=' + this.options[this.selectedIndex].value)\">\n";
 
 
-        uint hue = toUInt32(hueStr);
+        uint hue = toUInt32(ps.hueStr);
         for (uint a=0; a<256; a++)
         {
           if (a == hue)
           {
-            ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+            ps.ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
             session.setAttribute(ATTR_HUE,a);
           }
           else
           {
-            ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+            ps.ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
           }
         }
-        ostr1 << "</SELECT>\n";
+        ps.ostr1 << "</SELECT>\n";
 
 
-        uint saturation = toUInt32(saturationStr);
-        ostr1 << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_SATURATION << "=' + this.options[this.selectedIndex].value)\">\n";
+        uint saturation = toUInt32(ps.saturationStr);
+        ps.ostr1 << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_SATURATION << "=' + this.options[this.selectedIndex].value)\">\n";
 
 
         for (uint a=0; a<256; a++)
         {
           if (a == saturation)
           {
-            ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+            ps.ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
             session.setAttribute(ATTR_SATURATION,a);
           }
           else
           {
-            ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+            ps.ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
           }
         }
-        ostr1 << "</SELECT>\n";
+        ps.ostr1 << "</SELECT>\n";
 
 
-        ostr1 << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_BLUR << "=' + this.options[this.selectedIndex].value)\">\n";
+        ps.ostr1 << "<SELECT onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_BLUR << "=' + this.options[this.selectedIndex].value)\">\n";
 
-        uint blur = toUInt32(blurStr);
+        uint blur = toUInt32(ps.blurStr);
         for (uint a=1; a<=200; a++)
         {
           if (a == blur)
           {
-            ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+            ps.ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
             session.setAttribute(ATTR_BLUR,a);
           }
           else
           {
-            ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+            ps.ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
           }
         }
-        ostr1 << "</SELECT>\n";
-        ostr1 << "</TD></TR>\n";
+        ps.ostr1 << "</SELECT>\n";
+        ps.ostr1 << "</TD></TR>\n";
       }
 
 
 
 
-      if (presentation == "Streams" || presentation == "StreamsAnimation")
+      if (ps.presentation == "Streams" || ps.presentation == "StreamsAnimation")
       {
         // ### step, minLength, maxLength, background
 
-        ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Step, min and max length, color</TD></TR>\n";
-        ostr1 << "<TR height=\"30\"><TD>\n";
-        ostr1 << R"(<SELECT style="width:40px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_STEP << "=' + this.options[this.selectedIndex].value)\">\n";
+        ps.ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Step, min and max length, color</TD></TR>\n";
+        ps.ostr1 << "<TR height=\"30\"><TD>\n";
+        ps.ostr1 << R"(<SELECT style="width:40px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_STEP << "=' + this.options[this.selectedIndex].value)\">\n";
 
-        uint step = toUInt32(stepStr);
+        uint step = toUInt32(ps.stepStr);
         for (uint a=2; a<100; a = a + 2)
         {
           if (a == step)
           {
-            ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+            ps.ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
             session.setAttribute(ATTR_STEP,a);
           }
           else
           {
-            ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+            ps.ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
           }
         }
-        ostr1 << "</SELECT>\n";
+        ps.ostr1 << "</SELECT>\n";
 
 
-        uint minLength = toUInt32(minLengthStr);
-        ostr1 << R"(<SELECT style="width:50px;"onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_MIN_LENGTH << "=' + this.options[this.selectedIndex].value)\">\n";
+        uint minLength = toUInt32(ps.minLengthStr);
+        ps.ostr1 << R"(<SELECT style="width:50px;"onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_MIN_LENGTH << "=' + this.options[this.selectedIndex].value)\">\n";
 
         for (uint a=2; a<128; a=a+2)
         {
           if (a == minLength)
           {
-            ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+            ps.ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
             session.setAttribute(ATTR_MIN_LENGTH,a);
           }
           else
           {
-            ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+            ps.ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
           }
         }
         for (uint a=128; a<=2048; a=a+64)
         {
           if (a == minLength)
           {
-            ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+            ps.ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
             session.setAttribute(ATTR_MIN_LENGTH,a);
           }
           else
           {
-            ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+            ps.ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
           }
         }
-        ostr1 << "</SELECT>\n";
+        ps.ostr1 << "</SELECT>\n";
 
 
-        ostr1 << R"(<SELECT style="width:50px;"onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_MAX_LENGTH << "=' + this.options[this.selectedIndex].value)\">\n";
+        ps.ostr1 << R"(<SELECT style="width:50px;"onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_MAX_LENGTH << "=' + this.options[this.selectedIndex].value)\">\n";
 
-        uint maxLength = toUInt32(maxLengthStr);
+        uint maxLength = toUInt32(ps.maxLengthStr);
         for (uint a=8; a<128; a=a+4)
         {
           if (a == maxLength)
           {
-            ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+            ps.ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
             session.setAttribute(ATTR_MAX_LENGTH,a);
           }
           else
           {
-            ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+            ps.ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
           }
         }
         for (uint a=128; a<=2048; a=a+64)
         {
           if (a == maxLength)
           {
-            ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+            ps.ostr1 << "<OPTION selected value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
             session.setAttribute(ATTR_MAX_LENGTH,a);
           }
           else
           {
-            ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
+            ps.ostr1 << "<OPTION value=\"" <<  a << "\">" <<  a << "</OPTION>\n";
           }
         }
-        ostr1 << "</SELECT>\n";
+        ps.ostr1 << "</SELECT>\n";
 
-        ostr1 << R"(<SELECT style="width:120px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_STREAM_COLOR << "=' + this.options[this.selectedIndex].value)\">\n";
+        ps.ostr1 << R"(<SELECT style="width:120px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_STREAM_COLOR << "=' + this.options[this.selectedIndex].value)\">\n";
 
         for (auto& itsColor : itsColors)
         {
-          if (streamColorStr == itsColor.first)
+          if (ps.streamColorStr == itsColor.first)
           {
-            ostr1 << "<OPTION selected value=\"" << itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
-            session.setAttribute(ATTR_STREAM_COLOR,streamColorStr);
+            ps.ostr1 << "<OPTION selected value=\"" << itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
+            session.setAttribute(ATTR_STREAM_COLOR,ps.streamColorStr);
           }
           else
           {
-            ostr1 << "<OPTION value=\"" <<  itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
+            ps.ostr1 << "<OPTION value=\"" <<  itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
           }
-          a++;
+          ps.a++;
         }
-        ostr1 << "</SELECT>\n";
-        ostr1 << "</TD></TR>\n";
+        ps.ostr1 << "</SELECT>\n";
+        ps.ostr1 << "</TD></TR>\n";
       }
 
 
       // ### Coordinate lines:
 
-      ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Coordinate lines and land border:</TD></TR>\n";
-      ostr1 << "<TR height=\"30\"><TD>\n";
-      ostr1 << R"(<SELECT style="width:280px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_COORDINATE_LINES << "=' + this.options[this.selectedIndex].value)\">\n";
+      ps.ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Coordinate lines and land border:</TD></TR>\n";
+      ps.ostr1 << "<TR height=\"30\"><TD>\n";
+      ps.ostr1 << R"(<SELECT style="width:280px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_COORDINATE_LINES << "=' + this.options[this.selectedIndex].value)\">\n";
 
       for (auto& itsColor : itsColors)
       {
-        if (coordinateLinesStr == itsColor.first)
+        if (ps.coordinateLinesStr == itsColor.first)
         {
-          ostr1 << "<OPTION selected value=\"" << itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
-          session.setAttribute(ATTR_COORDINATE_LINES,coordinateLinesStr);
+          ps.ostr1 << "<OPTION selected value=\"" << itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
+          session.setAttribute(ATTR_COORDINATE_LINES,ps.coordinateLinesStr);
         }
         else
         {
-          ostr1 << "<OPTION value=\"" <<  itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
+          ps.ostr1 << "<OPTION value=\"" <<  itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
         }
 
-        a++;
+        ps.a++;
       }
-      ostr1 << "</SELECT>\n";
+      ps.ostr1 << "</SELECT>\n";
 
 
       // ### Land border:
 
-      ostr1 << R"(<SELECT style="width:280px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_LAND_BORDER << "=' + this.options[this.selectedIndex].value)\">\n";
+      ps.ostr1 << R"(<SELECT style="width:280px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_LAND_BORDER << "=' + this.options[this.selectedIndex].value)\">\n";
 
       for (auto& itsColor : itsColors)
       {
-        if (landBorderStr == itsColor.first)
+        if (ps.landBorderStr == itsColor.first)
         {
-          ostr1 << "<OPTION selected value=\"" << itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
-          session.setAttribute(ATTR_LAND_BORDER,landBorderStr);
+          ps.ostr1 << "<OPTION selected value=\"" << itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
+          session.setAttribute(ATTR_LAND_BORDER,ps.landBorderStr);
         }
         else
         {
-          ostr1 << "<OPTION value=\"" <<  itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
+          ps.ostr1 << "<OPTION value=\"" <<  itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
         }
-        a++;
+        ps.a++;
       }
-      ostr1 << "</SELECT>\n";
-      ostr1 << "</TD></TR>\n";
+      ps.ostr1 << "</SELECT>\n";
+      ps.ostr1 << "</TD></TR>\n";
 
 
 
 
       // ### Land and sea colors:
 
-      ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Land and sea colors:</TD></TR>\n";
-      ostr1 << "<TR height=\"30\"><TD>\n";
+      ps.ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Land and sea colors:</TD></TR>\n";
+      ps.ostr1 << "<TR height=\"30\"><TD>\n";
 
-      a = 0;
-      ostr1 << R"(<SELECT style="width:80px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_LAND_COLOR_POS << "=' + this.options[this.selectedIndex].value)\">\n";
-      while (layerPosition[a] != nullptr)
+      ps.a = 0;
+      ps.ostr1 << R"(<SELECT style="width:80px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_LAND_COLOR_POS << "=' + this.options[this.selectedIndex].value)\">\n";
+      while (layerPosition[ps.a] != nullptr)
       {
-        if (landcol_pos == a)
+        if (ps.landcol_pos == ps.a)
         {
-          ostr1 << "<OPTION selected value=\"" << a << "\">" <<  layerPosition[a] << "</OPTION>\n";
-          session.setAttribute(ATTR_LAND_COLOR_POS,a);
+          ps.ostr1 << "<OPTION selected value=\"" << ps.a << "\">" <<  layerPosition[ps.a] << "</OPTION>\n";
+          session.setAttribute(ATTR_LAND_COLOR_POS,ps.a);
         }
         else
         {
-          ostr1 << "<OPTION value=\"" <<  a << "\">" << layerPosition[a] << "</OPTION>\n";
+          ps.ostr1 << "<OPTION value=\"" <<  ps.a << "\">" << layerPosition[ps.a] << "</OPTION>\n";
         }
-        a++;
+        ps.a++;
       }
-      ostr1 << "</SELECT>\n";
+      ps.ostr1 << "</SELECT>\n";
 
 
-      a = 0;
-      ostr1 << R"(<SELECT style="width:190px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_LAND_MASK << "=' + this.options[this.selectedIndex].value)\">\n";
+      ps.a = 0;
+      ps.ostr1 << R"(<SELECT style="width:190px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_LAND_MASK << "=' + this.options[this.selectedIndex].value)\">\n";
       for (auto& itsColor : itsColors)
       {
-        if (landMaskStr == itsColor.first)
+        if (ps.landMaskStr == itsColor.first)
         {
-          ostr1 << "<OPTION selected value=\"" << itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
-          session.setAttribute(ATTR_LAND_MASK,landMaskStr);
+          ps.ostr1 << "<OPTION selected value=\"" << itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
+          session.setAttribute(ATTR_LAND_MASK,ps.landMaskStr);
         }
         else
         {
-          ostr1 << "<OPTION value=\"" <<  itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
+          ps.ostr1 << "<OPTION value=\"" <<  itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
         }
-        a++;
+        ps.a++;
       }
-      ostr1 << "</SELECT>\n";
+      ps.ostr1 << "</SELECT>\n";
 
 
-      a = 0;
-      ostr1 << R"(<SELECT style="width:80px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_SEA_COLOR_POS << "=' + this.options[this.selectedIndex].value)\">\n";
-      while (layerPosition[a] != nullptr)
+      ps.a = 0;
+      ps.ostr1 << R"(<SELECT style="width:80px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_SEA_COLOR_POS << "=' + this.options[this.selectedIndex].value)\">\n";
+      while (layerPosition[ps.a] != nullptr)
       {
-        if (seacol_pos == a)
+        if (ps.seacol_pos == ps.a)
         {
-          ostr1 << "<OPTION selected value=\"" << a << "\">" <<  layerPosition[a] << "</OPTION>\n";
-          session.setAttribute(ATTR_SEA_COLOR_POS,a);
+          ps.ostr1 << "<OPTION selected value=\"" << ps.a << "\">" <<  layerPosition[ps.a] << "</OPTION>\n";
+          session.setAttribute(ATTR_SEA_COLOR_POS,ps.a);
         }
         else
         {
-          ostr1 << "<OPTION value=\"" <<  a << "\">" << layerPosition[a] << "</OPTION>\n";
+          ps.ostr1 << "<OPTION value=\"" <<  ps.a << "\">" << layerPosition[ps.a] << "</OPTION>\n";
         }
-        a++;
+        ps.a++;
       }
-      ostr1 << "</SELECT>\n";
+      ps.ostr1 << "</SELECT>\n";
 
 
-      ostr1 << R"(<SELECT style="width:190px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_SEA_MASK << "=' + this.options[this.selectedIndex].value)\">\n";
-      a = 0;
+      ps.ostr1 << R"(<SELECT style="width:190px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_SEA_MASK << "=' + this.options[this.selectedIndex].value)\">\n";
+      ps.a = 0;
       for (auto& itsColor : itsColors)
       {
-        if (seaMaskStr == itsColor.first)
+        if (ps.seaMaskStr == itsColor.first)
         {
-          ostr1 << "<OPTION selected value=\"" << itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
-          session.setAttribute(ATTR_SEA_MASK,seaMaskStr);
+          ps.ostr1 << "<OPTION selected value=\"" << itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
+          session.setAttribute(ATTR_SEA_MASK,ps.seaMaskStr);
         }
         else
         {
-          ostr1 << "<OPTION value=\"" <<  itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
+          ps.ostr1 << "<OPTION value=\"" <<  itsColor.first << "\">" <<  itsColor.first << "</OPTION>\n";
         }
-        a++;
+        ps.a++;
       }
-      ostr1 << "</SELECT>\n";
+      ps.ostr1 << "</SELECT>\n";
 
-      ostr1 << "</TD></TR>\n";
+      ps.ostr1 << "</TD></TR>\n";
 
 
       // ### Land and sea topology
 
-      ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Land/sea topography positions and intensity:</TD></TR>\n";
-      ostr1 << "<TR height=\"30\"><TD>\n";
+      ps.ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Land/sea topography positions and intensity:</TD></TR>\n";
+      ps.ostr1 << "<TR height=\"30\"><TD>\n";
 
-      a = 0;
-      ostr1 << R"(<SELECT style="width:80px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_LAND_SHADING_POS << "=' + this.options[this.selectedIndex].value)\">\n";
-      while (layerPosition[a] != nullptr)
+      ps.a = 0;
+      ps.ostr1 << R"(<SELECT style="width:80px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_LAND_SHADING_POS << "=' + this.options[this.selectedIndex].value)\">\n";
+      while (layerPosition[ps.a] != nullptr)
       {
-        if (landshade_pos == a)
+        if (ps.landshade_pos == ps.a)
         {
-          ostr1 << "<OPTION selected value=\"" << a << "\">" <<  layerPosition[a] << "</OPTION>\n";
-          session.setAttribute(ATTR_LAND_SHADING_POS,a);
+          ps.ostr1 << "<OPTION selected value=\"" << ps.a << "\">" <<  layerPosition[ps.a] << "</OPTION>\n";
+          session.setAttribute(ATTR_LAND_SHADING_POS,ps.a);
         }
         else
         {
-          ostr1 << "<OPTION value=\"" <<  a << "\">" << layerPosition[a] << "</OPTION>\n";
+          ps.ostr1 << "<OPTION value=\"" <<  ps.a << "\">" << layerPosition[ps.a] << "</OPTION>\n";
         }
 
-        a++;
+        ps.a++;
       }
-      ostr1 << "</SELECT>\n";
+      ps.ostr1 << "</SELECT>\n";
 
 
-      ostr1 << R"(<SELECT style="width:55px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_LAND_SHADING_LIGHT << "=' + this.options[this.selectedIndex].value)\">\n";
+      ps.ostr1 << R"(<SELECT style="width:55px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_LAND_SHADING_LIGHT << "=' + this.options[this.selectedIndex].value)\">\n";
 
       for (uint t=0; t<=512; t=t+16)
       {
-        if (landshade_light == t)
+        if (ps.landshade_light == t)
         {
-          ostr1 << "<OPTION selected value=\"" << t << "\">" <<  t << "</OPTION>\n";
+          ps.ostr1 << "<OPTION selected value=\"" << t << "\">" <<  t << "</OPTION>\n";
           session.setAttribute(ATTR_LAND_SHADING_LIGHT,t);
         }
         else
         {
-          ostr1 << "<OPTION value=\"" <<  t << "\">" << t << "</OPTION>\n";
+          ps.ostr1 << "<OPTION value=\"" <<  t << "\">" << t << "</OPTION>\n";
         }
 
-        a++;
+        ps.a++;
       }
-      ostr1 << "</SELECT>\n";
+      ps.ostr1 << "</SELECT>\n";
 
-      ostr1 << R"(<SELECT style="width:55px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_LAND_SHADING_SHADOW << "=' + this.options[this.selectedIndex].value)\">\n";
+      ps.ostr1 << R"(<SELECT style="width:55px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_LAND_SHADING_SHADOW << "=' + this.options[this.selectedIndex].value)\">\n";
 
       for (uint t=0; t<=512; t=t+16)
       {
-        if (landshade_shadow == t)
+        if (ps.landshade_shadow == t)
         {
-          ostr1 << "<OPTION selected value=\"" << t << "\">" <<  t << "</OPTION>\n";
+          ps.ostr1 << "<OPTION selected value=\"" << t << "\">" <<  t << "</OPTION>\n";
           session.setAttribute(ATTR_LAND_SHADING_SHADOW,t);
         }
         else
         {
-          ostr1 << "<OPTION value=\"" <<  t << "\">" << t << "</OPTION>\n";
+          ps.ostr1 << "<OPTION value=\"" <<  t << "\">" << t << "</OPTION>\n";
         }
 
-        a++;
+        ps.a++;
       }
-      ostr1 << "</SELECT>\n";
+      ps.ostr1 << "</SELECT>\n";
 
-      ostr1 << "</TD></TR>\n";
-      ostr1 << "<TR><TD>\n";
+      ps.ostr1 << "</TD></TR>\n";
+      ps.ostr1 << "<TR><TD>\n";
 
-      a = 0;
-      ostr1 << R"(<SELECT style="width:80px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_SEA_SHADING_POS << "=' + this.options[this.selectedIndex].value)\">\n";
-      while (layerPosition[a] != nullptr)
+      ps.a = 0;
+      ps.ostr1 << R"(<SELECT style="width:80px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_SEA_SHADING_POS << "=' + this.options[this.selectedIndex].value)\">\n";
+      while (layerPosition[ps.a] != nullptr)
       {
-        if (seashade_pos == a)
+        if (ps.seashade_pos == ps.a)
         {
-          ostr1 << "<OPTION selected value=\"" << a << "\">" <<  layerPosition[a] << "</OPTION>\n";
-          session.setAttribute(ATTR_SEA_SHADING_POS,a);
+          ps.ostr1 << "<OPTION selected value=\"" << ps.a << "\">" <<  layerPosition[ps.a] << "</OPTION>\n";
+          session.setAttribute(ATTR_SEA_SHADING_POS,ps.a);
         }
         else
         {
-          ostr1 << "<OPTION value=\"" <<  a << "\">" << layerPosition[a] << "</OPTION>\n";
+          ps.ostr1 << "<OPTION value=\"" <<  ps.a << "\">" << layerPosition[ps.a] << "</OPTION>\n";
         }
 
-        a++;
+        ps.a++;
       }
-      ostr1 << "</SELECT>\n";
+      ps.ostr1 << "</SELECT>\n";
 
 
-      ostr1 << R"(<SELECT style="width:55px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_SEA_SHADING_LIGHT << "=' + this.options[this.selectedIndex].value)\">\n";
+      ps.ostr1 << R"(<SELECT style="width:55px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_SEA_SHADING_LIGHT << "=' + this.options[this.selectedIndex].value)\">\n";
 
       for (uint t=0; t<=512; t=t+16)
       {
-        if (seashade_light == t)
+        if (ps.seashade_light == t)
         {
-          ostr1 << "<OPTION selected value=\"" << t << "\">" <<  t << "</OPTION>\n";
+          ps.ostr1 << "<OPTION selected value=\"" << t << "\">" <<  t << "</OPTION>\n";
           session.setAttribute(ATTR_SEA_SHADING_LIGHT,t);
         }
         else
         {
-          ostr1 << "<OPTION value=\"" <<  t << "\">" << t << "</OPTION>\n";
+          ps.ostr1 << "<OPTION value=\"" <<  t << "\">" << t << "</OPTION>\n";
         }
 
-        a++;
+        ps.a++;
       }
-      ostr1 << "</SELECT>\n";
+      ps.ostr1 << "</SELECT>\n";
 
 
-      ostr1 << R"(<SELECT style="width:55px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_SEA_SHADING_SHADOW << "=' + this.options[this.selectedIndex].value)\">\n";
+      ps.ostr1 << R"(<SELECT style="width:55px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_SEA_SHADING_SHADOW << "=' + this.options[this.selectedIndex].value)\">\n";
 
       for (uint t=0; t<=512; t=t+16)
       {
-        if (seashade_shadow == t)
+        if (ps.seashade_shadow == t)
         {
-          ostr1 << "<OPTION selected value=\"" << t << "\">" <<  t << "</OPTION>\n";
+          ps.ostr1 << "<OPTION selected value=\"" << t << "\">" <<  t << "</OPTION>\n";
           session.setAttribute(ATTR_SEA_SHADING_SHADOW,t);
         }
         else
         {
-          ostr1 << "<OPTION value=\"" <<  t << "\">" << t << "</OPTION>\n";
+          ps.ostr1 << "<OPTION value=\"" <<  t << "\">" << t << "</OPTION>\n";
         }
 
-        a++;
+        ps.a++;
       }
-      ostr1 << "</SELECT>\n";
+      ps.ostr1 << "</SELECT>\n";
 
 
-      ostr1 << "</TD></TR>\n";
+      ps.ostr1 << "</TD></TR>\n";
 
 
       // ### Missing value:
 
-      ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Missing Value:</TD></TR>\n";
-      ostr1 << "<TR height=\"30\"><TD>\n";
-      ostr1 << R"(<SELECT style="width:280px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_MISSING << "=' + this.options[this.selectedIndex].value)\">\n";
+      ps.ostr1 << "<TR height=\"15\" style=\"font-size:12;\"><TD>Missing Value:</TD></TR>\n";
+      ps.ostr1 << "<TR height=\"30\"><TD>\n";
+      ps.ostr1 << R"(<SELECT style="width:280px;" onchange="getPage(this,parent,'/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_MISSING << "=' + this.options[this.selectedIndex].value)\">\n";
 
       const char *missingValues[] = {"Default","Zero",nullptr};
 
-      a = 0 ;
-      while (missingValues[a] != nullptr)
+      ps.a = 0 ;
+      while (missingValues[ps.a] != nullptr)
       {
-        if (missingStr == missingValues[a])
+        if (ps.missingStr == missingValues[ps.a])
         {
-          ostr1 << "<OPTION selected value=\"" << missingValues[a] << "\">" <<  missingValues[a] << "</OPTION>\n";
-          session.setAttribute(ATTR_MISSING,missingStr);
+          ps.ostr1 << "<OPTION selected value=\"" << missingValues[ps.a] << "\">" <<  missingValues[ps.a] << "</OPTION>\n";
+          session.setAttribute(ATTR_MISSING,ps.missingStr);
         }
         else
         {
-          ostr1 << "<OPTION value=\"" <<  missingValues[a] << "\">" <<  missingValues[a] << "</OPTION>\n";
+          ps.ostr1 << "<OPTION value=\"" <<  missingValues[ps.a] << "\">" <<  missingValues[ps.a] << "</OPTION>\n";
         }
-        a++;
+        ps.a++;
       }
-      ostr1 << "</SELECT>\n";
-      ostr1 << "</TD></TR>\n";
+      ps.ostr1 << "</SELECT>\n";
+      ps.ostr1 << "</TD></TR>\n";
 
 
-      ostr1 << "<TR height=\"15\"><TD><HR/></TD></TR>\n";
+      ps.ostr1 << "<TR height=\"15\"><TD><HR/></TD></TR>\n";
 
       // ## Value and units:
 
-      ostr1 << "<TR height=\"15\" style=\"font-size:12; width:100%;\"><TD>Value and units:</TD></TR>\n";
-      ostr1 << R"(<TR height="30"><TD><INPUT style="width:200px;" type="text" id="gridValue"><INPUT style="width:80px;"type="text" value=")" << unitStr << "\"></TD></TR>\n";
+      ps.ostr1 << "<TR height=\"15\" style=\"font-size:12; width:100%;\"><TD>Value and units:</TD></TR>\n";
+      ps.ostr1 << R"(<TR height="30"><TD><INPUT style="width:200px;" type="text" id="gridValue"><INPUT style="width:80px;"type="text" value=")" << ps.unitStr << "\"></TD></TR>\n";
     }
+  }
+  catch (...)
+  {
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
+    exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
+    throw exception;
+  }
+}
 
 
-    ostr1 << "<TR height=\"50%\"><TD> </TD></TR>\n";
+
+/*! \brief GridGui: The image frame and the animation of the presentation. */
+
+void Plugin::page_main_imageFrame(PageMainState& ps,Session& session)
+{
+  FUNCTION_TRACE
+  try
+  {
+    ps.ostr1 << "<TR height=\"50%\"><TD> </TD></TR>\n";
 
     // ## Download
-    ostr1 << R"(<TR height="30" style="font-size:16; font-weight:bold; width:280px; color:#000000; background:#D0D0D0; vertical-align:middle; text-align:center; "><TD><a href="grid-gui?)" << ATTR_PAGE << "=download&" << ATTR_FILE_ID << "=" << fileIdStr << "&" << ATTR_MESSAGE_INDEX << "=" << messageIndexStr << "\">Download</a></TD></TR>\n";
-    ostr1 << "</TABLE>\n";
+    ps.ostr1 << R"(<TR height="30" style="font-size:16; font-weight:bold; width:280px; color:#000000; background:#D0D0D0; vertical-align:middle; text-align:center; "><TD><a href="grid-gui?)" << ATTR_PAGE << "=download&" << ATTR_FILE_ID << "=" << ps.fileIdStr << "&" << ATTR_MESSAGE_INDEX << "=" << ps.messageIndexStr << "\">Download</a></TD></TR>\n";
+    ps.ostr1 << "</TABLE>\n";
 
 
 
-    if (itsAnimationEnabled  &&  (presentation == "Image" /*|| presentation == "Map"*/ || presentation == "Streams"))
+    if (itsAnimationEnabled  &&  (ps.presentation == "Image" /*|| ps.presentation == "Map"*/ || ps.presentation == "Streams"))
     {
-      ostr2 << "<TABLE>\n";
-      ostr2 << "<TR><TD style=\"height:35; width:100%; vertical-align:middle; text-align:left; font-size:12;\">" << ostr3.str() << "</TD></TR>\n";
+      ps.ostr2 << "<TABLE>\n";
+      ps.ostr2 << "<TR><TD style=\"height:35; width:100%; vertical-align:middle; text-align:left; font-size:12;\">" << ps.ostr3.str() << "</TD></TR>\n";
     }
     else
     {
-      ostr2 << "<TABLE width=\"100%\" height=\"100%\">\n";
+      ps.ostr2 << "<TABLE width=\"100%\" height=\"100%\">\n";
     }
 
-    if (presentation == "Image")
+    if (ps.presentation == "Image")
     {
-      ostr2 << R"(<TR><TD style="vertical-align:top;"><IMG id="myimage" style="background:#000000; max-width:1800; height:100%; max-height:1000;" src="/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_PAGE << "=" << presentation << "\" onclick=\"getImageCoords(event,this," << fileIdStr << "," << messageIndexStr << ",'" << presentation << "','" << session.getUrlParameter() << "');\"/></TD></TR>";
+      ps.ostr2 << R"(<TR><TD style="vertical-align:top;"><IMG id="myimage" style="background:#000000; max-width:1800; height:100%; max-height:1000;" src="/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_PAGE << "=" << ps.presentation << "\" onclick=\"getImageCoords(event,this," << ps.fileIdStr << "," << ps.messageIndexStr << ",'" << ps.presentation << "','" << session.getUrlParameter() << "');\"/></TD></TR>";
     }
-    else if (presentation == "Map")
+    else if (ps.presentation == "Map")
     {
-      ostr2 << R"(<TR><TD><IMG id="myimage" style="background:#000000; max-width:1800; height:100%; max-height:1000;" src="/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_PAGE << "=" << presentation << "\"/></TD></TR>";
+      ps.ostr2 << R"(<TR><TD><IMG id="myimage" style="background:#000000; max-width:1800; height:100%; max-height:1000;" src="/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_PAGE << "=" << ps.presentation << "\"/></TD></TR>";
     }
-    else if (presentation == "Table(sample)" /* || presentation == "table(full)"*/)
+    else if (ps.presentation == "Table(sample)" /* || ps.presentation == "table(full)"*/)
     {
-      ostr2 << R"(<TR><TD><IFRAME width="100%" height="100%" src="grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_PAGE << "=table\">";
-      ostr2 << "<p>Your browser does not support iframes.</p>\n";
-      ostr2 << "</IFRAME></TD></TR>";
+      ps.ostr2 << R"(<TR><TD><IFRAME width="100%" height="100%" src="grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_PAGE << "=table\">";
+      ps.ostr2 << "<p>Your browser does not support iframes.</p>\n";
+      ps.ostr2 << "</IFRAME></TD></TR>";
     }
-    else if (presentation == "Coordinates(sample)" /* || presentation == "coordinates(full)"*/)
+    else if (ps.presentation == "Coordinates(sample)" /* || ps.presentation == "coordinates(full)"*/)
     {
-      ostr2 << R"(<TR><TD><IFRAME width="100%" height="100%" src="grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_PAGE << "=coordinates\">";
-      ostr2 << "<p>Your browser does not support iframes.</p>\n";
-      ostr2 << "</IFRAME></TD></TR>";
+      ps.ostr2 << R"(<TR><TD><IFRAME width="100%" height="100%" src="grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_PAGE << "=coordinates\">";
+      ps.ostr2 << "<p>Your browser does not support iframes.</p>\n";
+      ps.ostr2 << "</IFRAME></TD></TR>";
     }
-    else if (presentation == "Info")
+    else if (ps.presentation == "Info")
     {
-      ostr2 << R"(<TR><TD><IFRAME width="100%" height="100%" src="grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_PAGE << "=" << presentation << "\">";
-      ostr2 << "<p>Your browser does not support iframes.</p>\n";
-      ostr2 << "</IFRAME></TD></TR>";
+      ps.ostr2 << R"(<TR><TD><IFRAME width="100%" height="100%" src="grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_PAGE << "=" << ps.presentation << "\">";
+      ps.ostr2 << "<p>Your browser does not support iframes.</p>\n";
+      ps.ostr2 << "</IFRAME></TD></TR>";
     }
-    else if (presentation == "Streams" || presentation == "StreamsAnimation")
+    else if (ps.presentation == "Streams" || ps.presentation == "StreamsAnimation")
     {
-      ostr2 << R"(<TR><TD><IMG id="myimage" style="background:#000000; max-width:1800; height:100%; max-height:1000;" src="/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_PAGE << "=" << presentation << "\" onclick=\"getImageCoords(event,this," << fileIdStr << "," << messageIndexStr << ",'" << presentation << "','" << session.getUrlParameter() << "');\"/></TD></TR>";
+      ps.ostr2 << R"(<TR><TD><IMG id="myimage" style="background:#000000; max-width:1800; height:100%; max-height:1000;" src="/grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_PAGE << "=" << ps.presentation << "\" onclick=\"getImageCoords(event,this," << ps.fileIdStr << "," << ps.messageIndexStr << ",'" << ps.presentation << "','" << session.getUrlParameter() << "');\"/></TD></TR>";
     }
-    else if (presentation == "Message")
+    else if (ps.presentation == "Message")
     {
-      ostr2 << R"(<TR><TD><IFRAME width="100%" height="100%" src="grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_PAGE << "=" << presentation << "\">";
-      ostr2 << "<p>Your browser does not support iframes.</p>\n";
-      ostr2 << "</IFRAME></TD></TR>";
+      ps.ostr2 << R"(<TR><TD><IFRAME width="100%" height="100%" src="grid-gui?session=)" << session.getUrlParameter() << "&" << ATTR_PAGE << "=" << ps.presentation << "\">";
+      ps.ostr2 << "<p>Your browser does not support iframes.</p>\n";
+      ps.ostr2 << "</IFRAME></TD></TR>";
     }
+  }
+  catch (...)
+  {
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
+    exception.addParameter("Configuration file",itsConfigurationFile.getFilename());
+    throw exception;
+  }
+}
 
-    std::string aggregation;
-    std::string processing;
-    if (currentCont)
+
+
+
+int Plugin::page_main(const Spine::Reactor & /*theReactor*/,
+                            const HTTP::Request & /*theRequest*/,
+                            HTTP::Response &theResponse,
+                            Session& session)
+{
+  FUNCTION_TRACE
+  try
+  {
+    PageMainState ps;
+    page_main_selectionAttributes(ps,session);
+    page_main_producers(ps,session);
+    page_main_generations(ps,session);
+    page_main_parameters(ps,session);
+    page_main_levelIds(ps,session);
+    page_main_levels(ps,session);
+    page_main_forecastTypes(ps,session);
+    page_main_forecastNumbers(ps,session);
+    page_main_geometries(ps,session);
+    page_main_times(ps,session);
+    page_main_presentation(ps,session);
+    page_main_projections(ps,session);
+    page_main_colorMaps(ps,session);
+    page_main_paintOptions(ps,session);
+    page_main_imageFrame(ps,session);
+
+    if (ps.currentCont)
     {
-      if (currentCont->mAggregationId > 0)
+      if (ps.currentCont->mAggregationId > 0)
       {
         Identification::AggregationDef aggregationDef;
-        if (Identification::gridDef.getFmiAggregationDef(currentCont->mAggregationId,aggregationDef))
+        if (Identification::gridDef.getFmiAggregationDef(ps.currentCont->mAggregationId,aggregationDef))
         {
-          aggregation = " / Aggregation: " + aggregationDef.mDescription;
-          if (currentCont->mAggregationPeriod)
+          ps.aggregation = " / Aggregation: " + aggregationDef.mDescription;
+          if (ps.currentCont->mAggregationPeriod)
           {
-            if ((currentCont->mAggregationPeriod % 60) == 0)
-              aggregation = aggregation + " (" + std::to_string(currentCont->mAggregationPeriod/60) + " hours)";
+            if ((ps.currentCont->mAggregationPeriod % 60) == 0)
+              ps.aggregation = ps.aggregation + " (" + std::to_string(ps.currentCont->mAggregationPeriod/60) + " hours)";
             else
-              aggregation = aggregation + " (" + std::to_string(currentCont->mAggregationPeriod) + " minutes)";
+              ps.aggregation = ps.aggregation + " (" + std::to_string(ps.currentCont->mAggregationPeriod) + " minutes)";
           }
         }
       }
 
-      if (currentCont->mProcessingTypeId > 0)
+      if (ps.currentCont->mProcessingTypeId > 0)
       {
         Identification::ProcessingTypeDef processingTypeDef;
-        if (Identification::gridDef.getFmiProcessingTypeDef(currentCont->mProcessingTypeId,processingTypeDef))
+        if (Identification::gridDef.getFmiProcessingTypeDef(ps.currentCont->mProcessingTypeId,processingTypeDef))
         {
-          processing = " / Processing: " + processingTypeDef.mDescription;
-          if (currentCont->mProcessingTypeValue1 != ParamValueMissing)
+          ps.processing = " / Processing: " + processingTypeDef.mDescription;
+          if (ps.currentCont->mProcessingTypeValue1 != ParamValueMissing)
           {
-            processing = processing  + " (" + std::to_string(currentCont->mProcessingTypeValue1);
-            if (currentCont->mProcessingTypeValue2 != ParamValueMissing)
-              processing = processing + ", " + std::to_string(currentCont->mProcessingTypeValue2) + ")";
-            processing = processing + ")";
+            ps.processing = ps.processing  + " (" + std::to_string(ps.currentCont->mProcessingTypeValue1);
+            if (ps.currentCont->mProcessingTypeValue2 != ParamValueMissing)
+              ps.processing = ps.processing + ", " + std::to_string(ps.currentCont->mProcessingTypeValue2) + ")";
+            ps.processing = ps.processing + ")";
           }
         }
       }
     }
 
-    ostr2 << "<TR><TD style=\"height:25; vertical-align:middle; text-align:left; font-size:12;\">" << paramDescription << aggregation << processing << "</TD></TR>\n";
+    ps.ostr2 << "<TR><TD style=\"height:25; vertical-align:middle; text-align:left; font-size:12;\">" << ps.paramDescription << ps.aggregation << ps.processing << "</TD></TR>\n";
 
-    ostr2 << "</TABLE>\n";
+    ps.ostr2 << "</TABLE>\n";
 
 
-    if (presentation == "Image" || presentation == "Map" || presentation == "Streams")
+    if (ps.presentation == "Image" || ps.presentation == "Map" || ps.presentation == "Streams")
     {
-      output << "<TABLE height=\"100%\">\n";
+      ps.output << "<TABLE height=\"100%\">\n";
     }
     else
     {
-      output << "<TABLE height=\"100%\" width=\"100%\">\n";
+      ps.output << "<TABLE height=\"100%\" width=\"100%\">\n";
     }
 
-    output << "<TR>\n";
+    ps.output << "<TR>\n";
 
-    output << "<TD style=\"vertical-align:top; background:#C0C0C0; width:290;\">\n";
-    output << ostr1.str();
-    output << "</TD>\n";
+    ps.output << "<TD style=\"vertical-align:top; background:#C0C0C0; width:290;\">\n";
+    ps.output << ps.ostr1.str();
+    ps.output << "</TD>\n";
 
-    output << "<TD  style=\"vertical-align:top;\">\n";
-    output << ostr2.str();
-    output << "</TD>\n";
+    ps.output << "<TD  style=\"vertical-align:top;\">\n";
+    ps.output << ps.ostr2.str();
+    ps.output << "</TD>\n";
 
-    if (itsAnimationEnabled  &&  (presentation == "Image" /*|| presentation == "Map"*/ || presentation == "Streams"))
+    if (itsAnimationEnabled  &&  (ps.presentation == "Image" /*|| ps.presentation == "Map"*/ || ps.presentation == "Streams"))
     {
-      output << "<TD style=\"vertical-align:top; width:70;\">\n";
-      output << ostr4.str();
-      output << "</TD>\n";
+      ps.output << "<TD style=\"vertical-align:top; width:70;\">\n";
+      ps.output << ps.ostr4.str();
+      ps.output << "</TD>\n";
     }
 
-    output << "</TR>\n";
-    output << "</TABLE>\n";
-    output << "</BODY></HTML>\n";
+    ps.output << "</TR>\n";
+    ps.output << "</TABLE>\n";
+    ps.output << "</BODY></HTML>\n";
 
-    theResponse.setContent(std::string(output.str()));
+    theResponse.setContent(std::string(ps.output.str()));
     theResponse.setHeader("Content-Type", "text/html; charset=UTF-8");
     return HTTP::Status::ok;
   }

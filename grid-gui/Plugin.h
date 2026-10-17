@@ -70,6 +70,8 @@ struct ImagePaintParameters
  *  point value queries (value).  All page state is carried in a Session object. */
 // ====================================================================================
 
+struct PageMainState;
+
 class Plugin : public SmartMetPlugin
 {
   public:
@@ -155,6 +157,21 @@ class Plugin : public SmartMetPlugin
      *  hover handlers, page navigation, image swap, XHR helper for grid-value lookup,
      *  etc.).  Writes directly to the given output stream. */
     void page_main_writeJavascript(std::ostringstream& output);
+    void page_main_selectionAttributes(PageMainState& ps,Session& session);
+    void page_main_producers(PageMainState& ps,Session& session);
+    void page_main_generations(PageMainState& ps,Session& session);
+    void page_main_parameters(PageMainState& ps,Session& session);
+    void page_main_levelIds(PageMainState& ps,Session& session);
+    void page_main_levels(PageMainState& ps,Session& session);
+    void page_main_forecastTypes(PageMainState& ps,Session& session);
+    void page_main_forecastNumbers(PageMainState& ps,Session& session);
+    void page_main_geometries(PageMainState& ps,Session& session);
+    void page_main_times(PageMainState& ps,Session& session);
+    void page_main_presentation(PageMainState& ps,Session& session);
+    void page_main_projections(PageMainState& ps,Session& session);
+    void page_main_colorMaps(PageMainState& ps,Session& session);
+    void page_main_paintOptions(PageMainState& ps,Session& session);
+    void page_main_imageFrame(PageMainState& ps,Session& session);
 
     /*! \brief Scan a parameter-value vector and compute the minimum, maximum and a
      *  per-class step size used by saveMap()'s implicit colour scaling when no explicit
