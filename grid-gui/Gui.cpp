@@ -72,7 +72,8 @@ const struct
                         {"streamColor", ATTR_STREAM_COLOR},
                         {"file2", ATTR_FILE_ID2},
                         {"message2", ATTR_MESSAGE_INDEX2},
-                        {"range", ATTR_DIFFERENCE_RANGE}};
+                        {"range", ATTR_DIFFERENCE_RANGE},
+                        {"area", ATTR_MAP_AREA}};
 
 // Only plain file names are served: letters, digits, '-', '_' and one '.' before a known
 // extension. This keeps requests inside ui.directory.

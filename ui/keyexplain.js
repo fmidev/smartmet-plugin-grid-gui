@@ -58,6 +58,8 @@ export function keyParts(info, meta = {})
     geometryText += `, from ${formatLatLon(c.bottomLeft[1], c.bottomLeft[0])} (bottom left)` +
         ` to ${formatLatLon(c.topRight[1], c.topRight[0])} (top right)`;
   }
+  if (g.bbox)
+    geometryText += `; the grid points lie within latitudes ${g.bbox[1].toFixed(2)}…${g.bbox[3].toFixed(2)} and longitudes ${g.bbox[0].toFixed(2)}…${g.bbox[2].toFixed(2)}`;
   if (info.searchConfigured === false)
     geometryText += '. Queries without a geometry do not find it: the producer file does not list it';
   parts.push({value: String(g.id), label: 'Geometry', text: geometryText + '.'});

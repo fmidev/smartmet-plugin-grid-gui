@@ -85,6 +85,18 @@ uint differenceColor(double value,double range);
 
 
 
+/*! \brief A lat/lon area of a map image: the longitude of the left edge, the latitude of
+ *  the top edge and the size of a pixel in degrees. */
+struct MapArea
+{
+  double lon0 = -180;
+  double lat1 = 90;
+  double dlon = 0.2;
+  double dlat = 0.2;
+};
+
+
+
 /*! \brief A file of the new user interface, served from memory and reloaded when the file changes. */
 struct UiFile
 {
@@ -274,7 +286,8 @@ class Plugin : public SmartMetPlugin
                       const std::string& landMask,
                       const std::string& seaMask,
                       const std::string& colorMapName,
-                      const std::string& missingStr);
+                      const std::string& missingStr,
+                      const MapArea* area = nullptr);
 
 
     T::ColorMapFile*  getColorMapFile(const std::string& colorMapName);

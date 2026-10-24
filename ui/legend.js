@@ -122,8 +122,31 @@ function draw(container, spec)
       `${spec.title}: ${formatValue(spec.min, spec.units)} to ${formatValue(spec.max, spec.units)}`);
 }
 
-// stats (optional): the value range of the field, to tell when it does not fit the map
-export function colorMapLegend(container, colormap, units, stats)
+// The colour maps whose range covers most of the values of the field, best first: maps
+// named after the quantity (a word of the parameter description, such as Temperature)
+// before the others, and tighter maps before wider ones
+function fittingColorMaps(ranges, stats, current, description)
+{
+  const span = stats.max - stats.min || 1;
+  const words = (description || '').toLowerCase().split(/[^a-z]+/).filter((w) => w.length > 3);
+  return Object.entries(ranges)
+      .filter(([name]) => name !== current)
+      .map(([name, [lo, hi]]) => {
+        const overlap = Math.max(0, Math.min(hi, stats.max) - Math.max(lo, stats.min)) / span;
+        // A map much wider than the data shows it in only a few colours
+        const tightness = span / Math.max(span, hi - lo);
+        const named = words.some((w) => name.toLowerCase().includes(w)) ? 1 : 0;
+        return {name, overlap, tightness, named};
+      })
+      .filter((m) => m.overlap >= 0.8)
+      .sort((a, b) => b.named - a.named || b.overlap - a.overlap || b.tightness - a.tightness)
+      .slice(0, 4)
+      .map((m) => m.name);
+}
+
+// stats (optional): the value range of the field, to tell when it does not fit the map.
+// ranges and choose (optional): suggest colour maps that fit, and choose one of them.
+export function colorMapLegend(container, colormap, units, stats, ranges, choose, description)
 {
   const stops = colormap.stops || [];
   if (stops.length < 2)
@@ -149,7 +172,24 @@ export function colorMapLegend(container, colormap, units, stats)
     else
       note = `The values of this field: ${range}.`;
   }
-  draw(container, {min, max, color: colorMapColor(stops), units, title: colormap.name, note, warn});
+  // No units: the name of the colour map tells them, and the stored values may be in
+  // other units than the parameter definition says (querydata in °C named T-K)
+  void units;
+  draw(container, {min, max, color: colorMapColor(stops), units: '', title: colormap.name, note, warn});
+
+  if (stats && stats.count > 0 && (stats.min < min || stats.max > max) && ranges && choose)
+  {
+    const fitting = fittingColorMaps(ranges, stats, colormap.name, description);
+    if (fitting.length)
+    {
+      container.append(el('div', {class: 'buttons small'}, el('span', {class: 'muted'}, 'Colour maps that fit: '),
+          fitting.map((name) => {
+            const b = el('button', {type: 'button', class: 'small'}, name);
+            b.addEventListener('click', () => choose(name));
+            return b;
+          })));
+    }
+  }
 }
 
 export function hsvLegend(container, stats, options, units)

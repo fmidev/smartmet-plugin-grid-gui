@@ -64,7 +64,15 @@ its indexes, coordinates (lat/lon and the grid's own x/y) and value.
 define is shown as *not defined*; its tooltip lists the defined ones.
 
 **Colour maps.** When the values of the field do not fit the range of the chosen colour
-map, the legend says so — for example temperatures in °C with a Kelvin colour map. *Download message* saves the GRIB
+map, the legend says so — for example temperatures in °C with a Kelvin colour map — and
+offers the colour maps that fit, those named after the quantity first.
+
+The page shows the values as they are stored. Querydata stores temperatures in °C, but
+the content is identified with the FMI name T-K; only a query whose parameter mapping has
+a conversion function converts them.
+
+**Map area.** The Map view shows the area of the data (its lat/lon bounding box with a
+margin) at full resolution, or the whole world. *Download message* saves the GRIB
 message.
 
 **Projection.** Image and streams can be drawn in any other geometry (linear
@@ -111,6 +119,7 @@ producer's parameter mapping, or the defaults of the parameter when there is no 
 TimeSeries request of the key at the pinned point (or the centre of the grid).
 
 A zero geometry or level type is written as an empty part, as the grid engine writes it.
+The geometry's tooltip also gives the lat/lon bounding box of the grid.
 
 ## 3. Addresses of the page
 
@@ -182,11 +191,11 @@ All calls are `GET /gui/api/NAME?...`. Errors are `{"error": "..."}` with status
 
 | Call | Parameters | Answer |
 |------|------------|--------|
-| `meta` | | colours, colour map names, projections (geometries, `blocked`), the defined forecast and level types, `animationEnabled`, default rendering options |
+| `meta` | | colours, colour map names and their value ranges (`colorMapRanges`), projections (geometries, `blocked`), the defined forecast and level types, `animationEnabled`, default rendering options |
 | `producers` | | `[{id, name, title, description, generations, newest, newestReady}]` |
 | `generations` | `producer` (id) | newest first: `[{id, name, analysisTime, ready, start, end, deletion}]` |
 | `parameters` | `generation` | `[{name, description, units, fmiId, aliases}]` |
-| `contents` | `generation`, `parameter` | `{levelTypes, forecastTypes, geometries, fields: [{levelId, level, forecastType, forecastNumber, geometry, times[], files[], messages[]}]}` |
+| `contents` | `generation`, `parameter` | `{levelTypes, forecastTypes, geometries (with `bbox`), fields: [{levelId, level, forecastType, forecastNumber, geometry, times[], files[], messages[]}]}` |
 | `key` | `file`, `message` | the key and the meaning of its parts, `interpolation`, `aliases`, `searchConfigured` |
 | `value` | `file`, `message`, `x`,`y` (0..1 in the image, with `projection`) or `lat`,`lon` | `{value, lat, lon, i, j}` |
 | `series` | `generation`, `parameter`, `levelId`, `level`, `forecastType`, `forecastNumber`, `geometry`, `lat`, `lon` | `{times[], values[]}` |
@@ -213,7 +222,9 @@ percentile of the absolute differences).
 `minLength`, `maxLength`, `streamColor`
 
 `difference` also needs `file2` and `message2` (the image is file2 − file) and takes
-`range`. Missing options take the defaults of `api/meta`.
+`range`. `map` takes `area=lon0,lat0,lon1,lat1`: that part of the world at up to 1200
+pixels on the longer side (without it the whole world at 1800 × 900). Missing options
+take the defaults of `api/meta`.
 
 ## 8. Developing the page
 

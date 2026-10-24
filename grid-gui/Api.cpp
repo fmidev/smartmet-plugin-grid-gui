@@ -261,6 +261,42 @@ Json::Value geometryJson(T::GeometryId geometryId)
   return json;
 }
 
+// The lat/lon bounding box [lonMin, latMin, lonMax, latMax] of all grid points, or null
+// for grids crossing the date line or covering the globe
+
+Json::Value geometryBBox(T::GeometryId geometryId)
+{
+  Json::Value json;
+  T::Coordinate_svec coordinates = Identification::gridDef.getGridLatLonCoordinatesByGeometryId(geometryId);
+  if (coordinates && !coordinates->empty())
+  {
+    double lonMin = 1e9;
+    double lonMax = -1e9;
+    double latMin = 1e9;
+    double latMax = -1e9;
+    for (const auto& c : *coordinates)
+    {
+      if (!std::isfinite(c.x()) || !std::isfinite(c.y()) || c.x() == ParamValueMissing)
+        continue;
+      lonMin = std::min(lonMin, c.x());
+      lonMax = std::max(lonMax, c.x());
+      latMin = std::min(latMin, c.y());
+      latMax = std::max(latMax, c.y());
+    }
+    if (lonMin <= lonMax && lonMax - lonMin < 300)
+    {
+      Json::Value bbox(Json::arrayValue);
+      bbox.append(lonMin);
+      bbox.append(latMin);
+      bbox.append(lonMax);
+      bbox.append(latMax);
+      json = bbox;
+    }
+  }
+
+  return json;
+}
+
 // The geometry with its corners and cell size, for the key explanation
 
 Json::Value geometryDetailsJson(T::GeometryId geometryId)
@@ -287,6 +323,10 @@ Json::Value geometryDetailsJson(T::GeometryId geometryId)
     corners["bottomRight"] = corner(bottomRight);
     json["corners"] = corners;
   }
+  Json::Value bbox = geometryBBox(geometryId);
+  if (!bbox.isNull())
+    json["bbox"] = bbox;
+
   double width = 0;
   double height = 0;
   if (Identification::gridDef.getGridCellAverageSizeByGeometryId(geometryId, width, height))
@@ -429,6 +469,25 @@ Json::Value Plugin::api_meta()
     for (const auto& n : names)
       colorMaps.append(n);
     result["colorMaps"] = colorMaps;
+
+    // The value range of each colour map, to suggest maps that fit a field
+    Json::Value ranges(Json::objectValue);
+    for (auto& colorMapFile : itsColorMapFiles)
+    {
+      std::vector<float> values;
+      std::vector<unsigned int> mapColors;
+      colorMapFile.getValuesAndColors(values, mapColors);
+      if (values.empty())
+        continue;
+      for (const auto& n : colorMapFile.getNames())
+      {
+        Json::Value range(Json::arrayValue);
+        range.append(values.front());
+        range.append(values.back());
+        ranges[n] = range;
+      }
+    }
+    result["colorMapRanges"] = ranges;
 
     // Every geometry can be a projection except the blocked ones
     std::set<T::GeometryId> geometries;
@@ -781,6 +840,9 @@ Json::Value Plugin::api_contents(const HTTP::Request& theRequest)
       // Queries find only the producer geometries listed in the producer file
       const std::string producerGeometry = toUpperString(producerInfo.mName + ":" + std::to_string(id));
       g["searchConfigured"] = (itsProducerList.find(producerGeometry) != itsProducerList.end());
+      Json::Value bbox = geometryBBox(id);
+      if (!bbox.isNull())
+        g["bbox"] = bbox;
       geoms[std::to_string(id)] = g;
     }
     result["geometries"] = geoms;

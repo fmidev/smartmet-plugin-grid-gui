@@ -55,3 +55,4 @@
 #define ATTR_FILE_ID2            "f2"
 #define ATTR_MESSAGE_INDEX2      "m2"
 #define ATTR_DIFFERENCE_RANGE    "dr"
+#define ATTR_MAP_AREA            "ma"

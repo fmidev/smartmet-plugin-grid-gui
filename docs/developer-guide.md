@@ -179,7 +179,7 @@ presentation on the right. It calls one `page_main_xxx()` function per page sect
 | Page | Data calls (through the engine's Data Server) | Output |
 |------|---------------------------------------------|--------|
 | `image` | `getGridData()` for the native grid; with a projection, `getGridValueVectorByGeometry()` with `grid.geometryId`, plus `gridDef` coordinates for the target geometry | PNG, or animated WebP when animation is on |
-| `map` | `getGridData()` | PNG with land and sea masks from `Map::topography` |
+| `map` | `getGridValueVectorByRectangle()` on a 1800 × 900 world grid, or on the `ma` area (`MapArea`) | PNG with land and sea masks from `Map::topography` |
 | `streams`, `streamsAnimation` | the same as `image` | PNG of streamlines, or an animated WebP of moving particles (`webp_anim_save`) |
 | `value` | `getGridValueByPoint()` | plain text for the hover display |
 | `table`, `coordinates` | `getGridValueVectorByRectangle()`, `getGridCoordinates()` | HTML table of a sample area |

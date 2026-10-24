@@ -587,13 +587,27 @@ bool onCoordinateLine(uint coordinateLines,int x,int y,uint xx,uint yy)
   return (coordinateLines & 0xFF000000) && ((x % xx) == 0  ||  (y % yy) == 0);
 }
 
+// The same for a map of a part of the world: a line where a pixel reaches a multiple of
+// 10 degrees, and lines 1 degree apart when the area is small
+
+bool onAreaCoordinateLine(uint coordinateLines,int x,int y,const MapArea& area)
+{
+  if (!(coordinateLines & 0xFF000000))
+    return false;
+  const double spacing = (area.dlon < 0.01 ? 1.0 : 10.0);
+  auto crosses = [spacing](double a,double b) { return std::floor(a / spacing) != std::floor(b / spacing); };
+  const double lonLeft = area.lon0 + x * area.dlon;
+  const double latTop = area.lat1 - y * area.dlat;
+  return crosses(lonLeft,lonLeft + area.dlon) || crosses(latTop - area.dlat,latTop);
+}
+
 }  // namespace
 
 
 
 /*! \brief GridGui: Save map. */
 
-void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_vec&  values,unsigned char hue,unsigned char saturation,unsigned char blur,uint coordinateLines,uint landBorder,const std::string& landMask,const std::string& seaMask,const std::string& colorMapName,const std::string& missingStr)
+void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_vec&  values,unsigned char hue,unsigned char saturation,unsigned char blur,uint coordinateLines,uint landBorder,const std::string& landMask,const std::string& seaMask,const std::string& colorMapName,const std::string& missingStr,const MapArea* area)
 {
   FUNCTION_TRACE
   try
@@ -668,6 +682,12 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
 
         double xc = xd*(x-(dWidth/2));
         double yc = yd*((dHeight-y-1)-(dHeight/2));
+        if (area != nullptr)
+        {
+          // A part of the world: the pixel centre
+          xc = area->lon0 + (x + 0.5) * area->dlon;
+          yc = area->lat1 - (y + 0.5) * area->dlat;
+        }
 
         bool land = Map::topography.isLand(xc,yc);
 
@@ -677,7 +697,8 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
         if (landBorder & 0xFF000000)
           paintLandBorder(image,width,x,y,land,prevLand,yLand[x],landBorder,coordinateLines,col,lbcol);
 
-        if (onCoordinateLine(coordinateLines,x,y,xx,yy))
+        if (area == nullptr ? onCoordinateLine(coordinateLines,x,y,xx,yy)
+                            : onAreaCoordinateLine(coordinateLines,x,y,*area))
           col = coordinateLines;
 
         yLand[x] = land;
@@ -2996,6 +3017,26 @@ int Plugin::page_map(const Spine::Reactor & /*theReactor*/,
       blurStr + ":" + coordinateLinesStr + ":" + landBorderStr + ":" +
       landMaskStr + ":" + seaMaskStr + ":" + colorMapFileName + ":" + colorMapModificationTime + ":" + missingStr;
 
+    // A part of the world (the new user interface): "lon0,lat0,lon1,lat1"
+    std::optional<MapArea> area;
+    uint areaColumns = 0;
+    uint areaRows = 0;
+    const std::string areaStr = session.getAttribute(ATTR_MAP_AREA);
+    if (!areaStr.empty())
+    {
+      std::vector<double> v;
+      splitString(areaStr,',',v);
+      if (v.size() != 4 || !(v[0] >= -180 && v[0] < v[2] && v[2] <= 180 && v[1] >= -90 && v[1] < v[3] && v[3] <= 90))
+        throw Fmi::Exception(BCP,"The map area must be lon0,lat0,lon1,lat1 within -180..180 and -90..90").addParameter("Area",areaStr);
+
+      // At most 1200 pixels on the longer side
+      const double aspect = (v[2] - v[0]) / (v[3] - v[1]);
+      areaColumns = (aspect >= 1 ? 1200 : std::max(1U, C_UINT(std::lround(1200 * aspect))));
+      areaRows = (aspect >= 1 ? std::max(1U, C_UINT(std::lround(1200 / aspect))) : 1200);
+      area = MapArea{v[0], v[3], (v[2] - v[0]) / areaColumns, (v[3] - v[1]) / areaRows};
+      hash += ":Area:" + areaStr;
+    }
+
     const std::size_t seed = Fmi::hash(hash);
     std::string seedStr = std::to_string(seed);
     theResponse.setHeader("ETag",seedStr);
@@ -3028,11 +3069,20 @@ int Plugin::page_map(const Spine::Reactor & /*theReactor*/,
     {
       uint columns = 1800;
       uint rows = 900;
+      double lon0 = -180;
+      double lat1 = 90;
+      if (area)
+      {
+        columns = areaColumns;
+        rows = areaRows;
+        lon0 = area->lon0;
+        lat1 = area->lat1;
+      }
       uint coordinateLines = getColorValue(coordinateLinesStr);
 
       T::ParamValue_vec values;
       double_vec modificationParameters;
-      int result = dataServer->getGridValueVectorByRectangle(0,toUInt64(fileIdStr),toUInt32(messageIndexStr),T::CoordinateTypeValue::LATLON_COORDINATES,columns,rows,-180,90,360/C_DOUBLE(columns),-180/C_DOUBLE(rows),T::AreaInterpolationMethod::Nearest,0,modificationParameters,values);
+      int result = dataServer->getGridValueVectorByRectangle(0,toUInt64(fileIdStr),toUInt32(messageIndexStr),T::CoordinateTypeValue::LATLON_COORDINATES,columns,rows,lon0,lat1,(area ? area->dlon : 360/C_DOUBLE(columns)),(area ? -area->dlat : -180/C_DOUBLE(rows)),T::AreaInterpolationMethod::Nearest,0,modificationParameters,values);
       if (result != 0)
       {
         std::ostringstream ostr;
@@ -3047,7 +3097,7 @@ int Plugin::page_map(const Spine::Reactor & /*theReactor*/,
       uint landBorder = getColorValue(landBorderStr);
 
       std::string fname = "/" + itsImageCache_dir + "/grid-gui-image_" + std::to_string(getTime()) + ".png";
-      saveMap(fname.c_str(),columns,rows,values,toUInt8(hueStr),toUInt8(saturationStr),toUInt8(blurStr),coordinateLines,landBorder,landMaskStr,seaMaskStr,colorMap,missingStr);
+      saveMap(fname.c_str(),columns,rows,values,toUInt8(hueStr),toUInt8(saturationStr),toUInt8(blurStr),coordinateLines,landBorder,landMaskStr,seaMaskStr,colorMap,missingStr,area ? &*area : nullptr);
 
       if (loadImage(fname.c_str(),theResponse))
       {

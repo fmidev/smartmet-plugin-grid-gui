@@ -1,0 +1,3 @@
+GET /gui/map?file=2&message=0&area=10,50,5,73 HTTP/1.0
+X-Test-Headers: Content-Type
+

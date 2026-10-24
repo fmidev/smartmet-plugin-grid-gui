@@ -46,6 +46,8 @@ const state = {
   projection: '',      // geometry id, '' = the field's own geometry
   lock: false,         // keep the projection when the geometry changes
   compare: '',         // analysis time of generation B, '' = no comparison
+  mapArea: 'data',     // the Map view: 'data' (the area of the data) or 'world'
+
   point: null,         // {lat, lon}
   options: {},         // rendering options that differ from the defaults
 };
@@ -92,6 +94,7 @@ function readUrl()
   state.projection = q.get('projection') || '';
   state.lock = q.get('lock') === '1';
   state.compare = q.get('compare') || '';
+  state.mapArea = q.get('mapArea') === 'world' ? 'world' : 'data';
   const lat = parseFloat(q.get('lat'));
   const lon = parseFloat(q.get('lon'));
   state.point = Number.isFinite(lat) && Number.isFinite(lon) ? {lat, lon} : null;
@@ -133,6 +136,8 @@ function writeUrl(push = false)
     q.set('lock', '1');
   if (state.compare)
     q.set('compare', state.compare);
+  if (state.mapArea !== 'data')
+    q.set('mapArea', state.mapArea);
   if (state.point)
   {
     q.set('lat', state.point.lat.toFixed(4));
@@ -579,6 +584,16 @@ function renderViewPanel()
     parts.push(el('label', {class: 'check', title: 'Keep the projection when the geometry changes'}, lock, ' Keep projection'));
   }
 
+  if (state.view === 'map')
+  {
+    parts.push(field('Map area', 'The area of the data, or the whole world',
+        select([{value: 'data', label: 'Area of the data'}, {value: 'world', label: 'Whole world'}], state.mapArea, (v) => {
+          state.mapArea = v;
+          writeUrl(true);
+          renderAll();
+        }, {class: 'wide'})));
+  }
+
   // Compare with another generation of the producer: the same field in both
   if (data.generations.length > 1 && viewInfo(state.view).image)
   {
@@ -776,6 +791,12 @@ function renderParams(view, content)
   const params = {file: content.file, message: content.message, geometry: data.resolved.sel.geometry};
   if (projected.has(view) && state.projection)
     params.projection = state.projection;
+  if (view === 'map' && state.mapArea === 'data')
+  {
+    const area = mapArea();
+    if (area)
+      params.area = area;
+  }
   const options = currentOptions();
   for (const name of viewOptions[view] || [])
   {
@@ -783,6 +804,26 @@ function renderParams(view, content)
       params[name] = options[name];
   }
   return params;
+}
+
+// The area of the data on the map with a margin: "lon0,lat0,lon1,lat1", or null when the
+// data covers (nearly) the whole world
+function mapArea()
+{
+  const g = data.contents && data.contents.geometries[data.resolved.sel.geometry];
+  if (!g || !g.bbox)
+    return null;
+  let [lon0, lat0, lon1, lat1] = g.bbox;
+  const mx = Math.max(1, (lon1 - lon0) * 0.05);
+  const my = Math.max(1, (lat1 - lat0) * 0.05);
+  lon0 = Math.max(-180, lon0 - mx);
+  lon1 = Math.min(180, lon1 + mx);
+  lat0 = Math.max(-90, lat0 - my);
+  lat1 = Math.min(90, lat1 + my);
+  if (lon1 - lon0 > 300 && lat1 - lat0 > 150)
+    return null;
+  // Whole degrees, so that small differences between grids share the cached images
+  return [Math.floor(lon0), Math.floor(lat0), Math.ceil(lon1), Math.ceil(lat1)].join(',');
 }
 
 function imageUrl(view, content)
@@ -891,7 +932,7 @@ function renderViewer()
 
   viewer.classList.toggle('pixelated', true);
   // A zoom applies to one image layout: the same view, geometry and projection
-  const layout = [state.view, data.resolved.sel.geometry, state.projection, compareActive()].join('/');
+  const layout = [state.view, data.resolved.sel.geometry, state.projection, compareActive(), state.mapArea].join('/');
   if (zoom.layout !== layout)
   {
     zoom.layout = layout;
@@ -1280,7 +1321,9 @@ const renderLegend = debounce(async () => {
         api('colormap', {name: o.colormap}, {maxAge: 60000}),
         api('stats', params, {maxAge: 60000}).catch(() => null),
       ]);
-      colorMapLegend(legend, colormap, u, stats);
+      const parameter = data.parameters.find((x) => x.name === state.parameter);
+      colorMapLegend(legend, colormap, u, stats, data.meta.colorMapRanges || {}, (name) => setOption('colormap', name),
+                     parameter ? parameter.description : '');
     }
     else
     {
