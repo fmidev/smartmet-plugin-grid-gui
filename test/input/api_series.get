@@ -1,0 +1,2 @@
+GET /gui/api/series?generation=4&parameter=T-K&levelId=2&level=30000&forecastType=0&forecastNumber=-1&geometry=5901&lat=60&lon=25 HTTP/1.0
+

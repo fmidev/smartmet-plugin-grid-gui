@@ -1,0 +1,3 @@
+GET /gui?producer=pal_skandinavia HTTP/1.0
+X-Test-Headers: Location
+

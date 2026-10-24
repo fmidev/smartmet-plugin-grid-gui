@@ -8,6 +8,8 @@
 #include <grid-files/common/ImageFunctions.h>
 #include <grid-files/common/BitLine.h>
 #include <grid-files/common/Session.h>
+#include <json/json.h>
+#include <mutex>
 
 
 namespace SmartMet
@@ -53,6 +55,42 @@ struct ImagePaintParameters
   uint seaShading_shadow = 160;                 //!< Shadow intensity for sea depth shading.
   uint seaShading_position = 2;                 //!< Z-order position for the sea shading layer.
   uint coordinateLine_color = 0xFFC0C0C0;       //!< Packed ARGB color for latitude/longitude grid lines.
+  T::FileId fileId2 = 0;                        //!< Second field of a difference image (fileId2 - fileId), 0 = no difference.
+  T::MessageIndex messageIndex2 = 0;            //!< Message index of the second field of a difference image.
+  double differenceRange = 0;                   //!< Value range -r..r of the difference colour scale, 0 = automatic.
+};
+
+
+
+/*! \brief The colour scale of an image without a colour map: values from minValue
+ *  upwards in steps of step, the lowest values brightest (see hsvValueImage()). */
+struct HsvScale
+{
+  double minValue = 0;
+  double maxValue = 0;
+  double avgValue = 0;
+  double step = 0;
+  uint count = 0;          //!< Number of values that are not missing.
+};
+
+HsvScale hsvScale(const T::ParamValue_vec& values);
+
+/*! \brief The automatic range r of the -r..r colour scale of a difference image: the
+ *  99th percentile of the absolute differences, so that a few outliers do not wash
+ *  out the image. */
+double differenceRange(const T::ParamValue_vec& values);
+
+/*! \brief The ARGB colour of a difference in the -range..range scale. */
+uint differenceColor(double value,double range);
+
+
+
+/*! \brief A file of the new user interface, served from memory and reloaded when the file changes. */
+struct UiFile
+{
+  time_t modificationTime = 0;
+  std::string content;
+  std::string etag;
 };
 
 
@@ -241,6 +279,46 @@ class Plugin : public SmartMetPlugin
 
     T::ColorMapFile*  getColorMapFile(const std::string& colorMapName);
 
+    /*! \brief The values of an image: the field in its own geometry, or interpolated to
+     *  the projection geometry. With params.fileId2 the values are fileId2 - fileId.
+     *  Returns false if the values or the geometry are not available. */
+    bool getImageValues(const ImagePaintParameters& params,T::GeometryId& geometryId,uint& columns,uint& rows,T::ParamValue_vec& values);
+
+    // ### The new user interface at /gui (Gui.cpp) and its JSON API (Api.cpp)
+
+    int gui_request(const Spine::Reactor& theReactor,
+                      const Spine::HTTP::Request& theRequest,
+                      Spine::HTTP::Response& theResponse,
+                      const std::string& path);
+
+    int gui_file(const std::string& name,
+                      const Spine::HTTP::Request& theRequest,
+                      Spine::HTTP::Response& theResponse);
+
+    int gui_render(const std::string& page,
+                      const Spine::Reactor& theReactor,
+                      const Spine::HTTP::Request& theRequest,
+                      Spine::HTTP::Response& theResponse,
+                      int& expires_seconds);
+
+    int gui_api(const std::string& name,
+                      const Spine::HTTP::Request& theRequest,
+                      Spine::HTTP::Response& theResponse,
+                      int& expires_seconds);
+
+    Json::Value api_meta();
+    Json::Value api_producers();
+    Json::Value api_generations(const Spine::HTTP::Request& theRequest);
+    Json::Value api_parameters(const Spine::HTTP::Request& theRequest);
+    Json::Value api_contents(const Spine::HTTP::Request& theRequest);
+    Json::Value api_key(const Spine::HTTP::Request& theRequest);
+    Json::Value api_value(const Spine::HTTP::Request& theRequest);
+    Json::Value api_series(const Spine::HTTP::Request& theRequest);
+    Json::Value api_profile(const Spine::HTTP::Request& theRequest);
+    Json::Value api_stats(const Spine::HTTP::Request& theRequest);
+    Json::Value api_colormap(const Spine::HTTP::Request& theRequest);
+    Json::Value api_info(const Spine::HTTP::Request& theRequest);
+
     void checkImageCache();
     void getGenerations(T::GenerationInfoList& generationInfoList,std::set<std::string>& generations);
     void getLevelIds(const T::ContentInfoList& contentInfoList,std::set<int>& levelIds);
@@ -280,6 +358,11 @@ class Plugin : public SmartMetPlugin
     time_t                    itsProducerFile_modificationTime; //!< Last-modified time of itsProducerFile; used to detect reload need.
     std::set<std::string>     itsProducerList;                  //!< Set of producer names loaded from itsProducerFile (empty = show all).
     std::set<int>             itsBlockedProjections;            //!< Geometry IDs excluded from the projection selector (too large to display).
+
+    std::string               itsUiUrl;                         //!< URL of the new user interface (default /gui).
+    std::string               itsUiDirectory;                   //!< Directory of the files of the new user interface.
+    std::map<std::string,UiFile> itsUiFiles;                    //!< Files of the new user interface by name.
+    std::mutex                itsUiFilesMutex;                  //!< Lock of itsUiFiles.
 
     std::shared_ptr<Engine::Grid::Engine> itsGridEngine;        //!< Grid engine used for content and data server access.
     std::map<std::string,std::string>      itsImages;           //!< Maps image hash keys to cached image file paths.

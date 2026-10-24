@@ -1,0 +1,2 @@
+GET /gui/api/profile?generation=4&parameter=T-K&levelId=2&forecastType=0&forecastNumber=-1&geometry=5901&time=20080909T000000&lat=60&lon=25 HTTP/1.0
+

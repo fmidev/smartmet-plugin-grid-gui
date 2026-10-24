@@ -1,0 +1,2 @@
+GET /gui/api/generations?producer=1 HTTP/1.0
+

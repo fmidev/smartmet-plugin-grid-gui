@@ -4,3 +4,7 @@
 *~
 #*
 .#*
+test/tmp/
+test/failures/
+test/cnf/grid/
+test/cnf/reactor-local.conf

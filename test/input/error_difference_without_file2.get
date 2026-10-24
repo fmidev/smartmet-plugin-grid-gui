@@ -1,0 +1,3 @@
+GET /gui/difference?file=1&message=2 HTTP/1.0
+X-Test-Headers: Content-Type
+

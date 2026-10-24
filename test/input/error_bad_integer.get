@@ -1,0 +1,3 @@
+GET /gui/api/key?file=x&message=0 HTTP/1.0
+X-Test-Headers: Content-Type
+

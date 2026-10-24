@@ -1,0 +1,3 @@
+GET /gui/difference?file=1&message=2&geometry=5900&file2=2&message2=0 HTTP/1.0
+X-Test-Headers: Content-Type
+

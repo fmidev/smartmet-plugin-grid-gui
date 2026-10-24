@@ -1,0 +1,3 @@
+GET /gui/ui/index.sh HTTP/1.0
+X-Test-Headers: Content-Type
+

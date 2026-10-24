@@ -1,0 +1,77 @@
+Status: 200
+Content-Type: text/html; charset=UTF-8
+
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Grid GUI</title>
+<link rel="stylesheet" href="ui/gridgui.css">
+<script type="module" src="ui/main.js"></script>
+</head>
+<body>
+<header class="topbar">
+  <h1>Grid GUI</h1>
+  <div id="status" class="status" role="status" aria-live="polite"></div>
+  <nav class="toplinks">
+    <button type="button" id="help-button" class="link" aria-haspopup="dialog">Keys</button>
+    <a id="legacy-link" href="../grid-gui">Legacy UI</a>
+  </nav>
+</header>
+
+<div class="layout">
+  <aside class="side" aria-label="Selection">
+    <section class="panel" aria-labelledby="h-data">
+      <h2 id="h-data">Data</h2>
+      <div id="data-controls"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="h-key">
+      <h2 id="h-key">Parameter key</h2>
+      <div id="key"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="h-view">
+      <h2 id="h-view">View</h2>
+      <div id="view-controls"></div>
+    </section>
+
+    <section class="panel" aria-labelledby="h-render">
+      <h2 id="h-render">Rendering</h2>
+      <div id="settings"></div>
+    </section>
+  </aside>
+
+  <main class="main">
+    <div class="timecontrols" id="timecontrols"></div>
+    <div id="timebar"></div>
+    <div class="viewer-row">
+      <div id="viewer" class="viewer"></div>
+      <div id="levelbar" class="levelbar-wrap"></div>
+    </div>
+    <div id="readout" class="readout mono" aria-live="polite"></div>
+    <div id="legend" class="legend"></div>
+    <section id="point" class="point" hidden aria-labelledby="h-point">
+      <h2 id="h-point">Point</h2>
+      <div id="point-body"></div>
+    </section>
+  </main>
+</div>
+
+<dialog id="help">
+  <h2>Keyboard</h2>
+  <table>
+    <tr><th>← →</th><td>previous / next time</td></tr>
+    <tr><th>↑ ↓</th><td>level up / down</td></tr>
+    <tr><th>Space</th><td>play / pause the times</td></tr>
+    <tr><th>Home End</th><td>first / last time</td></tr>
+    <tr><th>c</th><td>compare on / off</td></tr>
+    <tr><th>Esc</th><td>remove the pinned point</td></tr>
+  </table>
+  <p>Hover the image to read values, click it to pin a point and see its time series and
+  vertical profile. Hover the time and level bars to preview other times and levels.</p>
+  <form method="dialog"><button>Close</button></form>
+</dialog>
+</body>
+</html>

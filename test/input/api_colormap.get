@@ -1,0 +1,2 @@
+GET /gui/api/colormap?name=Values%20(0..100) HTTP/1.0
+

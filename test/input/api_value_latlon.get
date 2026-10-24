@@ -1,0 +1,2 @@
+GET /gui/api/value?file=4&message=3660&lat=60&lon=25 HTTP/1.0
+

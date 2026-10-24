@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-plugin-%{DIRNAME}
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
-Version: 26.10.17
+Version: 26.10.24
 Release: 1%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
@@ -13,6 +13,11 @@ BuildRoot: %{_tmppath}/%{name}-%{version}-%{release}-root-%(%{__id_u} -n)
 
 # https://fedoraproject.org/wiki/Changes/Broken_RPATH_will_fail_rpmbuild
 %global __brp_check_rpaths %{nil}
+
+%define smartmet_fmt_min 12.0.0
+%define smartmet_fmt_max 13.0.0
+%define smartmet_fmt fmt-libs >= %{smartmet_fmt_min}, fmt-libs < %{smartmet_fmt_max}
+%define smartmet_fmt_devel fmt-devel >= %{smartmet_fmt_min}, fmt-devel < %{smartmet_fmt_max}
 
 %if 0%{?rhel} && 0%{rhel} < 9
 %define smartmet_boost boost169
@@ -31,7 +36,9 @@ BuildRequires: smartmet-library-macgyver-devel >= 26.10.16
 BuildRequires: smartmet-library-spine-devel >= 26.10.16
 BuildRequires: smartmet-library-grid-files-devel >= 26.10.16
 BuildRequires: smartmet-library-grid-content-devel >= 26.10.16
-BuildRequires: smartmet-engine-grid-devel >= 26.10.16
+BuildRequires: smartmet-engine-grid-devel >= 26.10.23
+BuildRequires: jsoncpp-devel
+BuildRequires: %{smartmet_fmt_devel}
 BuildRequires: gdal312-devel
 Requires: libconfig17
 Requires: smartmet-library-macgyver >= 26.10.17
@@ -39,8 +46,16 @@ Requires: smartmet-library-grid-files >= 26.10.17
 Requires: smartmet-library-grid-content >= 26.10.17
 Requires: smartmet-library-spine >= 26.10.17
 Requires: smartmet-server >= 26.10.17
-Requires: smartmet-engine-grid >= 26.10.17
+Requires: smartmet-engine-grid >= 26.10.23
+Requires: jsoncpp
+Requires: %{smartmet_fmt}
 Provides: %{SPECNAME}
+#TestRequires: smartmet-utils-devel >= 26.9.3
+#TestRequires: smartmet-library-spine-plugin-test >= 26.10.16
+#TestRequires: smartmet-engine-grid >= 26.10.23
+#TestRequires: valkey
+#TestRequires: smartmet-test-data >= 26.8.26
+#TestRequires: smartmet-library-grid-files-test >= 26.10.20
 
 %description
 SmartMet grid-gui plugin
@@ -62,8 +77,22 @@ rm -rf $RPM_BUILD_ROOT
 %files
 %defattr(0775,root,root,0775)
 %{_datadir}/smartmet/plugins/%{DIRNAME}.so
+%defattr(0664,root,root,0775)
+%{_datadir}/smartmet/%{DIRNAME}
 
 %changelog
+* Sat Oct 24 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> - 26.10.24-1.fmi
+- New user interface at /gui: the page is static HTML, CSS and JavaScript modules installed
+  to /usr/share/smartmet/grid-gui, the data comes from a JSON API (/gui/api/...) and the
+  images from /gui/image, /gui/map, ... with readable parameters. The legacy interface at
+  /grid-gui is unchanged
+- The parameter key is shown with an explanation of every part, including the interpolation
+  methods a query of the key uses
+- Hover values with coordinates, a pinned point with its time series and vertical profile,
+  legends, time and level previews, animation, parameter search and keyboard shortcuts
+- Compare mode: the same field in two generations and their difference image
+- New settings ui.url (default /gui) and ui.directory (default /usr/share/smartmet/grid-gui)
+- Requires grid engine 26.10.23 for getParameterMappingNames
 * Sat Oct 17 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> - 26.10.17-1.fmi
 - Plugin::page_main: extract aggregationText, processingText, page_main_generationOption and
   page_main_parameterName

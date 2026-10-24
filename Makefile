@@ -2,7 +2,7 @@ SUBNAME = grid-gui
 SPEC = smartmet-plugin-$(SUBNAME)
 INCDIR = smartmet/plugins/$(SUBNAME)
 
-REQUIRES = gdal configpp webp
+REQUIRES = gdal configpp webp jsoncpp fmt
 
 include $(shell echo $${PREFIX-/usr})/share/smartmet/devel/makefile.inc
 
@@ -78,6 +78,8 @@ format:
 install:
 	@mkdir -p $(plugindir)
 	$(INSTALL_PROG) $(LIBFILE) $(plugindir)/$(LIBFILE)
+	@mkdir -p $(datadir)/smartmet/grid-gui
+	$(INSTALL_DATA) ui/*.html ui/*.js ui/*.css $(datadir)/smartmet/grid-gui/
 
 test:
 	@if [ -d test ] ; then $(MAKE) -C test $@; else echo "No tests available"; fi

@@ -17,6 +17,28 @@ jobs:
       - persist_to_workspace:
           root: /dist
           paths: ./*.rpm
+  test-rhel8:
+    docker:
+      - image: fmidev/smartmet-cibase-8:latest
+    resource_class: xlarge
+    environment:
+      RPM_BUILD_NCPUS: 8
+    steps:
+      - checkout
+      - attach_workspace:
+          at: /dist
+      - run:
+          name: Installation test
+          command: ci-build dummy ; sudo yum install -y /dist/*.rpm
+      - run:
+          name: Test prepare
+          command: ci-build testprep
+      - run:
+          name: Test
+          command: ci-build test
+      - store_artifacts:
+          path: /dist
+          destination: dist/
   upload-rhel8:
     docker:
       - image: fmidev/smartmet-cibase-8:latest
@@ -52,6 +74,28 @@ jobs:
       - persist_to_workspace:
           root: /dist
           paths: ./*.rpm
+  test-rhel10:
+    docker:
+      - image: quay.io/fmi/smartmet-cibase-10:latest
+    resource_class: xlarge
+    environment:
+      RPM_BUILD_NCPUS: 8
+    steps:
+      - checkout
+      - attach_workspace:
+          at: /dist
+      - run:
+          name: Installation test
+          command: ci-build dummy ; sudo yum install -y /dist/*.rpm
+      - run:
+          name: Test prepare
+          command: ci-build testprep
+      - run:
+          name: Test
+          command: ci-build test
+      - store_artifacts:
+          path: /dist
+          destination: dist/
   upload-rhel10:
     docker:
       # No need to use smartmet-cibase-10
@@ -76,12 +120,18 @@ workflows:
   build-test:
     jobs:
       - build-rhel8
+      - test-rhel8:
+          requires:
+            - build-rhel8
       - upload-rhel8:
           context: fmi-global
           requires:
-            - build-rhel8
+            - test-rhel8
       - build-rhel10
+      - test-rhel10:
+          requires:
+            - build-rhel10
       - upload-rhel10:
           context: fmi-global
           requires:
-            - build-rhel10
+            - test-rhel10

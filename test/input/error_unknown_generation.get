@@ -1,0 +1,3 @@
+GET /gui/api/parameters?generation=999999 HTTP/1.0
+X-Test-Headers: Content-Type
+

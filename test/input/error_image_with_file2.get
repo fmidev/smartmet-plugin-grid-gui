@@ -1,0 +1,3 @@
+GET /gui/image?file=1&message=2&file2=2 HTTP/1.0
+X-Test-Headers: Content-Type
+

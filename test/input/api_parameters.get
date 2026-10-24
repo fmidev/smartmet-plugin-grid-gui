@@ -1,0 +1,2 @@
+GET /gui/api/parameters?generation=4 HTTP/1.0
+

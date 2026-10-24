@@ -1,0 +1,2 @@
+GET /gui/api/value?file=4&message=3660&x=0.5&y=0.5 HTTP/1.0
+

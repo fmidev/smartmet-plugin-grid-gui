@@ -5,6 +5,7 @@
 // ======================================================================
 
 #include "Plugin.h"
+#include "Attributes.h"
 
 #include <grid-files/common/GeneralFunctions.h>
 #include <grid-files/common/ImagePaint.h>
@@ -66,52 +67,6 @@ bool isSafeRequestValue(const std::string& value)
 }
 }  // namespace
 
-#define ATTR_STREAM_COLOR       "sc"
-#define ATTR_BLUR               "bl"
-#define ATTR_COLOR_MAP          "cm"
-#define ATTR_OPACITY            "op"
-#define ATTR_COORDINATE_LINES   "cl"
-#define ATTR_FILE_ID            "f"
-#define ATTR_FMI_KEY            "k"
-#define ATTR_FORECAST_NUMBER    "fn"
-#define ATTR_FORECAST_TYPE      "ft"
-#define ATTR_GENERATION_ID      "g"
-#define ATTR_GEOMETRY_ID        "gm"
-#define ATTR_HUE                "hu"
-#define ATTR_LAND_BORDER        "lb"
-#define ATTR_LAND_MASK          "lm"
-#define ATTR_LEVEL              "l"
-#define ATTR_LEVEL_ID           "lt"
-#define ATTR_MAX_LENGTH         "max"
-#define ATTR_MESSAGE_INDEX      "m"
-#define ATTR_MIN_LENGTH         "min"
-#define ATTR_MISSING            "mi"
-#define ATTR_PAGE               "pg"
-#define ATTR_PARAMETER_ID       "p"
-#define ATTR_PRESENTATION       "pre"
-#define ATTR_PRODUCER_ID        "pi"
-#define ATTR_PRODUCER_NAME      "pn"
-#define ATTR_PROJECTION_ID      "pro"
-#define ATTR_SATURATION         "sa"
-#define ATTR_SEA_MASK           "sm"
-#define ATTR_STEP               "st"
-#define ATTR_TIME               "t"
-#define ATTR_UNIT               "u"
-#define ATTR_X                  "xx"
-#define ATTR_Y                  "yy"
-#define ATTR_TIME_GROUP_TYPE    "tgt"
-#define ATTR_TIME_GROUP         "tg"
-#define ATTR_PROJECTION_LOCK    "pl"
-
-#define ATTR_LAND_SHADING_LIGHT  "lsl"
-#define ATTR_LAND_SHADING_SHADOW "lss"
-#define ATTR_LAND_SHADING_POS    "lsp"
-#define ATTR_LAND_COLOR_POS      "lcp"
-
-#define ATTR_SEA_SHADING_LIGHT   "ssl"
-#define ATTR_SEA_SHADING_SHADOW  "sss"
-#define ATTR_SEA_SHADING_POS     "ssp"
-#define ATTR_SEA_COLOR_POS       "scp"
 
 
 // ----------------------------------------------------------------------
@@ -159,6 +114,25 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
 
 
     itsConfigurationFile.readFile(theConfig);
+
+    // The new user interface: its pages, files and JSON API are below one URL prefix
+
+    itsUiUrl = "/gui";
+    itsUiDirectory = "/usr/share/smartmet/grid-gui";
+    if (itsConfigurationFile.findAttribute("smartmet.plugin.grid-gui.ui.url"))
+      itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.ui.url",itsUiUrl);
+    if (itsConfigurationFile.findAttribute("smartmet.plugin.grid-gui.ui.directory"))
+      itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.ui.directory",itsUiDirectory);
+
+    if (!itsUiUrl.empty())
+    {
+      if (itsUiUrl[0] != '/' || itsUiUrl == "/grid-gui")
+        throw Fmi::Exception(BCP, "ui.url must start with '/' and differ from /grid-gui").addParameter("ui.url",itsUiUrl);
+
+      if (!theReactor->addPrivateContentHandler(
+              this, itsUiUrl, boost::bind(&Plugin::callRequestHandler, this, _1, _2, _3), {}, true))
+        throw Fmi::Exception(BCP, "Failed to register GridGui user interface handler");
+    }
 
     uint t=0;
     while (configAttribute[t] != nullptr)
@@ -766,13 +740,99 @@ void Plugin::checkImageCache()
 
 /*! \brief GridGui: Save image. */
 
-void Plugin::saveImage(ImagePaintParameters& params)
+namespace
+{
+/*! \brief The values of one field in its own geometry, or interpolated to the geometry
+    geomId when it differs from the field's geometry. */
+
+bool getFieldValues(DataServer::ServiceInterface& dataServer,T::FileId fileId,T::MessageIndex messageIndex,T::GeometryId fieldGeomId,T::GeometryId geomId,uint& columns,uint& rows,T::ParamValue_vec& values)
+{
+  if (geomId == fieldGeomId)
+  {
+    T::GridData gridData;
+    int result = dataServer.getGridData(0,fileId,messageIndex,gridData);
+    if (result != 0)
+    {
+      Fmi::Exception exception(BCP,"Data fetching failed!");
+      exception.addParameter("Result",DataServer::getResultString(result));
+      throw exception;
+    }
+    columns = gridData.mColumns;
+    rows = gridData.mRows;
+    values = std::move(gridData.mValues);
+    return true;
+  }
+
+  if (!Identification::gridDef.getGridDimensionsByGeometryId(geomId,columns,rows) || fileId == 0)
+    return false;
+
+  T::AttributeList attributeList;
+  attributeList.addAttribute("grid.geometryId",std::to_string(geomId));
+  attributeList.addAttribute("grid.areaInterpolationMethod",std::to_string(T::AreaInterpolationMethod::Linear));
+  double_vec modificationParameters;
+  int result = dataServer.getGridValueVectorByGeometry(0,fileId,messageIndex,attributeList,0,modificationParameters,values);
+  if (result != 0)
+    throw Fmi::Exception(BCP,"Data fetching failed!");
+  return true;
+}
+}  // namespace
+
+
+
+bool Plugin::getImageValues(const ImagePaintParameters& params,T::GeometryId& geometryId,uint& columns,uint& rows,T::ParamValue_vec& values)
 {
   FUNCTION_TRACE
   try
   {
     auto dataServer = itsGridEngine->getDataServer_sptr();
 
+    geometryId = params.geometryId;
+    if (params.projectionId > 0  &&  params.projectionId != params.geometryId)
+      geometryId = params.projectionId;
+
+    if (!getFieldValues(*dataServer,params.fileId,params.messageIndex,params.geometryId,geometryId,columns,rows,values))
+      return false;
+
+    if (params.fileId2 == 0)
+      return true;
+
+    // A difference image: the second field minus the first one. The fields are of the
+    // same parameter and geometry, so their grids are identical.
+
+    uint columns2 = 0;
+    uint rows2 = 0;
+    T::ParamValue_vec values2;
+    if (!getFieldValues(*dataServer,params.fileId2,params.messageIndex2,params.geometryId,geometryId,columns2,rows2,values2))
+      return false;
+
+    if (columns2 != columns || rows2 != rows || values2.size() != values.size())
+      throw Fmi::Exception(BCP,"The fields of a difference image have different grids");
+
+    for (std::size_t t = 0; t < values.size(); t++)
+    {
+      if (values[t] != ParamValueMissing && values2[t] != ParamValueMissing)
+        values[t] = values2[t] - values[t];
+      else
+        values[t] = ParamValueMissing;
+    }
+    return true;
+  }
+  catch (...)
+  {
+    Fmi::Exception exception(BCP, "Operation failed!", nullptr);
+    exception.addParameter("File",std::to_string(params.fileId));
+    exception.addParameter("Message",std::to_string(params.messageIndex));
+    throw exception;
+  }
+}
+
+
+
+void Plugin::saveImage(ImagePaintParameters& params)
+{
+  FUNCTION_TRACE
+  try
+  {
     T::GeometryId geomId = params.geometryId;
     if (params.projectionId > 0  &&  params.projectionId != params.geometryId)
       geomId = params.projectionId;
@@ -801,45 +861,13 @@ void Plugin::saveImage(ImagePaintParameters& params)
       }
     }
 
-    if (geomId == params.geometryId)
-    {
-      T::GridData gridData;
-      int result = dataServer->getGridData(0,params.fileId,params.messageIndex,gridData);
-      if (result != 0)
-      {
-        Fmi::Exception exception(BCP,"Data fetching failed!");
-        exception.addParameter("Result",DataServer::getResultString(result));
-        throw exception;
-      }
-
-      saveImage(params,gridData.mColumns,gridData.mRows,gridData.mValues,*coordinates,lineCoordinates);
-      //saveImage(imageFile,gridData.mColumns,gridData.mRows,gridData.mValues,*coordinates,*lineCoordinates,hue,saturation,blur,coordinateLines,landBorder,landMask,seaMask,colorMapName,missingStr,geometryId,pstep,minLength,maxLength,lightBackground,animation);
-    }
-    else
+    uint cols = 0;
+    uint rows = 0;
+    T::ParamValue_vec values;
+    if (getImageValues(params,geomId,cols,rows,values))
     {
       params.geometryId = geomId;
-      uint cols = 0;
-      uint rows = 0;
-      if (Identification::gridDef.getGridDimensionsByGeometryId(geomId,cols,rows))
-      {
-        T::ParamValue_vec values;
-
-        short interpolationMethod = T::AreaInterpolationMethod::Linear;
-
-        T::AttributeList attributeList;
-        attributeList.addAttribute("grid.geometryId",std::to_string(geomId));
-        attributeList.addAttribute("grid.areaInterpolationMethod",std::to_string(interpolationMethod));
-        if (params.fileId > 0)
-        {
-          double_vec modificationParameters;
-          int result = dataServer->getGridValueVectorByGeometry(0,params.fileId,params.messageIndex,attributeList,0,modificationParameters,values);
-          if (result != 0)
-            throw Fmi::Exception(BCP,"Data fetching failed!");
-
-          saveImage(params,cols,rows,values,*coordinates,lineCoordinates);
-          //saveImage(imageFile,cols,rows,values,*coordinates,*lineCoordinates,hue,saturation,blur,coordinateLines,landBorder,landMask,seaMask,colorMapName,missingStr,geomId,pstep,minLength,maxLength,lightBackground,animation);
-        }
-      }
+      saveImage(params,cols,rows,values,*coordinates,lineCoordinates);
     }
   }
   catch (...)
@@ -850,6 +878,90 @@ void Plugin::saveImage(ImagePaintParameters& params)
   }
 }
 
+
+
+
+HsvScale hsvScale(const T::ParamValue_vec& values)
+{
+  HsvScale scale;
+  double maxValue = -1000000000;
+  double minValue = 1000000000;
+  double total = 0;
+  uint cnt = 0;
+
+  for (double val : values)
+  {
+    if (val != ParamValueMissing)
+    {
+      total = total + val;
+      cnt++;
+      minValue = std::min(val, minValue);
+      maxValue = std::max(val, maxValue);
+    }
+  }
+
+  double avg = total / (double)cnt;
+  double dd = maxValue - minValue;
+  double ddd = avg-minValue;
+  double step = dd / 200;
+  if (maxValue > (minValue + 5*ddd))
+    step = 5*ddd / 200;
+
+  scale.minValue = minValue;
+  scale.maxValue = maxValue;
+  scale.avgValue = avg;
+  scale.step = step;
+  scale.count = cnt;
+  return scale;
+}
+
+
+
+double differenceRange(const T::ParamValue_vec& values)
+{
+  std::vector<double> diffs;
+  diffs.reserve(values.size());
+  for (double val : values)
+  {
+    if (val != ParamValueMissing)
+      diffs.push_back(std::abs(val));
+  }
+
+  if (diffs.empty())
+    return 1;
+
+  auto pos = diffs.begin() + static_cast<std::ptrdiff_t>((diffs.size() - 1) * 0.99);
+  std::nth_element(diffs.begin(),pos,diffs.end());
+  if (*pos > 0)
+    return *pos;
+
+  // Nearly all values are equal: use the largest difference, or 1 if there is none
+  double maxDiff = *std::max_element(diffs.begin(),diffs.end());
+  return (maxDiff > 0 ? maxDiff : 1);
+}
+
+
+
+uint differenceColor(double value,double range)
+{
+  // ColorBrewer RdBu end points: 0x2166AC (negative) and 0xB2182B (positive)
+  double p = (range > 0 ? value / range : 0);
+  p = std::max(-1.0, std::min(1.0, p));
+
+  uint r = 0xB2;
+  uint g = 0x18;
+  uint b = 0x2B;
+  if (p < 0)
+  {
+    r = 0x21;
+    g = 0x66;
+    b = 0xAC;
+    p = -p;
+  }
+
+  auto mix = [p](uint c) { return C_UINT(255 - (255 - C_INT(c)) * p + 0.5); };
+  return 0xFF000000 | (mix(r) << 16) | (mix(g) << 8) | mix(b);
+}
 
 
 
@@ -1014,36 +1126,48 @@ void buildLandImages(const ImagePaintParameters& params,int width,int height,uin
 
 
 
+// Value layer of a difference image: blue for negative and red for positive values,
+// white at zero, full colour at -range and range
+
+uint *differenceValueImage(const ImagePaintParameters& params,const T::ParamValue_vec& values,int width,int height,uint size,bool rotate,uint alpha)
+{
+  uint *valImage = new uint[size];
+
+  double range = params.differenceRange;
+  if (range <= 0)
+    range = differenceRange(values);
+
+  uint c = 0;
+  for (int y=0; y<height; y++)
+  {
+    int yy = y;
+    if (rotate)
+      yy = height-y-1;
+
+    for (int x=0; x<width; x++)
+    {
+      uint pixpos = yy*width + x;
+      valImage[pixpos] = 0x00000000;
+      T::ParamValue val = values[c];
+      if (val != ParamValueMissing)
+        valImage[pixpos] = alpha + (differenceColor(val,range) & 0x00FFFFFF);
+      c++;
+    }
+  }
+  return valImage;
+}
+
+
+
 // Value layer coloured with a hue ramp over the value range
 
 uint *hsvValueImage(ImagePaintParameters& params,T::ParamValue_vec& values,int width,int height,uint size,bool rotate,uint alpha)
 {
   uint *valImage = new uint[size];
 
-  double maxValue = -1000000000;
-  double minValue = 1000000000;
-  double total = 0;
-  uint cnt = 0;
-
-  for (uint t=0; t<size; t++)
-  {
-    double val = values[t];
-    if (val != ParamValueMissing)
-    {
-      total = total + val;
-      cnt++;
-      minValue = std::min(val, minValue);
-
-      maxValue = std::max(val, maxValue);
-    }
-  }
-
-  double avg = total / (double)cnt;
-  double dd = maxValue - minValue;
-  double ddd = avg-minValue;
-  double step = dd / 200;
-  if (maxValue > (minValue + 5*ddd))
-    step = 5*ddd / 200;
+  const HsvScale scale = hsvScale(values);
+  const double minValue = scale.minValue;
+  const double step = scale.step;
 
   if (params.paint_blur == 0)
     params.paint_blur = 1;
@@ -1407,7 +1531,14 @@ void Plugin::saveImage(ImagePaintParameters& params,
 
     uint alpha = (uint)params.paint_alpha << 24;
 
-    if (!colorMapFile && params.stream_step == 0)
+    if (params.fileId2 != 0)
+      colorMapFile = nullptr;
+
+    if (params.fileId2 != 0 && params.stream_step == 0)
+    {
+      valImage = differenceValueImage(params,values,width,height,size,rotate,alpha);
+    }
+    else if (!colorMapFile && params.stream_step == 0)
     {
       // We do not have colormap - using HSV instead
       valImage = hsvValueImage(params,values,width,height,size,rotate,alpha);
@@ -2463,6 +2594,13 @@ int Plugin::page_image(const Spine::Reactor & /*theReactor*/,
       landShadingLightStr + ":" + landShadingShadowStr  + ":" + landShadingPositionStr  + ":" + landColorPosStr + ":" +
       seaShadingLightStr + ":" + seaShadingShadowStr  + ":" + seaShadingPositionStr  + ":" + seaColorPosStr + ":" + opacityStr + ":" + streamColorStr;
 
+    // A difference image of the new user interface: the second field minus this one
+    std::string fileId2Str = session.getAttribute(ATTR_FILE_ID2);
+    std::string messageIndex2Str = session.getAttribute(ATTR_MESSAGE_INDEX2);
+    std::string differenceRangeStr = session.getAttribute(ATTR_DIFFERENCE_RANGE);
+    if (!fileId2Str.empty())
+      hash += ":Difference:" + fileId2Str + ":" + messageIndex2Str + ":" + differenceRangeStr;
+
     const std::size_t seed = Fmi::hash(hash);
     std::string seedStr = std::to_string(seed);
     theResponse.setHeader("ETag",seedStr);
@@ -2539,6 +2677,13 @@ int Plugin::page_image(const Spine::Reactor & /*theReactor*/,
       params.seaShading_shadow = toInt32(seaShadingShadowStr);
       params.seaShading_position = toInt32(seaShadingPositionStr);
       params.coordinateLine_color = getColorValue(coordinateLinesStr);
+      if (!fileId2Str.empty())
+      {
+        params.fileId2 = toUInt64(fileId2Str);
+        params.messageIndex2 = toUInt32(messageIndex2Str);
+        if (!differenceRangeStr.empty())
+          params.differenceRange = toDouble(differenceRangeStr);
+      }
 
       saveImage(params);
 
@@ -5810,6 +5955,20 @@ int Plugin::request(const Spine::Reactor &theReactor,
         theResponse.setContent("Invalid characters in request parameter\n");
         return HTTP::Status::bad_request;
       }
+    }
+
+    // The new user interface
+    const std::string resource = theRequest.getResource();
+    if (!itsUiUrl.empty() && resource.compare(0,itsUiUrl.size(),itsUiUrl) == 0 &&
+        (resource.size() == itsUiUrl.size() || resource[itsUiUrl.size()] == '/'))
+    {
+      if (!itsGridEngine->isEnabled())
+      {
+        theResponse.setHeader("Content-Type", "text/plain; charset=UTF-8");
+        theResponse.setContent("The grid engine is disabled\n");
+        return HTTP::Status::service_unavailable;
+      }
+      return gui_request(theReactor,theRequest,theResponse,resource.substr(itsUiUrl.size()));
     }
 
     std::optional<std::string> v;

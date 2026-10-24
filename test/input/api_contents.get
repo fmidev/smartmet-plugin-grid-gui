@@ -1,0 +1,2 @@
+GET /gui/api/contents?generation=4&parameter=T-K HTTP/1.0
+

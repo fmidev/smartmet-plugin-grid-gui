@@ -1,0 +1,57 @@
+#pragma once
+
+// The names of the session attributes of grid-gui. They travel in every URL of the
+// legacy user interface (/grid-gui?session=...), so they are kept short. The new user
+// interface (Gui.cpp) maps its readable request parameters to these names.
+
+#define ATTR_STREAM_COLOR       "sc"
+#define ATTR_BLUR               "bl"
+#define ATTR_COLOR_MAP          "cm"
+#define ATTR_OPACITY            "op"
+#define ATTR_COORDINATE_LINES   "cl"
+#define ATTR_FILE_ID            "f"
+#define ATTR_FMI_KEY            "k"
+#define ATTR_FORECAST_NUMBER    "fn"
+#define ATTR_FORECAST_TYPE      "ft"
+#define ATTR_GENERATION_ID      "g"
+#define ATTR_GEOMETRY_ID        "gm"
+#define ATTR_HUE                "hu"
+#define ATTR_LAND_BORDER        "lb"
+#define ATTR_LAND_MASK          "lm"
+#define ATTR_LEVEL              "l"
+#define ATTR_LEVEL_ID           "lt"
+#define ATTR_MAX_LENGTH         "max"
+#define ATTR_MESSAGE_INDEX      "m"
+#define ATTR_MIN_LENGTH         "min"
+#define ATTR_MISSING            "mi"
+#define ATTR_PAGE               "pg"
+#define ATTR_PARAMETER_ID       "p"
+#define ATTR_PRESENTATION       "pre"
+#define ATTR_PRODUCER_ID        "pi"
+#define ATTR_PRODUCER_NAME      "pn"
+#define ATTR_PROJECTION_ID      "pro"
+#define ATTR_SATURATION         "sa"
+#define ATTR_SEA_MASK           "sm"
+#define ATTR_STEP               "st"
+#define ATTR_TIME               "t"
+#define ATTR_UNIT               "u"
+#define ATTR_X                  "xx"
+#define ATTR_Y                  "yy"
+#define ATTR_TIME_GROUP_TYPE    "tgt"
+#define ATTR_TIME_GROUP         "tg"
+#define ATTR_PROJECTION_LOCK    "pl"
+
+#define ATTR_LAND_SHADING_LIGHT  "lsl"
+#define ATTR_LAND_SHADING_SHADOW "lss"
+#define ATTR_LAND_SHADING_POS    "lsp"
+#define ATTR_LAND_COLOR_POS      "lcp"
+
+#define ATTR_SEA_SHADING_LIGHT   "ssl"
+#define ATTR_SEA_SHADING_SHADOW  "sss"
+#define ATTR_SEA_SHADING_POS     "ssp"
+#define ATTR_SEA_COLOR_POS       "scp"
+
+// Used only by the new user interface (Gui.cpp)
+#define ATTR_FILE_ID2            "f2"
+#define ATTR_MESSAGE_INDEX2      "m2"
+#define ATTR_DIFFERENCE_RANGE    "dr"
