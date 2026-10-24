@@ -124,13 +124,22 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
     if (itsConfigurationFile.findAttribute("smartmet.plugin.grid-gui.ui.directory"))
       itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.ui.directory",itsUiDirectory);
 
+    // A visible URL is in the URI list of the server, so frontends route it to this
+    // backend. A private one (the default, like /grid-gui) is not, and accepts only
+    // local and private network addresses unless ip_filters says otherwise.
+    bool uiVisible = false;
+    if (itsConfigurationFile.findAttribute("smartmet.plugin.grid-gui.ui.visible"))
+      itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.ui.visible",uiVisible);
+
     if (!itsUiUrl.empty())
     {
       if (itsUiUrl[0] != '/' || itsUiUrl == "/grid-gui")
         throw Fmi::Exception(BCP, "ui.url must start with '/' and differ from /grid-gui").addParameter("ui.url",itsUiUrl);
 
-      if (!theReactor->addPrivateContentHandler(
-              this, itsUiUrl, boost::bind(&Plugin::callRequestHandler, this, _1, _2, _3), {}, true))
+      auto handler = boost::bind(&Plugin::callRequestHandler, this, _1, _2, _3);
+      const bool ok = uiVisible ? theReactor->addContentHandler(this, itsUiUrl, handler, {}, true)
+                                : theReactor->addPrivateContentHandler(this, itsUiUrl, handler, {}, true);
+      if (!ok)
         throw Fmi::Exception(BCP, "Failed to register GridGui user interface handler");
     }
 

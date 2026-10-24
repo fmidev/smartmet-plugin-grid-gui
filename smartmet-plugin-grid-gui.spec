@@ -91,7 +91,8 @@ rm -rf $RPM_BUILD_ROOT
 - Hover values with coordinates, a pinned point with its time series and vertical profile,
   legends, time and level previews, animation, parameter search and keyboard shortcuts
 - Compare mode: the same field in two generations and their difference image
-- New settings ui.url (default /gui) and ui.directory (default /usr/share/smartmet/grid-gui)
+- New settings ui.url (default /gui), ui.directory (default /usr/share/smartmet/grid-gui) and
+  ui.visible (default false: a private URL like /grid-gui; true: listed for the frontends)
 - Requires grid engine 26.10.23 for getParameterMappingNames
 * Sat Oct 17 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> - 26.10.17-1.fmi
 - Plugin::page_main: extract aggregationText, processingText, page_main_generationOption and
