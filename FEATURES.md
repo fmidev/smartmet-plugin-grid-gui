@@ -39,6 +39,8 @@ at `/grid-gui` offers the features of sections 1–8.
 - **Map of the data area** — the Map view draws the lat/lon box of the data at full
   resolution (or the whole world).
 - **Colour map suggestions** when the field does not fit the chosen colour map.
+- **Named colour picker** — the named colours as dots on a hue × lightness plane, greys
+  in their own strip, with a name filter.
 - **Sample tables** of values and coordinates that can be moved over the whole grid;
   hovering a cell shows its indexes, coordinates and value.
 - **Explanations** of undefined forecast and level types, and a legend note when the

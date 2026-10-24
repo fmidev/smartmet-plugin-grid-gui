@@ -250,3 +250,30 @@ dialog th { text-align: left; padding-right: 12px; font-family: var(--mono); }
 .sample-table th.hl { background: var(--accent); color: #fff; }
 .sample-table.coordinates td { font-size: 10px; }
 .error { color: var(--error); }
+
+/* Named colour picker */
+
+.color-button { display: inline-flex; align-items: center; gap: 6px; max-width: 170px; padding: 2px 8px; }
+.color-name { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 12px; }
+.color-picker {
+  position: absolute; z-index: 30; width: 410px; padding: 8px; background: var(--panel);
+  border: 1px solid var(--border); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.25);
+}
+.color-top { display: flex; gap: 6px; margin-bottom: 8px; }
+.color-top input { flex: 1; }
+.color-top .selected { border-color: var(--accent); }
+.color-area { display: flex; gap: 8px; height: 240px; }
+.color-greys { position: relative; width: 40px; flex: none;
+  background: linear-gradient(#fff, #000); border-radius: 4px; }
+.color-plane { position: relative; width: 330px; flex: none; border-radius: 4px;
+  background:
+    linear-gradient(#fff, rgba(255,255,255,0) 50%, rgba(0,0,0,0) 50%, #000),
+    linear-gradient(to right, #f00, #ff0, #0f0, #0ff, #00f, #f0f, #f00); }
+.color-picker .dot {
+  position: absolute; width: 13px; height: 13px; margin: -6.5px 0 0 -6.5px; padding: 0;
+  border: 2px solid #fff; border-radius: 50%; box-shadow: 0 0 0 1px rgba(0,0,0,.6); cursor: pointer;
+}
+.color-picker .dot:hover, .color-picker .dot:focus-visible { transform: scale(1.5); z-index: 2; }
+.color-picker .dot.selected { box-shadow: 0 0 0 2px var(--accent), 0 0 0 4px #fff; z-index: 1; }
+.color-picker .dot.dim { opacity: .15; }
+.color-readout { margin-top: 6px; min-height: 1.4em; font-family: var(--mono); }

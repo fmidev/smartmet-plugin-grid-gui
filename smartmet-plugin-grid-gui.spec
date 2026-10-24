@@ -94,6 +94,7 @@ rm -rf $RPM_BUILD_ROOT
 - Sample value and coordinate tables (api/sample) with hover readouts and a movable window
 - Map of the data area: page_map takes a lat/lon area (ma attribute, area parameter of /gui/map)
 - The legend suggests colour maps that fit the field
+- Named colours are chosen from a hue x lightness picker
 - New settings ui.url (default /gui), ui.directory (default /usr/share/smartmet/grid-gui) and
   ui.visible (default false: a private URL like /grid-gui; true: listed for the frontends)
 - Requires grid engine 26.10.23 for getParameterMappingNames

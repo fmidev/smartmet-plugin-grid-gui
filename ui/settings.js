@@ -1,6 +1,7 @@
 // The rendering options of the images. The names are the request parameters of the
 // rendering pages (Gui.cpp), the defaults come from api/meta.
 
+import {colorPicker, closeColorPicker} from './colorpicker.js';
 import {el, replace, select} from './dom.js';
 
 const positions = [
@@ -25,21 +26,9 @@ export const viewOptions = {
 viewOptions.streamsAnimation = viewOptions.streams;
 viewOptions.difference = viewOptions.image.filter((o) => !['colormap', 'hue', 'saturation', 'blur'].includes(o));
 
-function colorSelect(colors, value, onchange)
+function colorSelect(colors, value, onchange, label)
 {
-  const swatch = el('span', {class: 'swatch'});
-  const paint = (name) => {
-    const c = colors.find((x) => x.name === name);
-    const a = c ? parseInt(c.argb.slice(0, 2), 16) / 255 : 0;
-    swatch.style.background = c && a > 0 ? `#${c.argb.slice(2)}` : 'transparent';
-    swatch.classList.toggle('none', !c || a === 0);
-  };
-  const node = select(colors.map((c) => c.name), value, (v) => {
-    paint(v);
-    onchange(v);
-  });
-  paint(value);
-  return el('span', {class: 'color-select'}, swatch, node);
+  return colorPicker(colors, value, onchange, label);
 }
 
 // A slider whose value label follows it; the change is reported when it is released
@@ -62,6 +51,7 @@ function row(label, help, ...controls)
 // Renders the options of the view. set(name, value) changes one option.
 export function renderSettings(container, meta, options, view, set)
 {
+  closeColorPicker();
   const used = new Set(viewOptions[view] || []);
   if (used.size === 0)
   {
@@ -91,7 +81,7 @@ export function renderSettings(container, meta, options, view, set)
 
   if (used.has('streamColor'))
   {
-    parts.push(row('Stream colour', 'Colour of the stream lines', colorSelect(colors, options.streamColor, (v) => set('streamColor', v))));
+    parts.push(row('Stream colour', 'Colour of the stream lines', colorSelect(colors, options.streamColor, (v) => set('streamColor', v), 'Stream colour')));
     parts.push(row('Spacing', 'Grid points between the stream line starts', slider(2, 98, 2, options.step, (v) => set('step', v))));
     parts.push(row('Min length', 'Shorter stream lines are not drawn', slider(2, 2048, 2, options.minLength, (v) => set('minLength', v))));
     parts.push(row('Max length', 'Stream lines are cut at this length', slider(8, 2048, 4, options.maxLength, (v) => set('maxLength', v))));
@@ -99,19 +89,19 @@ export function renderSettings(container, meta, options, view, set)
 
   const layers = [];
   if (used.has('coordinateLines'))
-    layers.push(row('Lat/lon lines', 'Colour of the coordinate lines', colorSelect(colors, options.coordinateLines, (v) => set('coordinateLines', v))));
+    layers.push(row('Lat/lon lines', 'Colour of the coordinate lines', colorSelect(colors, options.coordinateLines, (v) => set('coordinateLines', v), 'Lat/lon lines')));
   if (used.has('landBorder'))
-    layers.push(row('Coastline', 'Colour of the land border', colorSelect(colors, options.landBorder, (v) => set('landBorder', v))));
+    layers.push(row('Coastline', 'Colour of the land border', colorSelect(colors, options.landBorder, (v) => set('landBorder', v), 'Coastline')));
   if (used.has('landColor'))
   {
     layers.push(row('Land', 'Land colour and its position relative to the data',
-        colorSelect(colors, options.landColor, (v) => set('landColor', v)),
+        colorSelect(colors, options.landColor, (v) => set('landColor', v), 'Land'),
         used.has('landColorPosition') ? select(positions, options.landColorPosition, (v) => set('landColorPosition', v)) : null));
   }
   if (used.has('seaColor'))
   {
     layers.push(row('Sea', 'Sea colour and its position relative to the data',
-        colorSelect(colors, options.seaColor, (v) => set('seaColor', v)),
+        colorSelect(colors, options.seaColor, (v) => set('seaColor', v), 'Sea'),
         used.has('seaColorPosition') ? select(positions, options.seaColorPosition, (v) => set('seaColorPosition', v)) : null));
   }
   if (used.has('landShadingPosition'))

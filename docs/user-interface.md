@@ -50,6 +50,12 @@ under the pointer. A click pins the point: the page then shows its time series a
 fields with several levels, its vertical profile. Clicking a chart selects that time or
 level.
 
+**Colours.** The named colours (coastline, land, sea, lat/lon lines, streams) are chosen
+from a picker that shows every named colour as a dot at its hue (left to right) and
+lightness (top to bottom), the greys in a strip of their own. Overlapping dots are moved
+slightly apart. A filter dims the colours whose name does not match; Enter chooses the
+first match.
+
 **Zoom.** The mouse wheel zooms the image around the pointer, dragging moves a zoomed
 image and a double click shows the whole image. Compared images zoom together. The grid
 cells are drawn as sharp squares, so single grid points can be inspected.
@@ -173,6 +179,7 @@ to restrict who may use it.
 | `ui/settings.js` | Rendering options |
 | `ui/info.js` | The Info view |
 | `ui/sample.js` | The sample value and coordinate tables |
+| `ui/colorpicker.js` | The picker of the named colours |
 | `ui/api.js`, `ui/dom.js`, `ui/format.js` | Fetching, DOM helpers, formatting |
 | `ui/gridgui.css` | Styles, light and dark |
 
