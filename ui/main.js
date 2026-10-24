@@ -703,8 +703,16 @@ function renderTimeControls()
     return b;
   };
 
-  const timeSelect = select(t.map((x) => ({value: x, label: `${formatShortTime(x)} UTC  (${formatLeadTime(x, analysis)})`})), current,
-      (v) => selectTime(v, true), {'aria-label': 'Time'});
+  // The times grouped by day: long histories stay readable
+  const groups = [];
+  for (const x of t)
+  {
+    const day = formatTime(x).slice(0, 10);
+    if (!groups.length || groups[groups.length - 1].group !== day)
+      groups.push({group: day, options: []});
+    groups[groups.length - 1].options.push({value: x, label: `${formatShortTime(x)} UTC  (${formatLeadTime(x, analysis)})`});
+  }
+  const timeSelect = select(groups, current, (v) => selectTime(v, true), {'aria-label': 'Time'});
 
   const speed = select([
     {value: 1500, label: 'slow'}, {value: 600, label: 'normal'}, {value: 200, label: 'fast'},
