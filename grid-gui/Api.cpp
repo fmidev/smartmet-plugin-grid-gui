@@ -405,9 +405,8 @@ Json::Value Plugin::api_meta()
   {
     Json::Value result(Json::objectValue);
 
-    if (getFileModificationTime(itsColorFile.c_str()) != itsColors_lastModified)
-      loadColorFile();
-
+    // The colours are not reloaded here: loadColorFile() rewrites itsColors while the
+    // rendering threads may read it. The legacy main page reloads a changed file.
     Json::Value colors(Json::arrayValue);
     for (const auto& color : itsColors)
     {
