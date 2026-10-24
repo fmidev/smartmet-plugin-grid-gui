@@ -105,8 +105,13 @@ function readUrl()
   }
 }
 
+// A change that should get its own history entry sets this before the address is written
+let pushNext = false;
+
 function writeUrl(push = false)
 {
+  push = push || pushNext;
+  pushNext = false;
   const q = new URLSearchParams();
   q.set('producer', state.producer);
   if (data.generation)
@@ -265,8 +270,9 @@ function applySelection()
   updateContent();
 }
 
-// The file and message of the selected time, the key and the compare field
-function updateContent()
+// The file and message of the selected time, the key and the compare field. Only the
+// time changed: the selection panel stays as it is.
+function updateContent(timeOnly = false)
 {
   const r = data.resolved;
   data.content = r ? fieldContent(r.field, r.sel.time) : null;
@@ -274,7 +280,10 @@ function updateContent()
   if (r && data.compareContents)
     data.compareContent = matchingContent(data.compareContents.fields, r.sel).content;
   writeUrl();
-  renderAll();
+  if (timeOnly)
+    renderTimeDependent();
+  else
+    renderAll();
   loadKey();
 }
 
@@ -351,13 +360,16 @@ function field(label, help, control, note)
 
 // The parameter list with a filter: the filter matches names, descriptions, units and
 // the other names of the parameters
+let parameterFilter = '';
+
 function parameterPicker()
 {
   const filter = el('input', {type: 'search', placeholder: `Filter ${data.parameters.length} parameters`,
-                              'aria-label': 'Filter the parameters'});
+                              'aria-label': 'Filter the parameters', value: parameterFilter});
   const list = el('select', {size: 8, class: 'parameter-list', 'aria-label': 'Parameter'});
   const label = (p) => `${p.name} — ${p.description || ''}${p.units ? ` [${p.units}]` : ''}`;
   const fill = () => {
+    parameterFilter = filter.value;
     const f = filter.value.trim().toLowerCase();
     const matches = data.parameters.filter((p) => !f ||
         [p.name, p.description, p.units, ...(p.aliases || [])].some((s) => s && s.toLowerCase().includes(f)));
@@ -374,11 +386,11 @@ function parameterPicker()
   });
   list.addEventListener('change', () => chooseParameter(list.value));
   fill();
-  // Keep the selected parameter visible
+  // Keep the selected parameter visible, scrolling only the list
   requestAnimationFrame(() => {
     const o = list.selectedOptions[0];
     if (o)
-      o.scrollIntoView({block: 'nearest'});
+      list.scrollTop = Math.max(0, o.offsetTop - list.clientHeight / 2);
   });
   return el('div', {class: 'parameter-picker'}, filter, list);
 }
@@ -397,13 +409,13 @@ async function run(step, push = false)
   try
   {
     status('Loading…');
+    pushNext = push;
     await step();
     status('');
-    if (push)
-      writeUrl(true);
   }
   catch (error)
   {
+    pushNext = false;
     report(error);
   }
 }
@@ -448,6 +460,7 @@ function renderDataPanel()
     const s = r.sel;
     const choose = (name) => (v) => {
       state.sel[name] = Number(v);
+      pushNext = true;
       applySelection();
     };
     controls.push(el('div', {class: 'field-row'},
@@ -624,9 +637,8 @@ function selectTime(time, push = false)
     return;
   state.sel.time = time;
   data.resolved.sel.time = time;
-  updateContent();
-  if (push)
-    writeUrl(true);
+  pushNext = push;
+  updateContent(true);
 }
 
 function stepTime(step)
@@ -1143,6 +1155,7 @@ function renderLevels()
   renderLevelbar($('levelbar'), levels, r.sel.level, {
     select: (level) => {
       state.sel.level = level;
+      pushNext = true;
       applySelection();
     },
     preview: (l) => preview(l),
@@ -1154,8 +1167,14 @@ function renderLevels()
 function renderAll()
 {
   renderDataPanel();
-  renderViewPanel();
   renderSettingsPanel();
+  renderTimeDependent();
+}
+
+// The parts that change with the time
+function renderTimeDependent()
+{
+  renderViewPanel();
   renderTimeControls();
   renderViewer();
   renderLevels();
