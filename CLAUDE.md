@@ -18,13 +18,13 @@ make install          # Install to $(plugindir)
 make rpm              # Build RPM package
 make configtest       # Validate cfg/grid-gui-plugin.conf syntax
 make format           # Run clang-format on source files
-make test             # Run tests (no test/ directory currently exists)
+make test             # Plugin tests in test/ (grid test fixture, smartmet-grid-test-redis)
 make doc              # Generate Doxygen HTML documentation in doc/html/
 ```
 
 ## Dependencies
 
-**pkg-config (`REQUIRES`):** `gdal`, `configpp` (libconfig++), `webp` (libwebp)
+**pkg-config (`REQUIRES`):** `gdal`, `configpp` (libconfig++), `webp` (libwebp), `jsoncpp`, `fmt`
 
 **SmartMet libraries linked directly:** `grid-files`, `grid-content`, `spine`, `macgyver`
 
@@ -32,7 +32,12 @@ make doc              # Generate Doxygen HTML documentation in doc/html/
 
 ## Architecture
 
-There are only 4 source files — the entire plugin is ~6K lines of C++.
+Two user interfaces: the legacy page at `/grid-gui` (HTML generated in `Plugin.cpp`) and
+the new page at `/gui/` (static ES modules in `ui/`, a JSON API in `Api.cpp`, routing,
+file serving and readable rendering URLs in `Gui.cpp`; see `docs/user-interface.md`).
+New UI work goes into `ui/` and `Api.cpp`; do not add HTML generation to the C++ code.
+The page uses plain ES modules with no framework and no build step; set text with
+`textContent`, never insert server data as HTML.
 
 ### Plugin.h / Plugin.cpp (~6,000 lines)
 
