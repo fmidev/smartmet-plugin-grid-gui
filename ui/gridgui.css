@@ -173,12 +173,14 @@ input.hue { background: linear-gradient(to right, red, yellow, lime, cyan, blue,
 .panes.compare .pane { flex: 1 1 300px; }
 .pane { margin: 0; min-width: 0; }
 .pane figcaption { font-size: 12px; color: var(--muted); margin-bottom: 2px; }
-.pane-image { position: relative; display: inline-block; max-width: 100%; line-height: 0; }
+.pane-viewport { overflow: hidden; position: relative; border-radius: 4px; max-width: 100%; }
+.pane-image { position: relative; display: inline-block; line-height: 0; transform-origin: 0 0; }
 .pane-image img { background: #000; cursor: crosshair; border-radius: 4px; display: block; }
 .viewer.pixelated img { image-rendering: pixelated; }
 .pane.missing .empty { padding: 40px 16px; }
 .marker {
   position: absolute; width: 15px; height: 15px; margin: -8px 0 0 -8px; pointer-events: none;
+  transform: scale(var(--marker-scale, 1));
   border: 2px solid #fff; border-radius: 50%; box-shadow: 0 0 0 2px #000;
 }
 .empty { color: var(--muted); padding: 24px; }

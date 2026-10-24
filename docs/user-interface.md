@@ -49,6 +49,10 @@ under the pointer. A click pins the point: the page then shows its time series a
 fields with several levels, its vertical profile. Clicking a chart selects that time or
 level.
 
+**Zoom.** The mouse wheel zooms the image around the pointer, dragging moves a zoomed
+image and a double click shows the whole image. Compared images zoom together. The grid
+cells are drawn as sharp squares, so single grid points can be inspected.
+
 **Views.** Image, Map (on the world map), Streams and Animated streams (for direction
 fields), Info (the content records and all message attributes, with a filter), sample
 value and coordinate tables and the message bytes. *Download message* saves the GRIB

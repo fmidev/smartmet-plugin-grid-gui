@@ -806,12 +806,17 @@ function renderViewer()
     img.addEventListener('load', () => fitImage(img));
     const marker = el('div', {class: 'marker', hidden: true});
     const wrap = el('div', {class: 'pane-image'}, img, marker);
-    const pane = {label, img, marker, content, kind};
+    const viewport = el('div', {class: 'pane-viewport', title: 'Wheel: zoom, drag: pan, double click: whole image'}, wrap);
+    const pane = {label, img, marker, wrap, viewport, content, kind};
     img.addEventListener('mousemove', (event) => hover(pane, event));
     img.addEventListener('mouseleave', () => hover(null));
-    img.addEventListener('click', (event) => pin(pane, event));
+    img.addEventListener('click', (event) => {
+      if (!zoom.dragged)
+        pin(pane, event);
+    });
+    enableZoom(pane);
     panes.push(pane);
-    return el('figure', {class: 'pane'}, label ? el('figcaption', {}, label) : null, wrap);
+    return el('figure', {class: 'pane'}, label ? el('figcaption', {}, label) : null, viewport);
   };
 
   if (compareActive())
@@ -835,6 +840,14 @@ function renderViewer()
     replace(viewer, el('div', {class: 'panes'}, makePane('', imageUrl(state.view, data.content), data.content, 'a')));
 
   viewer.classList.toggle('pixelated', true);
+  // A zoom applies to one image layout: the same view, geometry and projection
+  const layout = [state.view, data.resolved.sel.geometry, state.projection, compareActive()].join('/');
+  if (zoom.layout !== layout)
+  {
+    zoom.layout = layout;
+    Object.assign(zoom, {scale: 1, x: 0, y: 0});
+  }
+  applyZoom();
   renderLegend();
   showMarker();
   preloadNeighbours();
@@ -850,13 +863,101 @@ function fitImage(img)
   if (!nw || !nh)
     return;
   const pane = img.closest('.pane');
+  const viewport = img.closest('.pane-viewport');
   const availableWidth = Math.max(100, (pane ? pane.clientWidth : $('viewer').clientWidth) - 2);
-  const top = img.getBoundingClientRect().top + window.scrollY;
+  const top = (viewport || img).getBoundingClientRect().top + window.scrollY;
   const reserve = compareActive() ? 60 : 110;
   const availableHeight = Math.max(240, window.innerHeight - top - reserve);
   const scale = Math.min(availableWidth / nw, availableHeight / nh);
-  img.style.width = Math.floor(nw * scale) + 'px';
-  img.style.height = Math.floor(nh * scale) + 'px';
+  const width = Math.floor(nw * scale) + 'px';
+  const height = Math.floor(nh * scale) + 'px';
+  img.style.width = width;
+  img.style.height = height;
+  if (viewport)
+  {
+    viewport.style.width = width;
+    viewport.style.height = height;
+  }
+}
+
+// ### Zooming: the same zoom in every pane, so that compared fields stay aligned
+
+const zoom = {scale: 1, x: 0, y: 0, dragged: false};
+
+function applyZoom()
+{
+  for (const pane of panes)
+  {
+    pane.wrap.style.transform = zoom.scale === 1 ? '' : `translate(${zoom.x}px, ${zoom.y}px) scale(${zoom.scale})`;
+    // The marker keeps its size
+    pane.wrap.style.setProperty('--marker-scale', String(1 / zoom.scale));
+  }
+}
+
+function resetZoom()
+{
+  Object.assign(zoom, {scale: 1, x: 0, y: 0});
+  applyZoom();
+}
+
+// Keeps the zoomed image covering the viewport
+function clampZoom(viewport)
+{
+  const w = viewport.clientWidth;
+  const h = viewport.clientHeight;
+  zoom.x = Math.min(0, Math.max(w - w * zoom.scale, zoom.x));
+  zoom.y = Math.min(0, Math.max(h - h * zoom.scale, zoom.y));
+}
+
+function enableZoom(pane)
+{
+  const viewport = pane.viewport;
+  viewport.addEventListener('wheel', (event) => {
+    event.preventDefault();
+    const r = viewport.getBoundingClientRect();
+    const px = event.clientX - r.left;
+    const py = event.clientY - r.top;
+    const scale = Math.min(32, Math.max(1, zoom.scale * (event.deltaY < 0 ? 1.25 : 0.8)));
+    // The point under the pointer stays in place
+    zoom.x = px - (px - zoom.x) * scale / zoom.scale;
+    zoom.y = py - (py - zoom.y) * scale / zoom.scale;
+    zoom.scale = scale;
+    clampZoom(viewport);
+    applyZoom();
+  }, {passive: false});
+
+  viewport.addEventListener('mousedown', (event) => {
+    if (event.button !== 0 || zoom.scale === 1)
+      return;
+    event.preventDefault();
+    const start = {x: event.clientX, y: event.clientY, zx: zoom.x, zy: zoom.y};
+    zoom.dragged = false;
+    const move = (e) => {
+      const dx = e.clientX - start.x;
+      const dy = e.clientY - start.y;
+      if (Math.abs(dx) + Math.abs(dy) > 3)
+        zoom.dragged = true;
+      zoom.x = start.zx + dx;
+      zoom.y = start.zy + dy;
+      clampZoom(viewport);
+      applyZoom();
+    };
+    const up = () => {
+      window.removeEventListener('mousemove', move);
+      window.removeEventListener('mouseup', up);
+      // The click that ends a drag does not pin a point
+      setTimeout(() => {
+        zoom.dragged = false;
+      }, 0);
+    };
+    window.addEventListener('mousemove', move);
+    window.addEventListener('mouseup', up);
+  });
+
+  viewport.addEventListener('dblclick', (event) => {
+    event.preventDefault();
+    resetZoom();
+  });
 }
 
 window.addEventListener('resize', debounce(() => panes.forEach((p) => fitImage(p.img)), 150));

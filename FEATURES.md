@@ -29,6 +29,8 @@ at `/grid-gui` offers the features of sections 1–8.
   that time or level.
 - **Legends** — colour map, single-hue scale and difference scale, computed as the
   server colours the image.
+- **Zoom and pan** — mouse wheel zoom around the pointer, drag to pan, the same zoom in
+  compared images; grid cells stay sharp.
 - **Time and level bars with previews**, animation that waits for each image, keyboard
   shortcuts.
 - **Compare mode** — the same field in two generations side by side with the
