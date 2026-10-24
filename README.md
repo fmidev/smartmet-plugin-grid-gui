@@ -12,6 +12,15 @@ The figure below shows the basic outlook of the Grid-GUI.
 
 <img src="doc/images/grid-gui-new.png">
 
+## User interfaces
+
+The plugin serves two pages:
+
+* **`/gui/`** — the current interface: selections without page reloads, an explained
+  parameter key, hover values, point time series and profiles, legends, animation and a
+  compare mode for two generations. See [docs/user-interface.md](docs/user-interface.md).
+* **`/grid-gui`** — the original interface shown below.
+
 ## Visualization
 
 The basic idea of the visualization is that we imagine grids to be two dimensional images that contain different colors. I.e. grid values can be changed to colors. For example, if we have a grid that contains wind speed values we can convert these values to colors so that bigger values (= strong wind) are converted to darker colors and smaller values (= weak wind) are converted to lighter colors.  
@@ -45,6 +54,7 @@ CLA is required in order to contribute. Please contact us for more information!
 
 ## Documentation
 
+User interface: [docs/user-interface.md](docs/user-interface.md) — the /gui page, its JSON API and how to develop it
 Developer guide: [docs/developer-guide.md](docs/developer-guide.md) — plugin internals for developers
 SmartMet Server Grid support (https://github.com/fmidev/smartmet-tools-grid/raw/master/doc/grid-support.pdf)
 

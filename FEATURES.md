@@ -10,6 +10,32 @@ through a web browser.
 
 ---
 
+## 0. New user interface (/gui)
+
+The page at `/gui/` ([docs/user-interface.md](docs/user-interface.md)); the legacy page
+at `/grid-gui` offers the features of sections 1–8.
+
+- **No page reloads** — every selection is built in the browser from a JSON API.
+- **Readable, bookmarkable addresses** — the selection and the options are in the
+  address; Back returns to the previous selection.
+- **Explained parameter key** — every part of the key has a tooltip and a description,
+  with the interpolation methods (area, time, level) a query of the key uses, and
+  copy buttons for the key, its full query form and a TimeSeries URL.
+- **Producer freshness** — the age of each producer's newest ready generation; the
+  newest ready generation is the default, generations being loaded are marked.
+- **Parameter filter** — by name, description, unit and the other names of the parameter.
+- **Hover values** — value, coordinates and grid point under the pointer.
+- **Pinned point** — time series and vertical profile charts; click a chart to select
+  that time or level.
+- **Legends** — colour map, single-hue scale and difference scale, computed as the
+  server colours the image.
+- **Time and level bars with previews**, animation that waits for each image, keyboard
+  shortcuts.
+- **Compare mode** — the same field in two generations side by side with the
+  difference image B − A.
+- **Structured Info view** with an attribute filter.
+- **Light and dark themes.**
+
 ## 1. Grid data selection
 
 - **Producer** dropdown — pick a data producer registered in the Content Server.
@@ -121,4 +147,4 @@ Set by the *Presentation* dropdown.
 
 ---
 
-*Last updated: 2026-06-01.*
+*Last updated: 2026-10-24.*
