@@ -36,6 +36,10 @@ at `/grid-gui` offers the features of sections 1–8.
 - **Compare mode** — the same field in two generations side by side with the
   difference image B − A.
 - **Structured Info view** with an attribute filter.
+- **Sample tables** of values and coordinates that can be moved over the whole grid;
+  hovering a cell shows its indexes, coordinates and value.
+- **Explanations** of undefined forecast and level types, and a legend note when the
+  field's values do not fit the chosen colour map.
 - **Light and dark themes.**
 
 ## 1. Grid data selection

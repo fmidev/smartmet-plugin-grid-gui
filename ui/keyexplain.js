@@ -17,7 +17,13 @@ function describe(name, description)
 }
 
 // The parts of the key: [{value, label, text}]
-export function keyParts(info)
+// The defined types as text: "1 = Deterministic forecast, 2 = Analysis, ..."
+function definedList(defined)
+{
+  return (defined || []).map((d) => `${d.id} = ${d.name || d.description}`).join(', ');
+}
+
+export function keyParts(info, meta = {})
 {
   const p = info.parameter || {};
   const g = info.geometry || {};
@@ -59,8 +65,8 @@ export function keyParts(info)
   parts.push({
     value: String(lt.id),
     label: 'Level type',
-    text: `Level type ${lt.id}` + (lt.name ? `: ${describe(lt.name, lt.description)}` : '') +
-        (lt.units ? `, levels in ${lt.units}` : '') + '.',
+    text: lt.name ? `Level type ${lt.id}: ${describe(lt.name, lt.description)}` + (lt.units ? `, levels in ${lt.units}` : '') + '.'
+                  : `Level type ${lt.id} has no definition in the grid configuration. The defined ones are ${definedList(meta.levelTypes)}.`,
   });
 
   parts.push({
@@ -77,7 +83,8 @@ export function keyParts(info)
     parts.push({
       value: String(ft.id),
       label: 'Forecast type',
-      text: `Forecast type ${ft.id}` + (ft.name ? `: ${describe(ft.name, ft.description)}` : '') + '.',
+      text: ft.name ? `Forecast type ${ft.id}: ${describe(ft.name, ft.description)}.`
+                    : `Forecast type ${ft.id} has no definition in the grid configuration. The defined ones are ${definedList(meta.forecastTypes)}.`,
     });
     if (info.forecastNumber >= 0)
     {
@@ -201,7 +208,7 @@ export function renderKey(container, info, links = {})
     return;
   }
 
-  const parts = keyParts(info);
+  const parts = keyParts(info, links.meta || {});
   const extra = queryParts(info);
 
   const table = el('dl', {class: 'key-list'},

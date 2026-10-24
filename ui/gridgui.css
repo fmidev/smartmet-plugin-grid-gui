@@ -234,3 +234,19 @@ input.hue { background: linear-gradient(to right, red, yellow, lime, cyan, blue,
 
 dialog { border: 1px solid var(--border); border-radius: 8px; background: var(--panel); color: var(--text); max-width: 460px; }
 dialog th { text-align: left; padding-right: 12px; font-family: var(--mono); }
+
+/* Sample tables */
+
+.sample { background: var(--panel); border: 1px solid var(--border); border-radius: 8px; padding: 8px; }
+.sample-nav { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; margin-bottom: 6px; }
+.small-number { width: 5em; font: inherit; color: inherit; background: var(--panel); border: 1px solid var(--border); border-radius: 6px; padding: 2px 4px; }
+.sample-scroll { overflow: auto; max-height: calc(100vh - 230px); }
+.sample-table { border-collapse: collapse; font-family: var(--mono); font-size: 11px; }
+.sample-table th, .sample-table td { padding: 1px 5px; border: 1px solid var(--border); text-align: right; white-space: nowrap; }
+.sample-table thead th { position: sticky; top: 0; background: var(--cell); z-index: 1; }
+.sample-table tbody th { position: sticky; left: 0; background: var(--cell); }
+.sample-table th.corner { left: 0; z-index: 2; }
+.sample-table td:hover, .sample-table .hl { background: var(--accent-soft); }
+.sample-table th.hl { background: var(--accent); color: #fff; }
+.sample-table.coordinates td { font-size: 10px; }
+.error { color: var(--error); }

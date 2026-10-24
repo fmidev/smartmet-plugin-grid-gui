@@ -349,7 +349,8 @@ int Plugin::gui_api(const std::string& name,
         {"profile", &Plugin::api_profile},
         {"stats", &Plugin::api_stats},
         {"colormap", &Plugin::api_colormap},
-        {"info", &Plugin::api_info}};
+        {"info", &Plugin::api_info},
+        {"sample", &Plugin::api_sample}};
 
     Json::Value result;
     int status = HTTP::Status::ok;
@@ -441,6 +442,25 @@ Json::Value Plugin::api_meta()
       projections.append(g);
     }
     result["projections"] = projections;
+
+    // The defined forecast types and level types, to explain the undefined ones
+    Json::Value forecastTypes(Json::arrayValue);
+    for (int id = -1; id < 256; id++)
+    {
+      Identification::ForecastTypeDef def;
+      if (Identification::gridDef.getFmiForecastTypeDef(id, def))
+        forecastTypes.append(forecastTypeJson(id));
+    }
+    result["forecastTypes"] = forecastTypes;
+
+    Json::Value levelTypes(Json::arrayValue);
+    for (int id = 0; id < 1000; id++)
+    {
+      Identification::LevelDef def;
+      if (Identification::gridDef.getFmiLevelDef(id, def))
+        levelTypes.append(levelTypeJson(id));
+    }
+    result["levelTypes"] = levelTypes;
 
     result["animationEnabled"] = itsAnimationEnabled;
     result["legacyUrl"] = "/grid-gui";
@@ -1395,6 +1415,100 @@ Json::Value Plugin::api_info(const HTTP::Request& theRequest)
     }
     result["Attributes"] = attributes;
     return result;
+  }
+  catch (const BadRequest&)
+  {
+    throw;
+  }
+  catch (...)
+  {
+    throw Fmi::Exception::Trace(BCP, "Operation failed!");
+  }
+}
+
+/*! \brief A window of the grid for the sample tables: the values, the latitudes and
+    longitudes and the coordinates of the grid's own projection of the cells i0..i0+size-1,
+    j0..j0+size-1. The rows are in the order of the data. */
+
+Json::Value Plugin::api_sample(const HTTP::Request& theRequest)
+{
+  try
+  {
+    const auto fileId = static_cast<T::FileId>(requiredInteger(theRequest, "file"));
+    const auto messageIndex = static_cast<T::MessageIndex>(requiredInteger(theRequest, "message"));
+    const long long i0 = optionalInteger(theRequest, "i0", 0);
+    const long long j0 = optionalInteger(theRequest, "j0", 0);
+    const long long size = optionalInteger(theRequest, "size", 50);
+    if (i0 < 0 || j0 < 0 || size < 1 || size > 100)
+      throw BadRequest("i0 and j0 must not be negative, size must be 1..100");
+
+    auto dataServer = itsGridEngine->getDataServer_sptr();
+
+    T::GridData gridData;
+    int result = dataServer->getGridData(0, fileId, messageIndex, gridData);
+    if (result != 0)
+      throw BadRequest("Unknown file or message");
+
+    T::GridCoordinates latlon;
+    dataServer->getGridCoordinates(0, fileId, messageIndex, T::CoordinateTypeValue::LATLON_COORDINATES, latlon);
+    T::Coordinate_svec original = Identification::gridDef.getGridOriginalCoordinatesByGeometryId(gridData.mGeometryId);
+
+    const long long columns = gridData.mColumns;
+    const long long rows = gridData.mRows;
+    const long long i1 = std::min(columns, i0 + size);
+    const long long j1 = std::min(rows, j0 + size);
+    const std::size_t count = static_cast<std::size_t>(columns * rows);
+
+    Json::Value values(Json::arrayValue);
+    Json::Value lats(Json::arrayValue);
+    Json::Value lons(Json::arrayValue);
+    Json::Value xs(Json::arrayValue);
+    Json::Value ys(Json::arrayValue);
+
+    const bool haveLatLon = latlon.mCoordinateList.size() == count;
+    const bool haveOriginal = original && original->size() == count;
+
+    for (long long j = j0; j < j1; j++)
+    {
+      Json::Value v(Json::arrayValue);
+      Json::Value la(Json::arrayValue);
+      Json::Value lo(Json::arrayValue);
+      for (long long i = i0; i < i1; i++)
+      {
+        const auto c = static_cast<std::size_t>(j * columns + i);
+        v.append(c < gridData.mValues.size() ? jsonValue(gridData.mValues[c]) : Json::Value(Json::nullValue));
+        if (haveLatLon)
+        {
+          la.append(latlon.mCoordinateList[c].y());
+          lo.append(latlon.mCoordinateList[c].x());
+        }
+      }
+      values.append(v);
+      if (haveLatLon)
+      {
+        lats.append(la);
+        lons.append(lo);
+      }
+      if (haveOriginal)
+        ys.append((*original)[static_cast<std::size_t>(j * columns + i0)].y());
+    }
+    if (haveOriginal)
+    {
+      for (long long i = i0; i < i1; i++)
+        xs.append((*original)[static_cast<std::size_t>(j0 * columns + i)].x());
+    }
+
+    Json::Value json(Json::objectValue);
+    json["columns"] = static_cast<Json::Int64>(columns);
+    json["rows"] = static_cast<Json::Int64>(rows);
+    json["i0"] = static_cast<Json::Int64>(i0);
+    json["j0"] = static_cast<Json::Int64>(j0);
+    json["values"] = values;
+    json["lat"] = lats;
+    json["lon"] = lons;
+    json["x"] = xs;
+    json["y"] = ys;
+    return json;
   }
   catch (const BadRequest&)
   {

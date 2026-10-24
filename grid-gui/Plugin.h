@@ -318,6 +318,7 @@ class Plugin : public SmartMetPlugin
     Json::Value api_stats(const Spine::HTTP::Request& theRequest);
     Json::Value api_colormap(const Spine::HTTP::Request& theRequest);
     Json::Value api_info(const Spine::HTTP::Request& theRequest);
+    Json::Value api_sample(const Spine::HTTP::Request& theRequest);
 
     void checkImageCache();
     void getGenerations(T::GenerationInfoList& generationInfoList,std::set<std::string>& generations);

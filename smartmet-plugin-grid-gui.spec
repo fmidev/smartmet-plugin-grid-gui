@@ -91,6 +91,7 @@ rm -rf $RPM_BUILD_ROOT
 - Hover values with coordinates, a pinned point with its time series and vertical profile,
   legends, time and level previews, animation, parameter search and keyboard shortcuts
 - Compare mode: the same field in two generations and their difference image
+- Sample value and coordinate tables (api/sample) with hover readouts and a movable window
 - New settings ui.url (default /gui), ui.directory (default /usr/share/smartmet/grid-gui) and
   ui.visible (default false: a private URL like /grid-gui; true: listed for the frontends)
 - Requires grid engine 26.10.23 for getParameterMappingNames

@@ -117,12 +117,13 @@ function draw(container, spec)
       el('div', {class: 'legend-title'}, spec.title, spec.units ? el('span', {class: 'muted'}, ` (${spec.units})`) : null),
       canvas,
       labels,
-      spec.note ? el('div', {class: 'muted small'}, spec.note) : null);
+      spec.note ? el('div', {class: spec.warn ? 'warn small' : 'muted small'}, spec.note) : null);
   container.setAttribute('aria-label',
       `${spec.title}: ${formatValue(spec.min, spec.units)} to ${formatValue(spec.max, spec.units)}`);
 }
 
-export function colorMapLegend(container, colormap, units)
+// stats (optional): the value range of the field, to tell when it does not fit the map
+export function colorMapLegend(container, colormap, units, stats)
 {
   const stops = colormap.stops || [];
   if (stops.length < 2)
@@ -130,14 +131,25 @@ export function colorMapLegend(container, colormap, units)
     replace(container);
     return;
   }
-  draw(container, {
-    min: stops[0][0],
-    max: stops[stops.length - 1][0],
-    color: colorMapColor(stops),
-    units,
-    title: colormap.name,
-    note: 'Values outside the range get the colour of the nearest end.',
-  });
+  const min = stops[0][0];
+  const max = stops[stops.length - 1][0];
+  let note = 'Values outside the range get the colour of the nearest end.';
+  let warn = false;
+  if (stats && stats.count > 0)
+  {
+    const range = `${formatValue(stats.min)} … ${formatValue(stats.max)}`;
+    if (stats.max < min || stats.min > max)
+    {
+      note = `The values of this field (${range}) are all outside the range of the colour map, ` +
+          'so every point gets the same end colour. Choose another colour map, or none.';
+      warn = true;
+    }
+    else if (stats.min < min || stats.max > max)
+      note = `The values of this field (${range}) reach outside the range of the colour map: those points get the end colours.`;
+    else
+      note = `The values of this field: ${range}.`;
+  }
+  draw(container, {min, max, color: colorMapColor(stops), units, title: colormap.name, note, warn});
 }
 
 export function hsvLegend(container, stats, options, units)

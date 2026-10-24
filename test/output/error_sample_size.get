@@ -1,0 +1,4 @@
+Status: 400
+Content-Type: application/json; charset=UTF-8
+
+{"error":"i0 and j0 must not be negative, size must be 1..100"}

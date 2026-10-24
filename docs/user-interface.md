@@ -56,7 +56,15 @@ cells are drawn as sharp squares, so single grid points can be inspected.
 
 **Views.** Image, Map (on the world map), Streams and Animated streams (for direction
 fields), Info (the content records and all message attributes, with a filter), sample
-value and coordinate tables and the message bytes. *Download message* saves the GRIB
+value and coordinate tables and the message bytes. The sample tables show a window of
+up to 100 × 100 grid points that can be moved over the whole grid; hovering a cell shows
+its indexes, coordinates (lat/lon and the grid's own x/y) and value.
+
+**Undefined types.** A forecast type or level type the grid configuration does not
+define is shown as *not defined*; its tooltip lists the defined ones.
+
+**Colour maps.** When the values of the field do not fit the range of the chosen colour
+map, the legend says so — for example temperatures in °C with a Kelvin colour map. *Download message* saves the GRIB
 message.
 
 **Projection.** Image and streams can be drawn in any other geometry (linear
@@ -155,6 +163,7 @@ to restrict who may use it.
 | `ui/timebar.js` | Time and level bars |
 | `ui/settings.js` | Rendering options |
 | `ui/info.js` | The Info view |
+| `ui/sample.js` | The sample value and coordinate tables |
 | `ui/api.js`, `ui/dom.js`, `ui/format.js` | Fetching, DOM helpers, formatting |
 | `ui/gridgui.css` | Styles, light and dark |
 
@@ -173,7 +182,7 @@ All calls are `GET /gui/api/NAME?...`. Errors are `{"error": "..."}` with status
 
 | Call | Parameters | Answer |
 |------|------------|--------|
-| `meta` | | colours, colour map names, projections (geometries, `blocked`), `animationEnabled`, default rendering options |
+| `meta` | | colours, colour map names, projections (geometries, `blocked`), the defined forecast and level types, `animationEnabled`, default rendering options |
 | `producers` | | `[{id, name, title, description, generations, newest, newestReady}]` |
 | `generations` | `producer` (id) | newest first: `[{id, name, analysisTime, ready, start, end, deletion}]` |
 | `parameters` | `generation` | `[{name, description, units, fmiId, aliases}]` |
@@ -185,6 +194,7 @@ All calls are `GET /gui/api/NAME?...`. Errors are `{"error": "..."}` with status
 | `stats` | `file`, `message`, `geometry`, [`projection`], [`file2`, `message2`] | `{count, missing, min, max, mean, step, range}` |
 | `colormap` | `name` | `{name, stops: [[value, "AARRGGBB"], ...]}` |
 | `info` | `file`, `message` | producer, generation, file and content records, `Attributes: [[name, value], ...]` |
+| `sample` | `file`, `message`, [`i0`, `j0`, `size` (1..100, default 50)] | `{columns, rows, i0, j0, values[][], lat[][], lon[][], x[], y[]}`: a window of the grid in data order, `x`/`y` in the grid's own projection |
 
 Missing values are `null`. `stats.step` is the step of the hue scale of an image without
 a colour map; `stats.range` is the automatic range of a difference image (the 99th

@@ -1,0 +1,3 @@
+GET /gui/api/sample?file=2&message=0&size=101 HTTP/1.0
+X-Test-Headers: Content-Type
+

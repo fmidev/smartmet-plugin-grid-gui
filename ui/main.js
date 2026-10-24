@@ -13,6 +13,7 @@ import {renderInfo} from './info.js';
 import {renderKey} from './keyexplain.js';
 import {colorMapLegend, differenceLegend, hsvLegend} from './legend.js';
 import {fieldContent, levelContents, matchingContent, resolve} from './selection.js';
+import {renderSample} from './sample.js';
 import {renderSettings, viewOptions} from './settings.js';
 import {renderLevelbar, renderTimebar} from './timebar.js';
 
@@ -24,8 +25,8 @@ const views = [
   {value: 'streams', label: 'Streams', image: true},
   {value: 'streamsAnimation', label: 'Animated streams', image: true},
   {value: 'info', label: 'Info'},
-  {value: 'table', label: 'Values (sample)', frame: true},
-  {value: 'coordinates', label: 'Coordinates (sample)', frame: true},
+  {value: 'table', label: 'Values (sample)', sample: 'values'},
+  {value: 'coordinates', label: 'Coordinates (sample)', sample: 'coordinates'},
   {value: 'message', label: 'Message bytes', frame: true},
 ];
 const viewInfo = (v) => views.find((x) => x.value === v) || views[0];
@@ -328,13 +329,28 @@ function producerOption(p)
 function describeLevelType(id)
 {
   const lt = data.contents.levelTypes[id] || {};
-  return `${id}: ${lt.description || lt.name || 'level type ' + id}`;
+  return `${id}: ${lt.description || lt.name || 'not defined'}`;
 }
 
 function describeForecastType(id)
 {
   const ft = data.contents.forecastTypes[id] || {};
-  return `${id}: ${ft.description || ft.name || 'forecast type ' + id}`;
+  return `${id}: ${ft.description || ft.name || 'not defined'}`;
+}
+
+// Tooltips of the type selections: the meaning of the selected one, and the defined
+// types when it has no definition
+function typeHelp(kind, id, record, defined)
+{
+  if (record && (record.name || record.description))
+  {
+    const text = [record.name, record.description].filter((x, i, a) => x && a.indexOf(x) === i).join(' — ');
+    return `${kind} ${id}: ${text}${record.units ? ` (levels in ${record.units})` : ''}`;
+  }
+  const list = (defined || []).map((d) => `${d.id} = ${d.name || d.description}`).join(', ');
+  return `${kind} ${id} has no definition in the grid configuration` +
+      (list ? `. The defined ones are ${list}.` : '.') +
+      ' The data itself uses this value, so it is shown as it is.';
 }
 
 function describeMember(n)
@@ -464,11 +480,21 @@ function renderDataPanel()
       applySelection();
     };
     controls.push(el('div', {class: 'field-row'},
-        field('Level type', 'The kind of vertical coordinate', select(c.levelIds.map((v) => ({value: v, label: describeLevelType(v)})), s.levelId, choose('levelId'), {disabled: c.levelIds.length < 2})),
+        field('Level type', typeHelp('Level type', s.levelId, data.contents.levelTypes[s.levelId], data.meta.levelTypes),
+            select(c.levelIds.map((v) => ({value: v, label: describeLevelType(v),
+                                          title: typeHelp('Level type', v, data.contents.levelTypes[v], data.meta.levelTypes)})),
+                   s.levelId, choose('levelId'), {disabled: c.levelIds.length < 2,
+                                                  title: typeHelp('Level type', s.levelId, data.contents.levelTypes[s.levelId], data.meta.levelTypes)})),
         field('Level', 'The vertical level', select(c.levels.map((v) => ({value: v, label: String(v)})), s.level, choose('level'), {disabled: c.levels.length < 2}))));
     controls.push(el('div', {class: 'field-row'},
-        field('Forecast type', 'Deterministic, control or ensemble forecast etc.', select(c.forecastTypes.map((v) => ({value: v, label: describeForecastType(v)})), s.forecastType, choose('forecastType'), {disabled: c.forecastTypes.length < 2})),
-        field('Member', 'The ensemble member (forecast number)', select(c.forecastNumbers.map((v) => ({value: v, label: describeMember(v)})), s.forecastNumber, choose('forecastNumber'), {disabled: c.forecastNumbers.length < 2}))));
+        field('Forecast type', typeHelp('Forecast type', s.forecastType, data.contents.forecastTypes[s.forecastType], data.meta.forecastTypes),
+            select(c.forecastTypes.map((v) => ({value: v, label: describeForecastType(v),
+                                               title: typeHelp('Forecast type', v, data.contents.forecastTypes[v], data.meta.forecastTypes)})),
+                   s.forecastType, choose('forecastType'), {disabled: c.forecastTypes.length < 2,
+                                                           title: typeHelp('Forecast type', s.forecastType, data.contents.forecastTypes[s.forecastType], data.meta.forecastTypes)})),
+        field('Member', 'The ensemble member (forecast number). −1: the field is not an ensemble member. 0: the control forecast of an ensemble.',
+            select(c.forecastNumbers.map((v) => ({value: v, label: describeMember(v)})), s.forecastNumber, choose('forecastNumber'),
+                   {disabled: c.forecastNumbers.length < 2, title: describeMember(s.forecastNumber)}))));
     const geometry = data.contents.geometries[s.geometry] || {};
     controls.push(field('Geometry', 'The grid of the field', select(c.geometries.map((v) => ({value: v, label: describeGeometry(v)})), s.geometry, choose('geometry'), {disabled: c.geometries.length < 2}),
         geometry.searchConfigured === false
@@ -507,7 +533,7 @@ function timeseriesUrl()
 
 function renderKeyPanel()
 {
-  renderKey($('key'), data.key, {timeseries: timeseriesUrl()});
+  renderKey($('key'), data.key, {timeseries: timeseriesUrl(), meta: data.meta});
 }
 
 // ### The view panel
@@ -786,6 +812,22 @@ function renderViewer()
   }
 
   const view = viewInfo(state.view);
+
+  // The readout belongs to the view: an old image value must not stay there
+  if (!view.image)
+  {
+    lastReadout = null;
+    renderReadout('');
+  }
+
+  if (view.sample)
+  {
+    renderSample(viewer, {file: data.content.file, message: data.content.message,
+                          geometry: data.resolved.sel.geometry, mode: view.sample, units: units(),
+                          readout: renderReadout});
+    replace($('legend'));
+    return;
+  }
 
   if (view.frame)
   {
@@ -1231,8 +1273,14 @@ const renderLegend = debounce(async () => {
     }
     else if (o.colormap && o.colormap !== 'None')
     {
-      const colormap = await api('colormap', {name: o.colormap}, {key: 'legend', maxAge: 60000});
-      colorMapLegend(legend, colormap, u);
+      const params = {file: data.content.file, message: data.content.message, geometry: data.resolved.sel.geometry};
+      if (state.projection && projected.has(state.view))
+        params.projection = state.projection;
+      const [colormap, stats] = await Promise.all([
+        api('colormap', {name: o.colormap}, {maxAge: 60000}),
+        api('stats', params, {maxAge: 60000}).catch(() => null),
+      ]);
+      colorMapLegend(legend, colormap, u, stats);
     }
     else
     {
