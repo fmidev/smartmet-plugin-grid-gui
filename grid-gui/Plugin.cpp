@@ -124,12 +124,13 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
     if (itsConfigurationFile.findAttribute("smartmet.plugin.grid-gui.ui.directory"))
       itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.ui.directory",itsUiDirectory);
 
-    // A visible URL is in the URI list of the server, so frontends route it to this
-    // backend. A private one (the default, like /grid-gui) is not, and accepts only
-    // local and private network addresses unless ip_filters says otherwise.
-    bool uiVisible = false;
+    // The user interface is private like /grid-gui: it is not in the URI list of the server,
+    // so frontends do not route it, and it accepts only local and private network addresses
+    // unless ip_filters says otherwise. Its queries can be arbitrarily large, so it must not be
+    // offered to the public. The ui.visible setting of earlier versions is refused rather than
+    // ignored, so that nobody relies on it.
     if (itsConfigurationFile.findAttribute("smartmet.plugin.grid-gui.ui.visible"))
-      itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.ui.visible",uiVisible);
+      throw Fmi::Exception(BCP, "ui.visible is no longer supported: the user interface is always private");
 
     if (!itsUiUrl.empty())
     {
@@ -137,9 +138,7 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
         throw Fmi::Exception(BCP, "ui.url must start with '/' and differ from /grid-gui").addParameter("ui.url",itsUiUrl);
 
       auto handler = boost::bind(&Plugin::callRequestHandler, this, _1, _2, _3);
-      const bool ok = uiVisible ? theReactor->addContentHandler(this, itsUiUrl, handler, {}, true)
-                                : theReactor->addPrivateContentHandler(this, itsUiUrl, handler, {}, true);
-      if (!ok)
+      if (!theReactor->addPrivateContentHandler(this, itsUiUrl, handler, {}, true))
         throw Fmi::Exception(BCP, "Failed to register GridGui user interface handler");
     }
 

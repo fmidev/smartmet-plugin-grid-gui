@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-plugin-%{DIRNAME}
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
-Version: 26.10.24
+Version: 26.10.25
 Release: 1%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
@@ -81,6 +81,12 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/%{DIRNAME}
 
 %changelog
+* Sun Oct 25 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> - 26.10.25-1.fmi
+- /gui is always private like /grid-gui: never announced to the frontends, and by default
+  only for local and private network addresses. The ui.visible setting is refused.
+- /gui: Open in data explorer, the time series of the field at the pinned point in the data
+  explorer of the server, when it has one
+
 * Sat Oct 24 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> - 26.10.24-1.fmi
 - New user interface at /gui: the page is static HTML, CSS and JavaScript modules installed
   to /usr/share/smartmet/grid-gui, the data comes from a JSON API (/gui/api/...) and the

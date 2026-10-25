@@ -46,6 +46,11 @@ at `/grid-gui` offers the features of sections 1–8.
 - **Explanations** of undefined forecast and level types, and a legend note when the
   field's values do not fit the chosen colour map.
 - **Light and dark themes.**
+- **Open in data explorer** — when the server has the data explorer (`/api/explorer`),
+  the key panel opens the time series of the field at the pinned point (or the centre of
+  the grid) there, with the other views of the explorer one click away.
+- **Private** — like `/grid-gui`, `/gui` is never announced to frontends and accepts only
+  local and private network addresses unless `ip_filters` says otherwise.
 
 ## 1. Grid data selection
 
@@ -158,4 +163,4 @@ Set by the *Presentation* dropdown.
 
 ---
 
-*Last updated: 2026-10-24.*
+*Last updated: 2026-10-25.*

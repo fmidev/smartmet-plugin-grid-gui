@@ -201,7 +201,7 @@ function chips(parts)
   return line;
 }
 
-// The key panel. links: {timeseries: url or null}
+// The key panel. links: {timeseries: url or null, explorer: url or null}
 export function renderKey(container, info, links = {})
 {
   if (!info)
@@ -231,6 +231,10 @@ export function renderKey(container, info, links = {})
     copyTs.addEventListener('click', () => copyText(links.timeseries, copyTs));
     buttons.append(copyTs);
   }
+  if (links.explorer)
+    buttons.append(el('a', {class: 'button small', href: links.explorer, target: '_blank', rel: 'noopener',
+                            title: 'The time series of the field at the pinned point (or the centre of the grid) in the data explorer of the server'},
+                      'Open in data explorer'));
 
   const notes = [];
   if (info.aggregation)

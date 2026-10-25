@@ -9,8 +9,8 @@ grid-gui has two user interfaces:
   kept unchanged while the new interface is being tested, and every old link still works.
 
 `/grid-gui` is a private handler: it accepts only local and private network addresses
-by default (see the [developer guide](developer-guide.md#4-startup)). `/gui` is private
-too unless `ui.visible` is set ([§4](#4-configuration)).
+by default (see the [developer guide](developer-guide.md#4-startup)). `/gui` is always
+private too ([§4](#4-configuration)).
 
 ## Contents
 
@@ -122,7 +122,10 @@ A query may give four more parts: generation flags, and the area, time and level
 interpolation methods. The page shows the methods a query of the key uses: those of the
 producer's parameter mapping, or the defaults of the parameter when there is no mapping.
 *Copy full form* copies the key with these parts; *Copy TimeSeries URL* copies a
-TimeSeries request of the key at the pinned point (or the centre of the grid).
+TimeSeries request of the key at the pinned point (or the centre of the grid). When the
+server has the data explorer (`/api/explorer` answers), *Open in data explorer* opens the
+same request there: the key as a parameter expression of the producer's run at the point,
+ready to run, with the meteogram, soundings and the other views of the explorer.
 
 A zero geometry or level type is written as an empty part, as the grid engine writes it.
 The geometry's tooltip also gives the lat/lon bounding box of the grid.
@@ -150,17 +153,16 @@ ui :
 {
   url       = "/gui"                            # default
   directory = "/usr/share/smartmet/grid-gui"    # default, the files of the page
-  visible   = false                             # default
 }
 ```
 
 `url` must not be `/grid-gui`. An empty `url` disables the new interface.
 
-`visible` decides whether the URL is in the URI list of the server. A private URL (the
-default, as `/grid-gui` always is) is not advertised to frontends and accepts only local
-and private network addresses unless `plugins.grid-gui.ip_filters` is set. A visible URL
-is advertised, so frontends route it to the backend; use `ip_filters` (or the frontend)
-to restrict who may use it.
+The URL is private, as `/grid-gui` is: it is not in the URI list of the server, so
+frontends do not route it, and it accepts only local and private network addresses unless
+`plugins.grid-gui.ip_filters` is set. The page can ask for arbitrarily large areas and long
+series, so it is meant for the staff of the site only, not for the public. The `visible`
+setting of earlier versions is refused at startup.
 
 ## 5. How the page is built
 

@@ -57,6 +57,7 @@ const data = {
   producers: [],
   generations: [],
   generation: null,    // the selected generation record
+  explorer: false,     // the server has the data explorer
   parameters: [],
   contents: null,
   resolved: null,      // {choices, sel, field}
@@ -189,6 +190,7 @@ async function start()
   try
   {
     [data.meta, data.producers] = await Promise.all([api('meta'), api('producers')]);
+    findExplorer();
     readUrl();
     await loadProducer();
   }
@@ -514,31 +516,79 @@ function renderDataPanel()
 
 // ### The key panel
 
+// The pinned point, or the centre of the grid of the key
+function keyPoint()
+{
+  if (state.point)
+    return state.point;
+  if (data.key.geometry && data.key.geometry.corners)
+  {
+    const c = data.key.geometry.corners;
+    return {lat: (c.bottomLeft[1] + c.topRight[1]) / 2, lon: (c.bottomLeft[0] + c.topRight[0]) / 2};
+  }
+  return null;
+}
+
 function timeseriesUrl()
 {
   if (!data.key)
     return null;
-  let lat;
-  let lon;
-  if (state.point)
-    ({lat, lon} = state.point);
-  else if (data.key.geometry && data.key.geometry.corners)
-  {
-    const c = data.key.geometry.corners;
-    lat = (c.bottomLeft[1] + c.topRight[1]) / 2;
-    lon = (c.bottomLeft[0] + c.topRight[0]) / 2;
-  }
-  else
+  const point = keyPoint();
+  if (!point)
     return null;
+  const {lat, lon} = point;
   const base = location.origin + '/timeseries';
   return `${base}?producer=${encodeURIComponent(data.key.producer.name)}` +
       `&param=time,${encodeURIComponent(data.key.key)}&latlon=${lat.toFixed(4)},${lon.toFixed(4)}` +
       `&origintime=${data.key.generation.analysisTime}&format=json`;
 }
 
+// The data explorer of the server (/api/explorer), when the server has one this page may use
+const EXPLORER = '/api/explorer';
+
+function findExplorer()
+{
+  fetch(EXPLORER)
+      .then((response) => {
+        data.explorer = response.ok;
+        if (data.explorer && data.key)
+          renderKeyPanel();
+      })
+      .catch(() => {
+        data.explorer = false;
+      });
+}
+
+// The field at the pinned point (or the centre of the grid) as a TimeSeries request of the data
+// explorer, which draws it and offers the other views of the point
+function explorerUrl()
+{
+  if (!data.explorer || !data.key)
+    return null;
+  const point = keyPoint();
+  if (!point)
+    return null;
+  // The explorer names the runs by their ISO times: 20261024T120000 is 2026-10-24T12:00:00Z
+  const t = data.key.generation.analysisTime;
+  const run = /^\d{8}T\d{6}$/.test(t) ?
+      `${t.slice(0, 4)}-${t.slice(4, 6)}-${t.slice(6, 8)}T${t.slice(9, 11)}:${t.slice(11, 13)}:${t.slice(13, 15)}Z` :
+      '';
+  const q = new URLSearchParams({
+    api: '/timeseries',
+    producer: data.key.producer.name,
+    source: 'grid',
+    expr: data.key.key,
+    locmode: 'lonlat',
+    location: `${point.lon.toFixed(4)},${point.lat.toFixed(4)}`,
+  });
+  if (run)
+    q.set('run', run);
+  return `${location.origin}${EXPLORER}#${q.toString()}`;
+}
+
 function renderKeyPanel()
 {
-  renderKey($('key'), data.key, {timeseries: timeseriesUrl(), meta: data.meta});
+  renderKey($('key'), data.key, {timeseries: timeseriesUrl(), explorer: explorerUrl(), meta: data.meta});
 }
 
 // ### The view panel
