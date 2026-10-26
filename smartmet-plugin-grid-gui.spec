@@ -55,7 +55,7 @@ Provides: %{SPECNAME}
 #TestRequires: smartmet-engine-grid >= 26.10.23
 #TestRequires: valkey
 #TestRequires: smartmet-test-data >= 26.8.26
-#TestRequires: smartmet-library-grid-files-test >= 26.10.20
+#TestRequires: smartmet-library-grid-files-test >= 26.10.26
 
 %description
 SmartMet grid-gui plugin
