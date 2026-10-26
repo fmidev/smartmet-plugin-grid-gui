@@ -349,6 +349,10 @@ class Plugin : public SmartMetPlugin
     bool loadCachedImage(const std::string& hash,Spine::HTTP::Response &theResponse);
     bool isImageUnderConstruction(const std::string& hash);
     uint startImageConstruction(const std::string& hash);
+    void endImageConstruction(uint idx);
+    void addCachedImage(const std::string& hash,const std::string& fname);
+    bool waitForCachedImage(const std::string& hash,Spine::HTTP::Response &theResponse);
+    std::string colorMapVersion(const std::string& colorMap);
 
   
 

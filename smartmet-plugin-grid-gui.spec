@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-plugin-%{DIRNAME}
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
-Version: 26.10.25
+Version: 26.10.26
 Release: 1%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
@@ -81,6 +81,10 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/%{DIRNAME}
 
 %changelog
+* Mon Oct 26 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> - 26.10.26-1.fmi
+- A request waiting for an image another request generates gives up after 30 seconds and generates it itself; map and streams requests used to wait forever if the generation failed
+- Map and image pages split into smaller functions
+
 * Sun Oct 25 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> - 26.10.25-1.fmi
 - /gui is always private like /grid-gui: never announced to the frontends, and by default
   only for local and private network addresses. The ui.visible setting is refused.

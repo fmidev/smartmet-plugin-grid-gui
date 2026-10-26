@@ -600,6 +600,33 @@ bool onAreaCoordinateLine(uint coordinateLines,int x,int y,const MapArea& area)
   return crosses(lonLeft,lonLeft + area.dlon) || crosses(latTop - area.dlat,latTop);
 }
 
+// Is the pixel on a drawn coordinate line of the whole world or of a part of it?
+
+bool onMapCoordinateLine(uint coordinateLines,int x,int y,uint xx,uint yy,const MapArea* area)
+{
+  if (area == nullptr)
+    return onCoordinateLine(coordinateLines,x,y,xx,yy);
+  return onAreaCoordinateLine(coordinateLines,x,y,*area);
+}
+
+// The longitude and latitude of a map pixel: of the whole world, or the pixel centre of a part of it
+
+void mapPixelLonLat(int x,int y,int width,int height,const MapArea* area,double& xc,double& yc)
+{
+  if (area != nullptr)
+  {
+    xc = area->lon0 + (x + 0.5) * area->dlon;
+    yc = area->lat1 - (y + 0.5) * area->dlat;
+    return;
+  }
+  auto dWidth = C_DOUBLE(width);
+  auto dHeight = C_DOUBLE(height);
+  double xd = 360/dWidth;
+  double yd = 180/dHeight;
+  xc = xd*(x-(dWidth/2));
+  yc = yd*((dHeight-y-1)-(dHeight/2));
+}
+
 }  // namespace
 
 
@@ -648,13 +675,6 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
     uint xx = columns / 36;
     uint yy = rows / 18;
 
-    auto dWidth = C_DOUBLE(width);
-    auto dHeight = C_DOUBLE(height);
-
-    double xd = 360/dWidth;
-    double yd = 180/dHeight;
-
-
     uint *image = new uint[width*height];
 
     uint c = 0;
@@ -679,14 +699,9 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
 
         uint col = mapValueColor(colorMapFile,val,minValue,step,hue,saturation,blur);
 
-        double xc = xd*(x-(dWidth/2));
-        double yc = yd*((dHeight-y-1)-(dHeight/2));
-        if (area != nullptr)
-        {
-          // A part of the world: the pixel centre
-          xc = area->lon0 + (x + 0.5) * area->dlon;
-          yc = area->lat1 - (y + 0.5) * area->dlat;
-        }
+        double xc = 0;
+        double yc = 0;
+        mapPixelLonLat(x,y,width,height,area,xc,yc);
 
         bool land = Map::topography.isLand(xc,yc);
 
@@ -696,8 +711,7 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
         if (landBorder & 0xFF000000)
           paintLandBorder(image,width,x,y,land,prevLand,yLand[x],landBorder,coordinateLines,col,lbcol);
 
-        if (area == nullptr ? onCoordinateLine(coordinateLines,x,y,xx,yy)
-                            : onAreaCoordinateLine(coordinateLines,x,y,*area))
+        if (onMapCoordinateLine(coordinateLines,x,y,xx,yy,area))
           col = coordinateLines;
 
         yLand[x] = land;
@@ -988,7 +1002,7 @@ uint differenceColor(double value,double range)
     p = -p;
   }
 
-  auto mix = [p](uint c) { return C_UINT(255 - (255 - C_INT(c)) * p + 0.5); };
+  auto mix = [p](uint c) { return C_UINT(std::lround(255 - (255 - C_INT(c)) * p)); };
   return 0xFF000000 | (mix(r) << 16) | (mix(g) << 8) | mix(b);
 }
 
@@ -1513,6 +1527,38 @@ bool drawStreamLines(const ImagePaintParameters& params,T::ParamValue_vec& value
 
 
 
+// The image of the values: a difference image, colors from the color map or HSV colors.
+// None for stream lines.
+
+uint *valueImage(ImagePaintParameters& params,T::ColorMapFile *colorMapFile,T::ParamValue_vec& values,int width,int height,uint size,bool rotate,uint alpha)
+{
+  if (params.stream_step != 0)
+    return nullptr;
+  if (params.fileId2 != 0)
+    return differenceValueImage(params,values,width,height,size,rotate,alpha);
+  if (colorMapFile)
+    return colorMapValueImage(params,*colorMapFile,values,width,height,size,rotate,alpha);
+  // We do not have colormap - using HSV instead
+  return hsvValueImage(params,values,width,height,size,rotate,alpha);
+}
+
+
+
+// Paint the coordinate lines over the image
+
+void paintCoordinateLines(const ImagePaintParameters& params,uint *image,int width,int height,bool rotate,const T::Coordinate_vec *lineCoordinates)
+{
+  if (!(params.coordinateLine_color & 0xFF000000)  ||  !lineCoordinates  ||  lineCoordinates->empty())
+    return;
+
+  ImagePaint imagePaint(image,width,height,0x0,params.coordinateLine_color,0xFFFFFFFF,false,rotate);
+
+  for (auto it = lineCoordinates->begin(); it != lineCoordinates->end(); ++it)
+    imagePaint.paintPixel(C_INT(Fmi::floor(it->x())),C_INT(Fmi::floor(it->y())),params.coordinateLine_color);
+}
+
+
+
 }  // namespace
 
 
@@ -1560,36 +1606,12 @@ void Plugin::saveImage(ImagePaintParameters& params,
 
     uint alpha = (uint)params.paint_alpha << 24;
 
-    if (params.fileId2 != 0)
-      colorMapFile = nullptr;
-
-    if (params.fileId2 != 0 && params.stream_step == 0)
-    {
-      valImage = differenceValueImage(params,values,width,height,size,rotate,alpha);
-    }
-    else if (!colorMapFile && params.stream_step == 0)
-    {
-      // We do not have colormap - using HSV instead
-      valImage = hsvValueImage(params,values,width,height,size,rotate,alpha);
-    }
-
-
-    T::ByteData_vec contours;
-
-    if (colorMapFile && params.stream_step == 0)
-      valImage = colorMapValueImage(params,*colorMapFile,values,width,height,size,rotate,alpha);
+    valImage = valueImage(params,colorMapFile,values,width,height,size,rotate,alpha);
 
     for (uint t=0; t<size; t++)
       finalImage[t] = composePixel(params,t,landImage,seaImage,landShadingImage,seaShadingImage,valImage,landBorderImage);
 
-
-    if ((params.coordinateLine_color & 0xFF000000)  &&  lineCoordinates  &&  !lineCoordinates->empty())
-    {
-      ImagePaint imagePaint(finalImage,width,height,0x0,params.coordinateLine_color,0xFFFFFFFF,false,rotate);
-
-      for (auto it = lineCoordinates->begin(); it != lineCoordinates->end(); ++it)
-        imagePaint.paintPixel(C_INT(Fmi::floor(it->x())),C_INT(Fmi::floor(it->y())),params.coordinateLine_color);
-    }
+    paintCoordinateLines(params,finalImage,width,height,rotate,lineCoordinates);
 
 
     deleteImage(landImage);
@@ -2551,6 +2573,80 @@ uint Plugin::startImageConstruction(const std::string& hash)
 
 
 
+/*! \brief GridGui: Clears the slot of an image whose construction has ended. */
+
+void Plugin::endImageConstruction(uint idx)
+{
+  AutoThreadLock lock(&itsThreadLock);
+  itsImagesUnderConstruction[idx] = "";
+}
+
+
+
+
+
+/*! \brief GridGui: Adds a generated image to the image cache. */
+
+void Plugin::addCachedImage(const std::string& hash,const std::string& fname)
+{
+  AutoThreadLock lock(&itsThreadLock);
+  if (itsImages.find(hash) == itsImages.end())
+    itsImages.insert(std::pair<std::string,std::string>(hash,fname));
+}
+
+
+
+
+
+/*! \brief GridGui: Loads the image with the given hash into the response, waiting at most
+    30 seconds while another thread is generating it. Returns false if the image must be
+    generated by the caller. */
+
+bool Plugin::waitForCachedImage(const std::string& hash,Spine::HTTP::Response &theResponse)
+{
+  time_t endTime = time(nullptr) + 30;
+
+  while (time(nullptr) < endTime)
+  {
+    // ### Use the requested image if it has been generated earlier.
+
+    if (loadCachedImage(hash,theResponse))
+      return true;
+
+    // ### Another thread may be generating the requested image. Let's wait until it is ready
+    // ### and can be found from the itsImages list.
+
+    if (!isImageUnderConstruction(hash))
+      return false;
+
+    time_usleep(0,10000);
+  }
+  return false;
+}
+
+
+
+
+
+/*! \brief GridGui: The file name and the modification time of a color map, which identify
+    its version in the image hashes. */
+
+std::string Plugin::colorMapVersion(const std::string& colorMap)
+{
+  if (colorMap.empty() ||  strcasecmp(colorMap.c_str(),"None") == 0)
+    return ":";
+
+  T::ColorMapFile *colorMapFile = getColorMapFile(colorMap);
+  if (colorMapFile == nullptr)
+    return ":";
+
+  return colorMapFile->getFilename() + ":" + std::to_string(C_UINT(colorMapFile->getLastModificationTime()));
+}
+
+
+
+
+
 /*! \brief GridGui: Page image. */
 
 int Plugin::page_image(const Spine::Reactor & /*theReactor*/,
@@ -2605,21 +2701,11 @@ int Plugin::page_image(const Spine::Reactor & /*theReactor*/,
     if (projectionIdStr.empty())
       projectionIdStr = geometryIdStr;
 
-    std::string colorMapFileName;
-    std::string colorMapModificationTime;
-    if (!colorMap.empty() &&  strcasecmp(colorMap.c_str(),"None") != 0)
-    {
-      T::ColorMapFile *colorMapFile = getColorMapFile(colorMap);
-      if (colorMapFile != nullptr)
-      {
-        colorMapModificationTime = std::to_string(C_UINT(colorMapFile->getLastModificationTime()));
-        colorMapFileName = colorMapFile->getFilename();
-      }
-    }
+    const std::string colorMapVersionStr = colorMapVersion(colorMap);
 
     std::string hash = "Image:" + fileIdStr + ":" + messageIndexStr + ":" + hueStr + ":" + saturationStr + ":" +
       blurStr + ":" + coordinateLinesStr + ":" + landBorderStr + ":" + projectionIdStr + ":" +
-      landMaskStr + ":" + seaMaskStr + ":" + colorMapFileName + ":" + colorMapModificationTime + ":" + missingStr + ":" +
+      landMaskStr + ":" + seaMaskStr + ":" + colorMapVersionStr + ":" + missingStr + ":" +
       landShadingLightStr + ":" + landShadingShadowStr  + ":" + landShadingPositionStr  + ":" + landColorPosStr + ":" +
       seaShadingLightStr + ":" + seaShadingShadowStr  + ":" + seaShadingPositionStr  + ":" + seaColorPosStr + ":" + opacityStr + ":" + streamColorStr;
 
@@ -2637,36 +2723,8 @@ int Plugin::page_image(const Spine::Reactor & /*theReactor*/,
     if (auto status = conditionalResponseStatus(theRequest, seedStr))
       return *status;
 
-    bool found = false;
-    bool ind = true;
-
-    time_t endTime = time(nullptr) + 30;
-
-    while (ind  &&  time(nullptr) < endTime)
-    {
-      // ### Use the requested image if it has been generated earlier.
-
-      if (loadCachedImage(hash,theResponse))
-        return HTTP::Status::ok;
-
-      if (!found)
-      {
-        // ### Let's check if another thread is already generating the requested image
-
-        found = isImageUnderConstruction(hash);
-        if (!found)
-          ind = false;
-      }
-
-      if (found)
-      {
-        // ### Another thread is generating the requested image. Let's wait until it is ready and can be
-        // ### found from the itsImages list.
-
-        time_usleep(0,10000);
-        found = false;
-      }
-    }
+    if (waitForCachedImage(hash,theResponse))
+      return HTTP::Status::ok;
 
     // ### It seems that we should generated the requested image by ourselves.
 
@@ -2717,24 +2775,12 @@ int Plugin::page_image(const Spine::Reactor & /*theReactor*/,
       saveImage(params);
 
       if (loadImage(fname.c_str(),theResponse))
-      {
-        AutoThreadLock lock(&itsThreadLock);
-        if (itsImages.find(hash) == itsImages.end())
-        {
-          itsImages.insert(std::pair<std::string,std::string>(hash,fname));
-        }
-      }
-      {
-        AutoThreadLock lock(&itsThreadLock);
-        itsImagesUnderConstruction[idx] = "";
-      }
+        addCachedImage(hash,fname);
+      endImageConstruction(idx);
     }
     catch (...)
     {
-      {
-        AutoThreadLock lock(&itsThreadLock);
-        itsImagesUnderConstruction[idx] = "";
-      }
+      endImageConstruction(idx);
       Fmi::Exception exception(BCP, "Operation failed!", nullptr);
       throw exception;
     }
@@ -2831,17 +2877,7 @@ int Plugin::page_streamsImpl(const HTTP::Request &theRequest,
     std::string seaShadingPositionStr = session.getAttribute(ATTR_SEA_SHADING_POS);
     std::string seaColorPosStr = session.getAttribute(ATTR_SEA_COLOR_POS);
 
-    std::string colorMapFileName;
-    std::string colorMapModificationTime;
-    if (!colorMap.empty() &&  strcasecmp(colorMap.c_str(),"None") != 0)
-    {
-      T::ColorMapFile *colorMapFile = getColorMapFile(colorMap);
-      if (colorMapFile != nullptr)
-      {
-        colorMapModificationTime = std::to_string(C_UINT(colorMapFile->getLastModificationTime()));
-        colorMapFileName = colorMapFile->getFilename();
-      }
-    }
+    const std::string colorMapVersionStr = colorMapVersion(colorMap);
 
     if (projectionIdStr.empty())
       projectionIdStr = geometryIdStr;
@@ -2849,7 +2885,7 @@ int Plugin::page_streamsImpl(const HTTP::Request &theRequest,
     const char *hashPrefix = animation ? "StreamsAnimation:" : "Streams:";
     std::string hash = std::string(hashPrefix) + fileIdStr + ":" + messageIndexStr + ":" + hueStr + ":" + saturationStr + ":" +
       blurStr + ":" + coordinateLinesStr + ":" + landBorderStr + ":" + projectionIdStr + ":" +
-      landMaskStr + ":" + seaMaskStr + ":" + colorMapFileName + ":" + colorMapModificationTime + ":" + missingStr + ":" +
+      landMaskStr + ":" + seaMaskStr + ":" + colorMapVersionStr + ":" + missingStr + ":" +
       minLengthStr + ":" + maxLengthStr + ":" + stepStr + ":" + streamColorStr + ":" +
       landShadingLightStr + ":" + landShadingShadowStr  + ":" + landShadingPositionStr  + ":" + landColorPosStr + ":" +
       seaShadingLightStr + ":" + seaShadingShadowStr  + ":" + seaShadingPositionStr  + ":" + seaColorPosStr + ":" + opacityStr;
@@ -2861,24 +2897,8 @@ int Plugin::page_streamsImpl(const HTTP::Request &theRequest,
     if (auto status = conditionalResponseStatus(theRequest, seedStr))
       return *status;
 
-    bool found = false;
-    bool ind = true;
-
-    while (ind)
-    {
-      if (loadCachedImage(hash,theResponse))
-        return HTTP::Status::ok;
-
-      if (!found)
-      {
-        found = isImageUnderConstruction(hash);
-        if (!found)
-          ind = false;
-      }
-
-      if (found)
-        time_usleep(0,10000);
-    }
+    if (waitForCachedImage(hash,theResponse))
+      return HTTP::Status::ok;
 
     uint idx = startImageConstruction(hash);
 
@@ -2921,25 +2941,13 @@ int Plugin::page_streamsImpl(const HTTP::Request &theRequest,
       saveImage(params);
 
       if (loadImage(fname.c_str(),theResponse))
-      {
-        AutoThreadLock lock(&itsThreadLock);
-        if (itsImages.find(hash) == itsImages.end())
-        {
-          itsImages.insert(std::pair<std::string,std::string>(hash,fname));
-        }
-      }
+        addCachedImage(hash,fname);
 
-      {
-        AutoThreadLock lock(&itsThreadLock);
-        itsImagesUnderConstruction[idx] = "";
-      }
+      endImageConstruction(idx);
     }
     catch (...)
     {
-      {
-        AutoThreadLock lock(&itsThreadLock);
-        itsImagesUnderConstruction[idx] = "";
-      }
+      endImageConstruction(idx);
       Fmi::Exception exception(BCP, "Operation failed!", nullptr);
       throw exception;
     }
@@ -2953,6 +2961,32 @@ int Plugin::page_streamsImpl(const HTTP::Request &theRequest,
     throw exception;
   }
 }
+
+
+
+
+
+namespace
+{
+/*! \brief The part of the world "lon0,lat0,lon1,lat1" of a map, and its size in pixels: at
+    most 1200 pixels on the longer side. None for the whole world, whose size is not changed. */
+
+std::optional<MapArea> parseMapArea(const std::string& areaStr,uint& columns,uint& rows)
+{
+  if (areaStr.empty())
+    return {};
+
+  std::vector<double> v;
+  splitString(areaStr,',',v);
+  if (v.size() != 4 || !(v[0] >= -180 && v[0] < v[2] && v[2] <= 180 && v[1] >= -90 && v[1] < v[3] && v[3] <= 90))
+    throw Fmi::Exception(BCP,"The map area must be lon0,lat0,lon1,lat1 within -180..180 and -90..90").addParameter("Area",areaStr);
+
+  const double aspect = (v[2] - v[0]) / (v[3] - v[1]);
+  columns = (aspect >= 1 ? 1200 : std::max(1U, C_UINT(std::lround(1200 * aspect))));
+  rows = (aspect >= 1 ? std::max(1U, C_UINT(std::lround(1200 / aspect))) : 1200);
+  return MapArea{v[0], v[3], (v[2] - v[0]) / columns, (v[3] - v[1]) / rows};
+}
+}  // namespace
 
 
 
@@ -3000,41 +3034,19 @@ int Plugin::page_map(const Spine::Reactor & /*theReactor*/,
     std::string unitStr = session.getAttribute(ATTR_UNIT);
     std::string fmiKeyStr = session.getAttribute(ATTR_FMI_KEY);
 
-    std::string colorMapFileName;
-    std::string colorMapModificationTime;
-    if (!colorMap.empty() &&  strcasecmp(colorMap.c_str(),"None") != 0)
-    {
-      T::ColorMapFile *colorMapFile = getColorMapFile(colorMap);
-      if (colorMapFile != nullptr)
-      {
-        colorMapModificationTime = std::to_string(C_UINT(colorMapFile->getLastModificationTime()));
-        colorMapFileName = colorMapFile->getFilename();
-      }
-    }
+    const std::string colorMapVersionStr = colorMapVersion(colorMap);
 
     std::string hash = "Map:" + fileIdStr + ":" + messageIndexStr + ":" + hueStr + ":" + saturationStr + ":" +
       blurStr + ":" + coordinateLinesStr + ":" + landBorderStr + ":" +
-      landMaskStr + ":" + seaMaskStr + ":" + colorMapFileName + ":" + colorMapModificationTime + ":" + missingStr;
+      landMaskStr + ":" + seaMaskStr + ":" + colorMapVersionStr + ":" + missingStr;
 
     // A part of the world (the new user interface): "lon0,lat0,lon1,lat1"
-    std::optional<MapArea> area;
-    uint areaColumns = 0;
-    uint areaRows = 0;
+    uint columns = 1800;
+    uint rows = 900;
     const std::string areaStr = session.getAttribute(ATTR_MAP_AREA);
-    if (!areaStr.empty())
-    {
-      std::vector<double> v;
-      splitString(areaStr,',',v);
-      if (v.size() != 4 || !(v[0] >= -180 && v[0] < v[2] && v[2] <= 180 && v[1] >= -90 && v[1] < v[3] && v[3] <= 90))
-        throw Fmi::Exception(BCP,"The map area must be lon0,lat0,lon1,lat1 within -180..180 and -90..90").addParameter("Area",areaStr);
-
-      // At most 1200 pixels on the longer side
-      const double aspect = (v[2] - v[0]) / (v[3] - v[1]);
-      areaColumns = (aspect >= 1 ? 1200 : std::max(1U, C_UINT(std::lround(1200 * aspect))));
-      areaRows = (aspect >= 1 ? std::max(1U, C_UINT(std::lround(1200 / aspect))) : 1200);
-      area = MapArea{v[0], v[3], (v[2] - v[0]) / areaColumns, (v[3] - v[1]) / areaRows};
+    const auto area = parseMapArea(areaStr,columns,rows);
+    if (area)
       hash += ":Area:" + areaStr;
-    }
 
     const std::size_t seed = Fmi::hash(hash);
     std::string seedStr = std::to_string(seed);
@@ -3043,40 +3055,15 @@ int Plugin::page_map(const Spine::Reactor & /*theReactor*/,
     if (auto status = conditionalResponseStatus(theRequest, seedStr))
       return *status;
 
-    bool found = false;
-    bool ind = true;
-
-    while (ind)
-    {
-      if (loadCachedImage(hash,theResponse))
-        return HTTP::Status::ok;
-
-      if (!found)
-      {
-        found = isImageUnderConstruction(hash);
-        if (!found)
-          ind = false;
-      }
-
-      if (found)
-        time_usleep(0,10000);
-    }
+    if (waitForCachedImage(hash,theResponse))
+      return HTTP::Status::ok;
 
     uint idx = startImageConstruction(hash);
 
     try
     {
-      uint columns = 1800;
-      uint rows = 900;
-      double lon0 = -180;
-      double lat1 = 90;
-      if (area)
-      {
-        columns = areaColumns;
-        rows = areaRows;
-        lon0 = area->lon0;
-        lat1 = area->lat1;
-      }
+      const double lon0 = (area ? area->lon0 : -180);
+      const double lat1 = (area ? area->lat1 : 90);
       uint coordinateLines = getColorValue(coordinateLinesStr);
 
       T::ParamValue_vec values;
@@ -3099,25 +3086,13 @@ int Plugin::page_map(const Spine::Reactor & /*theReactor*/,
       saveMap(fname.c_str(),columns,rows,values,toUInt8(hueStr),toUInt8(saturationStr),toUInt8(blurStr),coordinateLines,landBorder,landMaskStr,seaMaskStr,colorMap,missingStr,area ? &*area : nullptr);
 
       if (loadImage(fname.c_str(),theResponse))
-      {
-        AutoThreadLock lock(&itsThreadLock);
-        if (itsImages.find(hash) == itsImages.end())
-        {
-          itsImages.insert(std::pair<std::string,std::string>(hash,fname));
-        }
-      }
+        addCachedImage(hash,fname);
 
-      {
-        AutoThreadLock lock(&itsThreadLock);
-        itsImagesUnderConstruction[idx] = "";
-      }
+      endImageConstruction(idx);
     }
     catch (...)
     {
-      {
-        AutoThreadLock lock(&itsThreadLock);
-        itsImagesUnderConstruction[idx] = "";
-      }
+      endImageConstruction(idx);
       Fmi::Exception exception(BCP, "Operation failed!", nullptr);
       throw exception;
     }
