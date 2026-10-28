@@ -68,7 +68,8 @@ slightly apart. A filter dims the colours whose name does not match; Enter choos
 first match.
 
 **Zoom.** An image is shown one image pixel per screen pixel, smaller only when it does
-not fit; *Fit to view* scales small images up to the space available. The mouse wheel
+not fit; *Fit to view* scales small images up to the space available, by a whole number
+so that every grid cell gets as many pixels. The mouse wheel
 zooms the image around the pointer, dragging moves a zoomed image and a double click
 shows the whole image. Compared images zoom together. The grid cells are drawn as sharp
 squares, so single grid points can be inspected.
@@ -85,8 +86,10 @@ its indexes, coordinates (lat/lon and the grid's own x/y) and value.
 **Undefined types.** A forecast type or level type the grid configuration does not
 define is shown as *not defined*; its tooltip lists the defined ones.
 
-**Colour maps.** When the values of the field do not fit the range of the chosen colour
-map, the legend says so — for example temperatures in °C with a Kelvin colour map — and
+**Colour maps.** The legend shows the whole colour map in the unit of the values,
+extended to the values of the field when they reach further (those get the end colours).
+When the values of the field do not fit the range of the chosen colour map, the legend
+says so — for example temperatures in °C with a Kelvin colour map — and
 offers the colour maps that fit, those named after the quantity first.
 
 Querydata stores temperatures in °C, but the content is identified with the FMI name

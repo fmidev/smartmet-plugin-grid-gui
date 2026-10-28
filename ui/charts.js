@@ -84,8 +84,10 @@ export function lineChart(container, spec)
     return vertical ? svg('line', {x1: pos, x2: pos, y1: m.top, y2: m.top + h, class: 'grid'})
                     : svg('line', {x1: m.left, x2: m.left + w, y1: pos, y2: pos, class: 'grid'});
   };
+  // A label of the x axis may have two lines, separated by a newline
   const label = (pos, text, onXAxis) => onXAxis
-      ? svg('text', {x: pos, y: m.top + h + 14, class: 'tick', 'text-anchor': 'middle'}, text)
+      ? svg('text', {x: pos, y: m.top + h + 14, class: 'tick', 'text-anchor': 'middle'},
+            ...String(text).split('\n').map((line, i) => svg('tspan', {x: pos, dy: i ? 11 : 0}, line)))
       : svg('text', {x: m.left - 4, y: pos + 3, class: 'tick', 'text-anchor': 'end'}, text);
 
   for (const t of valueTicks)

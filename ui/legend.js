@@ -154,28 +154,33 @@ export function colorMapLegend(container, colormap, units, stats, ranges, choose
     replace(container);
     return;
   }
-  const min = stops[0][0];
-  const max = stops[stops.length - 1][0];
+  // The whole colour map, extended to the values of the field when they reach further
+  // (such as winds and temperatures high in the atmosphere): those get the end colours
+  const mapMin = stops[0][0];
+  const mapMax = stops[stops.length - 1][0];
+  let min = mapMin;
+  let max = mapMax;
   let note = 'Values outside the range get the colour of the nearest end.';
   let warn = false;
   if (stats && stats.count > 0)
   {
+    min = Math.min(min, stats.min);
+    max = Math.max(max, stats.max);
     const range = `${formatValue(stats.min)} … ${formatValue(stats.max)}`;
-    if (stats.max < min || stats.min > max)
+    const map = `${formatValue(mapMin)} … ${formatValue(mapMax)}`;
+    if (stats.max < mapMin || stats.min > mapMax)
     {
-      note = `The values of this field (${range}) are all outside the range of the colour map, ` +
+      note = `The values of this field (${range}) are all outside the range of the colour map (${map}), ` +
           'so every point gets the same end colour. Choose another colour map, or none.';
       warn = true;
     }
-    else if (stats.min < min || stats.max > max)
-      note = `The values of this field (${range}) reach outside the range of the colour map: those points get the end colours.`;
+    else if (stats.min < mapMin || stats.max > mapMax)
+      note = `The values of this field (${range}) reach outside the range of the colour map (${map}): ` +
+          'the legend is extended to them, and they get the end colours.';
     else
       note = `The values of this field: ${range}.`;
   }
-  // No units: the name of the colour map tells them, and the stored values may be in
-  // other units than the parameter definition says (querydata in °C named T-K)
-  void units;
-  draw(container, {min, max, color: colorMapColor(stops), units: '', title: colormap.name, note, warn});
+  draw(container, {min, max, color: colorMapColor(stops), units, title: colormap.name, note, warn});
 
   if (stats && stats.count > 0 && (stats.min < min || stats.max > max) && ranges && choose)
   {

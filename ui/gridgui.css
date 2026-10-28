@@ -178,7 +178,9 @@ input.hue { background: linear-gradient(to right, red, yellow, lime, cyan, blue,
 .stage.beside .stage-image { flex: none; }
 .stage.beside .point { flex: 1 1 360px; min-width: 0; }
 .viewer-row { display: flex; gap: 8px; align-items: flex-start; }
-.viewer { flex: 1; min-width: 0; }
+/* The image with its readout and legend directly below it, beside the level bar */
+.viewer-column { flex: 1; min-width: 0; display: flex; flex-direction: column; gap: 8px; }
+.viewer { min-width: 0; }
 .panes { display: flex; flex-wrap: wrap; gap: 8px; }
 .panes .pane { flex: 1 1 0; }
 .panes.compare .pane { flex: 1 1 300px; }

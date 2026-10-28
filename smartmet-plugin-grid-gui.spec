@@ -86,6 +86,10 @@ rm -rf $RPM_BUILD_ROOT
 - /gui: the time series and profile of the pinned point follow the selected time and level: their marks move in place, also while playing, and hovering them previews that time or level in the image
 - /gui: time axis labels show the date at midnight and the hour otherwise, so they no longer overlap
 - /gui: the charts of the pinned point are placed beside the image when there is room for them
+- /gui: the readout and the legend are directly below the image, beside the level bar
+- /gui: a colour map legend shows the whole colour map with units, extended to the values of the field when they reach further
+- /gui: time axes show the date below the hour at midnight and on the first label; tick labels have enough decimals for steps such as 2.5
+- /gui: Fit to view scales images up by a whole number, so that every grid cell gets as many pixels
 
 * Wed Oct 28 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> - 26.10.28-2.fmi
 - /gui: parameters can be shown in another unit by name (T-C for T-K, P-HPA, FF-KT, FF-KMH) or with a Unit selector; images, legends and values are converted, and a colour map of another unit is replaced by its counterpart

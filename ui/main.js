@@ -1186,7 +1186,10 @@ function fitImage(img)
   const top = (viewport || img).getBoundingClientRect().top + window.scrollY;
   const reserve = compareActive() ? 60 : 110;
   const availableHeight = Math.max(240, window.innerHeight - top - reserve);
-  const scale = Math.min(availableWidth / nw, availableHeight / nh, fitToView ? Infinity : 1);
+  let scale = Math.min(availableWidth / nw, availableHeight / nh, fitToView ? Infinity : 1);
+  // Scaled up by a whole number, so that every grid cell gets as many pixels
+  if (scale > 1)
+    scale = Math.floor(scale);
   const w = Math.floor(nw * scale);
   const width = w + 'px';
   const height = Math.floor(nh * scale) + 'px';
