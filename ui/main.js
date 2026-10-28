@@ -1011,10 +1011,13 @@ function differenceUrl(a, b)
 
 // The panes of the viewer: [{label, img, content}]
 let panes = [];
+// What the panes of the viewer show apart from the time: the layout and the panes
+let viewerArrangement = '';
 
 function renderViewer()
 {
   const viewer = $('viewer');
+  const previous = panes;
   panes = [];
 
   if (!data.content)
@@ -1083,29 +1086,53 @@ function renderViewer()
     return el('figure', {class: 'pane'}, label ? el('figcaption', {}, label) : null, viewport);
   };
 
-  if (compareActive())
+  // The panes wanted: [{label, src, content, kind}], null for a missing field B
+  const compare = compareActive();
+  const specs = [];
+  if (compare)
   {
     const a = data.content;
     const b = data.compareContent;
-    const la = `A: ${formatTime(data.generation.analysisTime)}`;
-    const lb = `B: ${formatTime(data.compareGeneration.analysisTime)}`;
-    const children = [makePane(la, imageUrl('image', a), a, 'a')];
+    specs.push({label: `A: ${formatTime(data.generation.analysisTime)}`, src: imageUrl('image', a), content: a, kind: 'a'});
     if (b)
     {
-      children.push(makePane(lb, imageUrl('image', b), b, 'b'));
-      children.push(makePane('B − A', differenceUrl(a, b), a, 'diff'));
+      specs.push({label: `B: ${formatTime(data.compareGeneration.analysisTime)}`, src: imageUrl('image', b), content: b, kind: 'b'});
+      specs.push({label: 'B − A', src: differenceUrl(a, b), content: a, kind: 'diff'});
     }
     else
-      children.push(el('figure', {class: 'pane missing'}, el('figcaption', {}, lb),
-          el('div', {class: 'empty'}, 'Generation B has no field at this time.')));
-    replace(viewer, el('div', {class: 'panes compare'}, children));
+      specs.push(null);
   }
   else
-    replace(viewer, el('div', {class: 'panes'}, makePane('', imageUrl(state.view, data.content), data.content, 'a')));
+    specs.push({label: '', src: imageUrl(state.view, data.content), content: data.content, kind: 'a'});
+
+  // A zoom applies to one image layout: the same view, geometry and projection
+  const layout = [state.view, data.resolved.sel.geometry, state.projection, compare, state.mapArea].join('/');
+  const arrangement = [layout, ...specs.map((x) => (x ? `${x.kind}:${x.label}` : 'missing'))].join('|');
+
+  // Only the time or the rendering options changed: the images change in place, so that
+  // each one shows the previous image until the new one has loaded and nothing blinks
+  const shown = specs.filter((x) => x);
+  if (viewerArrangement === arrangement && previous.length === shown.length &&
+      previous.every((p) => viewer.contains(p.img)))
+  {
+    previous.forEach((pane, i) => {
+      pane.content = shown[i].content;
+      if (pane.img.getAttribute('src') !== shown[i].src)
+        pane.img.src = shown[i].src;
+    });
+    panes = previous;
+  }
+  else
+  {
+    const label = compare ? `B: ${formatTime(data.compareGeneration.analysisTime)}` : '';
+    const children = specs.map((x) => (x ? makePane(x.label, x.src, x.content, x.kind)
+        : el('figure', {class: 'pane missing'}, el('figcaption', {}, label),
+             el('div', {class: 'empty'}, 'Generation B has no field at this time.'))));
+    replace(viewer, el('div', {class: compare ? 'panes compare' : 'panes'}, children));
+    viewerArrangement = arrangement;
+  }
 
   viewer.classList.toggle('pixelated', true);
-  // A zoom applies to one image layout: the same view, geometry and projection
-  const layout = [state.view, data.resolved.sel.geometry, state.projection, compareActive(), state.mapArea].join('/');
   if (zoom.layout !== layout)
   {
     zoom.layout = layout;
