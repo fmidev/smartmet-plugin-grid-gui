@@ -171,6 +171,12 @@ input.hue { background: linear-gradient(to right, red, yellow, lime, cyan, blue,
 
 /* Viewer */
 
+.stage { display: flex; flex-direction: column; gap: 8px; }
+.stage-image { display: flex; flex-direction: column; gap: 8px; min-width: 0; }
+/* The point charts beside the image when there is room (fitImage() in main.js) */
+.stage.beside { flex-direction: row; align-items: flex-start; gap: 12px; }
+.stage.beside .stage-image { flex: none; }
+.stage.beside .point { flex: 1 1 360px; min-width: 0; }
 .viewer-row { display: flex; gap: 8px; align-items: flex-start; }
 .viewer { flex: 1; min-width: 0; }
 .panes { display: flex; flex-wrap: wrap; gap: 8px; }

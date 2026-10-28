@@ -85,6 +85,7 @@ rm -rf $RPM_BUILD_ROOT
 - /gui: playing the times no longer blinks: a new time changes the images in place instead of rebuilding the viewer
 - /gui: the time series and profile of the pinned point follow the selected time and level: their marks move in place, also while playing, and hovering them previews that time or level in the image
 - /gui: time axis labels show the date at midnight and the hour otherwise, so they no longer overlap
+- /gui: the charts of the pinned point are placed beside the image when there is room for them
 
 * Wed Oct 28 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> - 26.10.28-2.fmi
 - /gui: parameters can be shown in another unit by name (T-C for T-K, P-HPA, FF-KT, FF-KMH) or with a Unit selector; images, legends and values are converted, and a colour map of another unit is replaced by its counterpart

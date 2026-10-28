@@ -43,16 +43,20 @@
   <main class="main">
     <div class="timecontrols" id="timecontrols"></div>
     <div id="timebar"></div>
-    <div class="viewer-row">
-      <div id="viewer" class="viewer"></div>
-      <div id="levelbar" class="levelbar-wrap"></div>
+    <div id="stage" class="stage">
+      <div id="stage-image" class="stage-image">
+        <div class="viewer-row">
+          <div id="viewer" class="viewer"></div>
+          <div id="levelbar" class="levelbar-wrap"></div>
+        </div>
+        <div id="readout" class="readout mono" aria-live="polite"></div>
+        <div id="legend" class="legend"></div>
+      </div>
+      <section id="point" class="point" hidden aria-labelledby="h-point">
+        <h2 id="h-point">Point</h2>
+        <div id="point-body"></div>
+      </section>
     </div>
-    <div id="readout" class="readout mono" aria-live="polite"></div>
-    <div id="legend" class="legend"></div>
-    <section id="point" class="point" hidden aria-labelledby="h-point">
-      <h2 id="h-point">Point</h2>
-      <div id="point-body"></div>
-    </section>
   </main>
 </div>
 

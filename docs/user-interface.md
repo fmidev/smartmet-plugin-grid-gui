@@ -58,7 +58,8 @@ the image has loaded.
 under the pointer. A click pins the point: the page then shows its time series and, for
 fields with several levels, its vertical profile. The charts mark the selected time and
 level and follow them, also while the times are played. Hovering a chart previews that
-time or level in the image, and clicking it selects it.
+time or level in the image, and clicking it selects it. The charts are placed beside the
+image when the image, the level bar and the charts fit side by side, otherwise below it.
 
 **Colours.** The named colours (coastline, land, sea, lat/lon lines, streams) are chosen
 from a picker that shows every named colour as a dot at its hue (left to right) and

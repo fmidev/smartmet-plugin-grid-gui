@@ -1019,6 +1019,9 @@ function renderViewer()
   const viewer = $('viewer');
   const previous = panes;
   panes = [];
+  // Only a single image has the point charts beside it (fitImage())
+  if (!data.content || !viewInfo(state.view).image || compareActive())
+    placePoint(null);
 
   if (!data.content)
   {
@@ -1148,8 +1151,24 @@ function renderViewer()
 // smaller than the screen, and an image scaled up shows its grid cells as blocks.
 let fitToView = store.get('fitToView', false);
 
+// The narrowest point charts placed beside the image, the narrowest image column (room for
+// the legend and the readout) and the gaps of the layout (CSS)
+const pointWidth = 360;
+const imageColumnWidth = 360;
+const stageGap = 12;
+const viewerGap = 8;
+
+// Places the charts of the pinned point beside the image (width: the width of the image
+// column in pixels) or below it (width null)
+function placePoint(width)
+{
+  $('stage').classList.toggle('beside', width !== null);
+  $('stage-image').style.width = width === null ? '' : width + 'px';
+}
+
 // Scales the image to the space available: only down unless fitToView is on. The size is
 // set in pixels so that a position in the image maps exactly to the grid (no letterboxing).
+// A single image leaves room for the charts of the pinned point beside it when it can.
 function fitImage(img)
 {
   const nw = img.naturalWidth;
@@ -1158,12 +1177,18 @@ function fitImage(img)
     return;
   const pane = img.closest('.pane');
   const viewport = img.closest('.pane-viewport');
-  const availableWidth = Math.max(100, (pane ? pane.clientWidth : $('viewer').clientWidth) - 2);
+  const single = panes.length === 1;
+  const stageWidth = $('stage').clientWidth;
+  const levelbar = $('levelbar').offsetWidth;
+  const besideImage = levelbar ? levelbar + viewerGap : 0;
+  const availableWidth = Math.max(100, (single ? stageWidth - besideImage
+                                                : (pane ? pane.clientWidth : $('viewer').clientWidth)) - 2);
   const top = (viewport || img).getBoundingClientRect().top + window.scrollY;
   const reserve = compareActive() ? 60 : 110;
   const availableHeight = Math.max(240, window.innerHeight - top - reserve);
   const scale = Math.min(availableWidth / nw, availableHeight / nh, fitToView ? Infinity : 1);
-  const width = Math.floor(nw * scale) + 'px';
+  const w = Math.floor(nw * scale);
+  const width = w + 'px';
   const height = Math.floor(nh * scale) + 'px';
   img.style.width = width;
   img.style.height = height;
@@ -1172,6 +1197,20 @@ function fitImage(img)
     viewport.style.width = width;
     viewport.style.height = height;
   }
+  if (single)
+  {
+    const column = Math.max(imageColumnWidth, w + 2 + besideImage);
+    placePoint(state.point && column + stageGap + pointWidth <= stageWidth ? column : null);
+  }
+}
+
+// Fits the images again, and places the charts of the point, after the space changed
+function layoutImages()
+{
+  if (panes.length)
+    panes.forEach((p) => fitImage(p.img));
+  else
+    placePoint(null);
 }
 
 // ### Zooming: the same zoom in every pane, so that compared fields stay aligned
@@ -1254,7 +1293,7 @@ function enableZoom(pane)
   });
 }
 
-window.addEventListener('resize', debounce(() => panes.forEach((p) => fitImage(p.img)), 150));
+window.addEventListener('resize', debounce(layoutImages, 150));
 
 // Loads the images of the next and the previous time into the browser cache
 const preloadNeighbours = debounce(() => {
@@ -1385,6 +1424,7 @@ async function pin(pane, event)
     writeUrl();
     showMarker();
     renderPoint();
+    layoutImages();
     renderKeyPanel();
   }
   catch (error)
@@ -1400,6 +1440,7 @@ function unpin()
   writeUrl();
   showMarker();
   renderPoint();
+  layoutImages();
   renderKeyPanel();
 }
 
