@@ -58,6 +58,8 @@ struct ImagePaintParameters
   T::FileId fileId2 = 0;                        //!< Second field of a difference image (fileId2 - fileId), 0 = no difference.
   T::MessageIndex messageIndex2 = 0;            //!< Message index of the second field of a difference image.
   double differenceRange = 0;                   //!< Value range -r..r of the difference colour scale, 0 = automatic.
+  double valueScale = 1;                        //!< Unit conversion of the values: value * valueScale + valueOffset.
+  double valueOffset = 0;                       //!< Unit conversion offset; a difference is only scaled.
 };
 
 

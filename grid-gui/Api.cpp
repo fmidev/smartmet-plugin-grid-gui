@@ -91,6 +91,14 @@ double requiredNumber(const HTTP::Request& theRequest, const char* name)
   }
 }
 
+double optionalNumber(const HTTP::Request& theRequest, const char* name, double defaultValue)
+{
+  auto value = theRequest.getParameter(name);
+  if (!value || value->empty())
+    return defaultValue;
+  return requiredNumber(theRequest, name);
+}
+
 // A value, or null when it is missing
 
 Json::Value jsonValue(T::ParamValue value)
@@ -1321,6 +1329,9 @@ Json::Value Plugin::api_stats(const HTTP::Request& theRequest)
       params.fileId2 = static_cast<T::FileId>(requiredInteger(theRequest, "file2"));
       params.messageIndex2 = static_cast<T::MessageIndex>(requiredInteger(theRequest, "message2"));
     }
+    // The unit the values are shown in
+    params.valueScale = optionalNumber(theRequest, "scale", 1);
+    params.valueOffset = optionalNumber(theRequest, "offset", 0);
 
     T::GeometryId geometryId = 0;
     uint columns = 0;

@@ -36,8 +36,16 @@ A list with only one choice is grayed out: it shows the value, which cannot be c
 * The producer list shows the age of each producer's newest ready generation.
 * By default the newest **ready** generation is shown; a generation still being loaded is
   marked *not ready*.
-* The parameter list has a filter that matches names, descriptions, units and the other
-  names the parameter mappings give to a parameter (for example `Temperature` finds `T-K`).
+* The parameter list has a filter that matches names, descriptions and units, and the
+  beginnings of the other names the parameter mappings give to a parameter (for example
+  `Temperature` finds `T-K`). The name a parameter was found by is shown after it.
+* **Units.** A temperature, pressure or wind speed can be shown in another unit by the
+  name with that unit: `T-C` shows `T-K` in °C, `P-HPA` shows `P-PA` in hPa, `FF-KT` and
+  `FF-KMH` show `FF-MS` in knots and km/h. Typing such a name in the filter lists it, and
+  the *Unit* selector below the list switches between the units. A colour map made for
+  another unit is replaced by its counterpart, such as `Temperature (-33C..68C)` for
+  `Temperature (240K..341K)`. Deviations and differences of temperatures are not
+  converted.
 * A geometry missing from the producer file is marked: queries without an explicit
   geometry do not find it.
 
@@ -57,9 +65,14 @@ lightness (top to bottom), the greys in a strip of their own. Overlapping dots a
 slightly apart. A filter dims the colours whose name does not match; Enter chooses the
 first match.
 
-**Zoom.** The mouse wheel zooms the image around the pointer, dragging moves a zoomed
-image and a double click shows the whole image. Compared images zoom together. The grid
-cells are drawn as sharp squares, so single grid points can be inspected.
+**Zoom.** An image is shown one image pixel per screen pixel, smaller only when it does
+not fit; *Fit to view* scales small images up to the space available. The mouse wheel
+zooms the image around the pointer, dragging moves a zoomed image and a double click
+shows the whole image. Compared images zoom together. The grid cells are drawn as sharp
+squares, so single grid points can be inspected.
+
+**Rendering.** The map layers (coastline, land, sea, relief, lat/lon lines) are in a
+panel that is closed at first and remembers whether it was opened.
 
 **Views.** Image, Map (on the world map), Streams and Animated streams (for direction
 fields), Info (the content records and all message attributes, with a filter), sample
@@ -74,9 +87,10 @@ define is shown as *not defined*; its tooltip lists the defined ones.
 map, the legend says so — for example temperatures in °C with a Kelvin colour map — and
 offers the colour maps that fit, those named after the quantity first.
 
-The page shows the values as they are stored. Querydata stores temperatures in °C, but
-the content is identified with the FMI name T-K; only a query whose parameter mapping has
-a conversion function converts them.
+Querydata stores temperatures in °C, but the content is identified with the FMI name
+T-K. The values of a temperature tell the unit they are in (no temperature in Celsius is
+above 150, none in Kelvins below it), so T-K is shown in Kelvins and T-C in Celsius
+whichever way the values are stored. Other parameters are shown as they are stored.
 
 **Map area.** The Map view shows the area of the data (its lat/lon bounding box with a
 margin) at full resolution, or the whole world. *Download message* saves the GRIB
@@ -180,6 +194,7 @@ setting of earlier versions is refused at startup.
 | `ui/charts.js` | SVG line charts for the time series and the profile |
 | `ui/timebar.js` | Time and level bars |
 | `ui/settings.js` | Rendering options |
+| `ui/units.js` | Unit variants of the parameters (T-C for T-K) and their conversions |
 | `ui/info.js` | The Info view |
 | `ui/sample.js` | The sample value and coordinate tables |
 | `ui/colorpicker.js` | The picker of the named colours |
@@ -210,7 +225,7 @@ All calls are `GET /gui/api/NAME?...`. Errors are `{"error": "..."}` with status
 | `value` | `file`, `message`, `x`,`y` (0..1 in the image, with `projection`) or `lat`,`lon` | `{value, lat, lon, i, j}` |
 | `series` | `generation`, `parameter`, `levelId`, `level`, `forecastType`, `forecastNumber`, `geometry`, `lat`, `lon` | `{times[], values[]}` |
 | `profile` | as `series` without `level`, with `time` | `{levelType, levels[], values[]}` |
-| `stats` | `file`, `message`, `geometry`, [`projection`], [`file2`, `message2`] | `{count, missing, min, max, mean, step, range}` |
+| `stats` | `file`, `message`, `geometry`, [`projection`], [`file2`, `message2`], [`scale`, `offset`] | `{count, missing, min, max, mean, step, range}` |
 | `colormap` | `name` | `{name, stops: [[value, "AARRGGBB"], ...]}` |
 | `info` | `file`, `message` | producer, generation, file and content records, `Attributes: [[name, value], ...]` |
 | `sample` | `file`, `message`, [`i0`, `j0`, `size` (1..100, default 50)] | `{columns, rows, i0, j0, values[][], lat[][], lon[][], x[], y[]}`: a window of the grid in data order, `x`/`y` in the grid's own projection |
@@ -232,7 +247,9 @@ percentile of the absolute differences).
 `minLength`, `maxLength`, `streamColor`
 
 `difference` also needs `file2` and `message2` (the image is file2 − file) and takes
-`range`. `map` takes `area=lon0,lat0,lon1,lat1`: that part of the world at up to 1200
+`range`. `image`, `map`, `difference` and the `stats` call take `scale` and `offset`: the
+values are converted to value × scale + offset before they are coloured (a difference is
+only scaled). `map` takes `area=lon0,lat0,lon1,lat1`: that part of the world at up to 1200
 pixels on the longer side (without it the whole world at 1800 × 900). Missing options
 take the defaults of `api/meta`.
 

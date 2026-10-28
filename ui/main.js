@@ -16,6 +16,8 @@ import {fieldContent, levelContents, matchingContent, resolve} from './selection
 import {renderSample} from './sample.js';
 import {renderSettings, viewOptions} from './settings.js';
 import {renderLevelbar, renderTimebar} from './timebar.js';
+import {colorMapForUnit, conversion, needsStoredUnit, resolveParameter, shownUnit, storedTemperatureUnit,
+        unitChoices, unitVariants} from './units.js';
 
 // ### State
 
@@ -30,6 +32,9 @@ const views = [
   {value: 'message', label: 'Message bytes', frame: true},
 ];
 const viewInfo = (v) => views.find((x) => x.value === v) || views[0];
+
+// Views whose values are converted to the unit of the parameter shown
+const converted = new Set(['image', 'map', 'difference']);
 
 // Views drawn in the projection geometry
 const projected = new Set(['image', 'streams', 'streamsAnimation']);
@@ -59,6 +64,8 @@ const data = {
   generation: null,    // the selected generation record
   explorer: false,     // the server has the data explorer
   parameters: [],
+  variants: [],        // the unit variants of the parameters, such as T-C for T-K (units.js)
+  conversion: null,    // {scale, offset, convert} to the unit of the parameter shown, null = none
   contents: null,
   resolved: null,      // {choices, sel, field}
   content: null,       // {file, message, time}
@@ -154,6 +161,19 @@ function writeUrl(push = false)
     history[push ? 'pushState' : 'replaceState'](null, '', url);
 }
 
+// The parameter shown: {name, stored, variant}, null when there is none. The name may be a
+// unit variant of a stored parameter, such as T-C for T-K.
+function shownParameter()
+{
+  return resolveParameter(state.parameter, data.parameters, data.variants);
+}
+
+function storedParameter()
+{
+  const shown = shownParameter();
+  return shown ? shown.stored : '';
+}
+
 // The rendering options with the defaults filled in
 function currentOptions()
 {
@@ -223,19 +243,23 @@ async function loadGeneration()
   if (!data.generation)
   {
     data.parameters = [];
+    data.variants = [];
     data.contents = null;
     renderAll();
     return;
   }
   data.parameters = await api('parameters', {generation: data.generation.id}, {key: 'parameters', maxAge: 5000});
+  data.variants = unitVariants(data.parameters);
   await loadParameter();
 }
 
 async function loadParameter()
 {
-  const names = data.parameters.map((p) => p.name);
   const remembered = store.get('parameter.' + state.producer);
-  state.parameter = [state.parameter, remembered, ...preferredParameters].find((n) => n && names.includes(n)) || names[0] || '';
+  const exists = (n) => resolveParameter(n, data.parameters, data.variants) !== null;
+  state.parameter = [state.parameter, remembered, ...preferredParameters].find((n) => n && exists(n)) ||
+      (data.parameters[0] ? data.parameters[0].name : '');
+  data.conversion = null;
   if (!state.parameter)
   {
     data.contents = null;
@@ -243,10 +267,70 @@ async function loadParameter()
     return;
   }
   store.set('parameter.' + state.producer, state.parameter);
-  data.contents = await api('contents', {generation: data.generation.id, parameter: state.parameter},
+  data.contents = await api('contents', {generation: data.generation.id, parameter: storedParameter()},
                             {key: 'contents', maxAge: 5000});
+  await loadConversion();
+  matchColorMap();
   await loadCompare();
   applySelection();
+}
+
+// The units the temperatures of a generation are stored in: "generation/parameter" -> unit
+const storedUnits = new Map();
+
+// The conversion of the values to the unit of the parameter shown. A temperature named in
+// Kelvins may be stored in Celsius (querydata), so its values tell which it is.
+async function loadConversion()
+{
+  const shown = shownParameter();
+  if (!shown || !shown.variant)
+    return;
+  let from = null;
+  if (needsStoredUnit(shown.variant))
+  {
+    const key = `${data.generation.id}/${shown.stored}`;
+    from = storedUnits.get(key) || null;
+    const r = from ? null : resolve(data.contents.fields, state.sel);
+    const content = r && r.field ? fieldContent(r.field, r.sel.time) : null;
+    if (content)
+    {
+      const stats = await api('stats', {file: content.file, message: content.message, geometry: r.sel.geometry},
+                              {maxAge: 60000});
+      if (stats.count > 0)
+      {
+        from = storedTemperatureUnit(shown.variant, stats.mean);
+        storedUnits.set(key, from);
+      }
+    }
+  }
+  data.conversion = conversion(shown.variant, from);
+}
+
+// A colour map made for another unit, such as Kelvins when the values are shown in Celsius,
+// is replaced by its counterpart in the unit shown when there is one
+function matchColorMap()
+{
+  const unit = shownUnit(shownParameter(), data.parameters);
+  const counterpart = colorMapForUnit(currentOptions().colormap, data.meta.colorMaps, unit);
+  if (counterpart)
+  {
+    state.options.colormap = counterpart;
+    store.set('options', state.options);
+  }
+}
+
+// The request parameters of the unit conversion added to params
+function withConversion(params)
+{
+  if (data.conversion)
+    Object.assign(params, {scale: data.conversion.scale, offset: data.conversion.offset});
+  return params;
+}
+
+// A value in the unit shown
+function shownValue(value)
+{
+  return data.conversion && value !== null && value !== undefined ? data.conversion.convert(value) : value;
 }
 
 // The contents of generation B in compare mode
@@ -260,7 +344,7 @@ async function loadCompare()
   if (!b)
     return;
   data.compareGeneration = b;
-  data.compareContents = await api('contents', {generation: b.id, parameter: state.parameter},
+  data.compareContents = await api('contents', {generation: b.id, parameter: storedParameter()},
                                    {key: 'compare', maxAge: 5000});
 }
 
@@ -381,8 +465,9 @@ function field(label, help, control, note)
   return el('div', {class: 'field'}, el('label', {title: help}, label, control), note || null);
 }
 
-// The parameter list with a filter: the filter matches names, descriptions, units and
-// the other names of the parameters
+// The parameter list with a filter: the filter matches names, descriptions and units, and
+// the beginnings of the other names of the parameters. The unit variants of the parameters,
+// such as T-C for T-K, are listed when the filter matches their names.
 let parameterFilter = '';
 
 function parameterPicker()
@@ -390,17 +475,38 @@ function parameterPicker()
   const filter = el('input', {type: 'search', placeholder: `Filter ${data.parameters.length} parameters`,
                               'aria-label': 'Filter the parameters', value: parameterFilter});
   const list = el('select', {size: 8, class: 'parameter-list', 'aria-label': 'Parameter'});
-  const label = (p) => `${p.name} — ${p.description || ''}${p.units ? ` [${p.units}]` : ''}`;
+  const label = (p, alias) => `${p.name} — ${p.description || ''}${p.units ? ` [${p.units}]` : ''}` +
+      (alias ? ` (as ${alias})` : '');
+  const variantLabel = (v) => `${v.name} — ${v.stored} in ${v.units}`;
   const fill = () => {
     parameterFilter = filter.value;
     const f = filter.value.trim().toLowerCase();
-    const matches = data.parameters.filter((p) => !f ||
-        [p.name, p.description, p.units, ...(p.aliases || [])].some((s) => s && s.toLowerCase().includes(f)));
-    fillSelect(list, matches.map((p) => ({
-      value: p.name,
-      label: label(p),
-      title: (p.aliases || []).length ? `Also known as ${p.aliases.join(', ')}` : '',
-    })), state.parameter);
+    const has = (s) => s && s.toLowerCase().includes(f);
+    const options = [];
+    for (const p of data.parameters)
+    {
+      // An alias only by its beginning: a filter such as T-C must not find every alias
+      // containing it, such as MEPS-T-C-1 of T-K
+      const alias = f && !has(p.name) && !has(p.description) && !has(p.units)
+          ? (p.aliases || []).find((a) => a.toLowerCase().startsWith(f))
+          : null;
+      if (!f || has(p.name) || has(p.description) || has(p.units) || alias)
+      {
+        options.push({value: p.name, label: label(p, alias), exact: p.name.toLowerCase() === f,
+                      title: (p.aliases || []).length ? `Also known as ${p.aliases.join(', ')}` : ''});
+      }
+      for (const v of data.variants.filter((x) => x.stored === p.name))
+      {
+        if ((f && has(v.name)) || v.name === state.parameter)
+        {
+          options.push({value: v.name, label: variantLabel(v), exact: v.name.toLowerCase() === f,
+                        title: `The values of ${v.stored} converted to ${v.units}`});
+        }
+      }
+    }
+    // The name typed first, so that Enter chooses it
+    options.sort((a, b) => b.exact - a.exact);
+    fillSelect(list, options, state.parameter);
   };
   filter.addEventListener('input', fill);
   filter.addEventListener('keydown', (event) => {
@@ -474,7 +580,13 @@ function renderDataPanel()
     controls.push(el('div', {class: 'muted'}, 'The producer has no generations.'));
 
   if (data.parameters.length)
+  {
     controls.push(field('Parameter', 'FMI parameter name, description and unit', parameterPicker()));
+    const choices = unitChoices(storedParameter(), data.parameters, data.variants);
+    if (choices.length)
+      controls.push(field('Unit', 'The unit the values are shown in. The name of the parameter tells the unit, as in T-C for T-K in Celsius.',
+          select(choices.map((c) => ({value: c.name, label: `${c.label} (${c.name})`})), state.parameter, chooseParameter)));
+  }
 
   const r = data.resolved;
   if (r)
@@ -632,6 +744,19 @@ function renderViewPanel()
     parts.push(el('label', {class: 'check', title: 'Keep the projection when the geometry changes'}, lock, ' Keep projection'));
   }
 
+  if (viewInfo(state.view).image)
+  {
+    const fit = el('input', {type: 'checkbox', checked: fitToView});
+    fit.addEventListener('change', () => {
+      fitToView = fit.checked;
+      store.set('fitToView', fitToView);
+      resetZoom();
+      panes.forEach((p) => fitImage(p.img));
+    });
+    parts.push(el('label', {class: 'check', title: 'Scale small images up to the space available. Off: one image pixel per screen pixel, the mouse wheel zooms.'},
+        fit, ' Fit to view'));
+  }
+
   if (state.view === 'map')
   {
     parts.push(field('Map area', 'The area of the data, or the whole world',
@@ -675,7 +800,7 @@ function legacyUrl()
   const s = data.resolved.sel;
   const producer = data.producers.find((p) => p.name === state.producer);
   const attrs = {
-    pg: 'main', pi: producer ? producer.id : '', pn: state.producer, g: data.generation.id, p: state.parameter,
+    pg: 'main', pi: producer ? producer.id : '', pn: state.producer, g: data.generation.id, p: storedParameter(),
     lt: s.levelId, l: s.level, ft: s.forecastType, fn: s.forecastNumber, gm: s.geometry, t: s.time,
     f: data.content.file, m: data.content.message, pre: 'Image', pro: state.projection || s.geometry,
     tgt: 'Month', tg: s.time.slice(0, 6),
@@ -851,7 +976,7 @@ function renderParams(view, content)
     if (String(options[name]) !== String(data.meta.defaults[name]))
       params[name] = options[name];
   }
-  return params;
+  return converted.has(view) ? withConversion(params) : params;
 }
 
 // The area of the data on the map with a margin: "lon0,lat0,lon1,lat1", or null when the
@@ -912,7 +1037,7 @@ function renderViewer()
   if (view.sample)
   {
     renderSample(viewer, {file: data.content.file, message: data.content.message,
-                          geometry: data.resolved.sel.geometry, mode: view.sample, units: units(),
+                          geometry: data.resolved.sel.geometry, mode: view.sample, units: units(), convert: shownValue,
                           readout: renderReadout});
     replace($('legend'));
     return;
@@ -992,9 +1117,12 @@ function renderViewer()
   preloadNeighbours();
 }
 
-// Scales the image to the space available, also up: grids are often smaller than the
-// screen. The size is set in pixels so that a position in the image maps exactly to the
-// grid (no letterboxing).
+// Whether images are scaled up to the space available. Off by default: grids are often
+// smaller than the screen, and an image scaled up shows its grid cells as blocks.
+let fitToView = store.get('fitToView', false);
+
+// Scales the image to the space available: only down unless fitToView is on. The size is
+// set in pixels so that a position in the image maps exactly to the grid (no letterboxing).
 function fitImage(img)
 {
   const nw = img.naturalWidth;
@@ -1007,7 +1135,7 @@ function fitImage(img)
   const top = (viewport || img).getBoundingClientRect().top + window.scrollY;
   const reserve = compareActive() ? 60 : 110;
   const availableHeight = Math.max(240, window.innerHeight - top - reserve);
-  const scale = Math.min(availableWidth / nw, availableHeight / nh);
+  const scale = Math.min(availableWidth / nw, availableHeight / nh, fitToView ? Infinity : 1);
   const width = Math.floor(nw * scale) + 'px';
   const height = Math.floor(nh * scale) + 'px';
   img.style.width = width;
@@ -1165,12 +1293,14 @@ const hoverValue = debounce(async (pane, pos) => {
     if (projected.has(state.view) && state.projection)
       params.projection = state.projection;
     const a = await api('value', params, {key: 'hover'});
+    a.value = shownValue(a.value);
     let text = `${formatLatLon(a.lat, a.lon)}  ` +
         (a.i !== undefined ? `(i ${a.i.toFixed(1)}, j ${a.j.toFixed(1)})  ` : '');
     if (compareActive() && data.compareContent)
     {
       const b = await api('value', {file: data.compareContent.file, message: data.compareContent.message,
                                     lat: a.lat, lon: a.lon}, {key: 'hoverB'});
+      b.value = shownValue(b.value);
       const d = a.value !== null && b.value !== null ? b.value - a.value : null;
       text += `A ${formatValue(a.value, units())}  B ${formatValue(b.value, units())}  B−A ${formatValue(d, units())}`;
     }
@@ -1203,7 +1333,10 @@ function renderReadout(text)
 
 function units()
 {
-  const p = data.parameters.find((x) => x.name === state.parameter);
+  const shown = shownParameter();
+  if (shown && shown.variant)
+    return shown.variant.units;
+  const p = shown ? data.parameters.find((x) => x.name === shown.stored) : null;
   return p ? p.units : '';
 }
 
@@ -1278,14 +1411,14 @@ async function renderPoint()
   replace(body, el('div', {class: 'point-head'}, el('span', {class: 'mono'}, formatLatLon(lat, lon)), close),
       el('div', {class: 'charts'}, series, profile));
 
-  const common = {generation: data.generation.id, parameter: state.parameter, levelId: s.levelId,
+  const common = {generation: data.generation.id, parameter: storedParameter(), levelId: s.levelId,
                   forecastType: s.forecastType, forecastNumber: s.forecastNumber, geometry: s.geometry, lat, lon};
   const u = units();
 
   try
   {
     const ts = await api('series', {...common, level: s.level}, {key: 'series', maxAge: 5000});
-    const points = ts.times.map((t, i) => [parseTime(t).getTime(), ts.values[i]]);
+    const points = ts.times.map((t, i) => [parseTime(t).getTime(), shownValue(ts.values[i])]);
     const ticks = points.length ? timeTicks(points[0][0], points[points.length - 1][0]) : undefined;
     lineChart(series, {
       title: `${state.parameter} at level ${s.level}${u ? ` [${u}]` : ''}`,
@@ -1314,7 +1447,7 @@ async function renderPoint()
     const lt = data.contents.levelTypes[s.levelId] || {};
     lineChart(profile, {
       title: `Profile at ${formatShortTime(s.time)} UTC`,
-      points: pr.levels.map((l, i) => [l, pr.values[i]]),
+      points: pr.levels.map((l, i) => [l, shownValue(pr.values[i])]),
       vertical: true,
       invertKeys: levelsGrowDown(lt),
       mark: s.level,
@@ -1357,7 +1490,7 @@ const renderLegend = debounce(async () => {
                       file2: data.compareContent.file, message2: data.compareContent.message};
       if (state.projection)
         params.projection = state.projection;
-      const stats = await api('stats', params, {key: 'legend', maxAge: 60000});
+      const stats = await api('stats', withConversion(params), {key: 'legend', maxAge: 60000});
       differenceLegend(legend, stats.range, u, 'B − A');
     }
     else if (o.colormap && o.colormap !== 'None')
@@ -1367,9 +1500,9 @@ const renderLegend = debounce(async () => {
         params.projection = state.projection;
       const [colormap, stats] = await Promise.all([
         api('colormap', {name: o.colormap}, {maxAge: 60000}),
-        api('stats', params, {maxAge: 60000}).catch(() => null),
+        api('stats', withConversion(params), {maxAge: 60000}).catch(() => null),
       ]);
-      const parameter = data.parameters.find((x) => x.name === state.parameter);
+      const parameter = data.parameters.find((x) => x.name === storedParameter());
       colorMapLegend(legend, colormap, u, stats, data.meta.colorMapRanges || {}, (name) => setOption('colormap', name),
                      parameter ? parameter.description : '');
     }
@@ -1378,7 +1511,7 @@ const renderLegend = debounce(async () => {
       const params = {file: data.content.file, message: data.content.message, geometry: data.resolved.sel.geometry};
       if (state.projection && projected.has(state.view))
         params.projection = state.projection;
-      const stats = await api('stats', params, {key: 'legend', maxAge: 60000});
+      const stats = await api('stats', withConversion(params), {key: 'legend', maxAge: 60000});
       hsvLegend(legend, stats, o, u);
     }
   }

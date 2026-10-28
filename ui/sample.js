@@ -9,7 +9,8 @@ import {formatLatLon, formatValue} from './format.js';
 // Where each field's window was, so that moving in time keeps it
 const windows = new Map();
 
-// options = {file, message, geometry, mode: 'values' | 'coordinates', units, readout(text)}
+// options = {file, message, geometry, mode: 'values' | 'coordinates', units, convert(value) to the
+// unit shown (optional), readout(text)}
 export async function renderSample(container, options)
 {
   const key = `${options.geometry}`;
@@ -30,6 +31,9 @@ export async function renderSample(container, options)
     replace(box, el('div', {class: 'error'}, String(error.message || error)));
     return;
   }
+
+  if (options.convert)
+    data.values = data.values.map((row) => row.map(options.convert));
 
   const width = data.values.length ? data.values[0].length : 0;
   const height = data.values.length;

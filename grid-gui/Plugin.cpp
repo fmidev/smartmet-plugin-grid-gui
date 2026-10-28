@@ -17,6 +17,7 @@
 #include <macgyver/TimeFormatter.h>
 #include <macgyver/FastMath.h>
 #include <algorithm>
+#include <cmath>
 #include <boost/bind/bind.hpp>
 #include <macgyver/DateTime.h>
 #include <boost/lexical_cast.hpp>
@@ -818,6 +819,31 @@ bool getFieldValues(DataServer::ServiceInterface& dataServer,T::FileId fileId,T:
     throw Fmi::Exception(BCP,"Data fetching failed!");
   return true;
 }
+/*! \brief Converts the values to another unit: value * scale + offset. Zeros stay zeros
+    when they mean missing values. */
+
+void convertValues(T::ParamValue_vec& values,double scale,double offset,bool zeroIsMissing = false)
+{
+  if (scale == 1 && offset == 0)
+    return;
+  for (auto& v : values)
+  {
+    if (v != ParamValueMissing && !(zeroIsMissing && v == 0))
+      v = C_FLOAT(v*scale + offset);
+  }
+}
+
+/*! \brief The unit conversion of the new user interface: a number, the default when not given. */
+
+double conversionValue(const std::string& str,double defaultValue)
+{
+  if (str.empty())
+    return defaultValue;
+  double value = toDouble(str);
+  if (!std::isfinite(value))
+    throw Fmi::Exception(BCP,"Invalid unit conversion").addParameter("Value",str);
+  return value;
+}
 }  // namespace
 
 
@@ -837,7 +863,10 @@ bool Plugin::getImageValues(const ImagePaintParameters& params,T::GeometryId& ge
       return false;
 
     if (params.fileId2 == 0)
+    {
+      convertValues(values,params.valueScale,params.valueOffset);
       return true;
+    }
 
     // A difference image: the second field minus the first one. The fields are of the
     // same parameter and geometry, so their grids are identical.
@@ -858,6 +887,8 @@ bool Plugin::getImageValues(const ImagePaintParameters& params,T::GeometryId& ge
       else
         values[t] = ParamValueMissing;
     }
+    // The offset of a unit conversion cancels out in a difference
+    convertValues(values,params.valueScale,0);
     return true;
   }
   catch (...)
@@ -2716,6 +2747,12 @@ int Plugin::page_image(const Spine::Reactor & /*theReactor*/,
     if (!fileId2Str.empty())
       hash += ":Difference:" + fileId2Str + ":" + messageIndex2Str + ":" + differenceRangeStr;
 
+    // A unit conversion of the new user interface
+    std::string valueScaleStr = session.getAttribute(ATTR_VALUE_SCALE);
+    std::string valueOffsetStr = session.getAttribute(ATTR_VALUE_OFFSET);
+    if (!valueScaleStr.empty() || !valueOffsetStr.empty())
+      hash += ":Unit:" + valueScaleStr + ":" + valueOffsetStr;
+
     const std::size_t seed = Fmi::hash(hash);
     std::string seedStr = std::to_string(seed);
     theResponse.setHeader("ETag",seedStr);
@@ -2771,6 +2808,8 @@ int Plugin::page_image(const Spine::Reactor & /*theReactor*/,
         if (!differenceRangeStr.empty())
           params.differenceRange = toDouble(differenceRangeStr);
       }
+      params.valueScale = conversionValue(valueScaleStr,1);
+      params.valueOffset = conversionValue(valueOffsetStr,0);
 
       saveImage(params);
 
@@ -3048,6 +3087,12 @@ int Plugin::page_map(const Spine::Reactor & /*theReactor*/,
     if (area)
       hash += ":Area:" + areaStr;
 
+    // A unit conversion of the new user interface
+    const std::string valueScaleStr = session.getAttribute(ATTR_VALUE_SCALE);
+    const std::string valueOffsetStr = session.getAttribute(ATTR_VALUE_OFFSET);
+    if (!valueScaleStr.empty() || !valueOffsetStr.empty())
+      hash += ":Unit:" + valueScaleStr + ":" + valueOffsetStr;
+
     const std::size_t seed = Fmi::hash(hash);
     std::string seedStr = std::to_string(seed);
     theResponse.setHeader("ETag",seedStr);
@@ -3079,6 +3124,8 @@ int Plugin::page_map(const Spine::Reactor & /*theReactor*/,
         theResponse.setHeader("Content-Type", "text/html; charset=UTF-8");
         return HTTP::Status::ok;
       }
+
+      convertValues(values,conversionValue(valueScaleStr,1),conversionValue(valueOffsetStr,0),isZeroMissing(missingStr));
 
       uint landBorder = getColorValue(landBorderStr);
 

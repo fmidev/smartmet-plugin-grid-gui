@@ -1,0 +1,2 @@
+GET /gui/api/stats?file=4&message=3660&geometry=5901&scale=1&offset=273.15 HTTP/1.0
+

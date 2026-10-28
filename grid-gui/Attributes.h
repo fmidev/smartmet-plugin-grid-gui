@@ -56,3 +56,5 @@
 #define ATTR_MESSAGE_INDEX2      "m2"
 #define ATTR_DIFFERENCE_RANGE    "dr"
 #define ATTR_MAP_AREA            "ma"
+#define ATTR_VALUE_SCALE         "vs"
+#define ATTR_VALUE_OFFSET        "vo"

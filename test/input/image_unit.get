@@ -1,0 +1,3 @@
+GET /gui/image?file=4&message=3660&geometry=5901&colormap=Dali%20Temperature%20(Celcius)&scale=1&offset=-273.15 HTTP/1.0
+X-Test-Headers: Content-Type
+

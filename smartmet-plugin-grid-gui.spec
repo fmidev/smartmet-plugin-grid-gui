@@ -4,7 +4,7 @@
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
 Version: 26.10.28
-Release: 1%{?dist}.fmi
+Release: 2%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
 URL: https://github.com/fmidev/smartmet-plugin-grid-gui
@@ -81,6 +81,14 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/%{DIRNAME}
 
 %changelog
+* Wed Oct 28 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> - 26.10.28-2.fmi
+- /gui: parameters can be shown in another unit by name (T-C for T-K, P-HPA, FF-KT, FF-KMH) or with a Unit selector; images, legends and values are converted, and a colour map of another unit is replaced by its counterpart
+- /gui: temperatures stored in Celsius under T-K (querydata) are detected from their values
+- /gui: the parameter filter matches aliases only by their beginning, so T-C no longer finds T-K through aliases such as MEPS-T-C-1
+- /gui: images are no longer scaled up to fill the view by default; a Fit to view option does that
+- /gui: the Map layers panel is closed at first and remembers its state
+- image, map, difference and api/stats take scale and offset for unit conversions
+
 * Wed Oct 28 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> - 26.10.28-1.fmi
 - /gui: drop-down lists with only one choice are disabled and shown grayed
 

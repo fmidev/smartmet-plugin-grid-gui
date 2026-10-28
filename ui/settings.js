@@ -2,7 +2,7 @@
 // rendering pages (Gui.cpp), the defaults come from api/meta.
 
 import {colorPicker, closeColorPicker} from './colorpicker.js';
-import {el, replace, select} from './dom.js';
+import {el, replace, select, store} from './dom.js';
 
 const positions = [
   {value: '0', label: 'Off'},
@@ -26,6 +26,9 @@ export const viewOptions = {
 viewOptions.streamsAnimation = viewOptions.streams;
 viewOptions.difference = viewOptions.image.filter((o) => !['colormap', 'hue', 'saturation', 'blur'].includes(o));
 
+// Whether the map layers are shown: closed at first, so that the panel is short for new users
+let layersOpen = store.get('layersOpen', false);
+
 function colorSelect(colors, value, onchange, label)
 {
   return colorPicker(colors, value, onchange, label);
@@ -46,6 +49,17 @@ function slider(min, max, step, value, onchange, attrs = {})
 function row(label, help, ...controls)
 {
   return el('div', {class: 'row'}, el('label', {title: help}, label), el('div', {class: 'controls'}, controls));
+}
+
+// The map layers in a panel that stays open or closed when the options are drawn again
+function layerDetails(layers)
+{
+  const details = el('details', {class: 'layers', open: layersOpen}, el('summary', {}, 'Map layers'), layers);
+  details.addEventListener('toggle', () => {
+    layersOpen = details.open;
+    store.set('layersOpen', layersOpen);
+  });
+  return details;
 }
 
 // Renders the options of the view. set(name, value) changes one option.
@@ -123,6 +137,6 @@ export function renderSettings(container, meta, options, view, set)
 
   replace(container,
       parts,
-      layers.length ? el('details', {class: 'layers', open: true}, el('summary', {}, 'Map layers'), layers) : null,
+      layers.length ? layerDetails(layers) : null,
       el('div', {class: 'buttons'}, reset));
 }
