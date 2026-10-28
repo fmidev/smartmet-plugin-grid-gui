@@ -221,7 +221,8 @@ input.hue { background: linear-gradient(to right, red, yellow, lime, cyan, blue,
 .chart .tick { fill: var(--muted); font-size: 10px; font-family: var(--mono); }
 .chart .line { fill: none; stroke: var(--chart-line); stroke-width: 1.6; }
 .chart .dot { fill: var(--chart-line); }
-.chart .mark { stroke: var(--cell-hover); stroke-width: 1.2; stroke-dasharray: 3 2; }
+.chart .mark { stroke: var(--cell-hover); stroke-width: 1.6; }
+.chart .mark-ring { fill: none; stroke: var(--cell-hover); stroke-width: 2; }
 .chart .cursor { stroke: var(--muted); stroke-width: 1; }
 .chart .overlay { fill: transparent; }
 .chart-title { font-size: 12px; font-weight: 600; }

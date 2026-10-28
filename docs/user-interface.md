@@ -56,8 +56,9 @@ the image has loaded.
 
 **Values.** Hovering the image shows the coordinates, the grid point (i, j) and the value
 under the pointer. A click pins the point: the page then shows its time series and, for
-fields with several levels, its vertical profile. Clicking a chart selects that time or
-level.
+fields with several levels, its vertical profile. The charts mark the selected time and
+level and follow them, also while the times are played. Hovering a chart previews that
+time or level in the image, and clicking it selects it.
 
 **Colours.** The named colours (coastline, land, sea, lat/lon lines, streams) are chosen
 from a picker that shows every named colour as a dot at its hue (left to right) and

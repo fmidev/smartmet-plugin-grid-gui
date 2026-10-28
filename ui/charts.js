@@ -12,7 +12,9 @@ import {formatTick, formatValue, niceTicks} from './format.js';
 //   mark: a highlighted key (the selected time or level)
 //   title, describe: point -> text for the readout
 //   onClick: point -> void
+//   onHover: point -> void, null when the pointer leaves the chart
 // }
+// Returns {setMark(key)}, which moves the mark without drawing the chart again.
 export function lineChart(container, spec)
 {
   const width = 360;
@@ -27,7 +29,7 @@ export function lineChart(container, spec)
   {
     replace(container, spec.title ? el('div', {class: 'chart-title'}, spec.title) : null,
         el('div', {class: 'muted small'}, 'No values at this point'));
-    return;
+    return {setMark: () => {}};
   }
 
   // The ranges of the keys and the values
@@ -101,12 +103,10 @@ export function lineChart(container, spec)
   }
   root.append(svg('rect', {x: m.left, y: m.top, width: w, height: h, class: 'frame'}));
 
-  if (spec.mark !== undefined && spec.mark !== null)
-  {
-    const pos = keyPos(spec.mark);
-    root.append(spec.vertical ? svg('line', {x1: m.left, x2: m.left + w, y1: pos, y2: pos, class: 'mark'})
-                              : svg('line', {x1: pos, x2: pos, y1: m.top, y2: m.top + h, class: 'mark'}));
-  }
+  // The mark: a line at the key, and a ring around its point when it has a value
+  const markLine = svg('line', {class: 'mark', visibility: 'hidden'});
+  const markRing = svg('circle', {r: 4.5, class: 'mark-ring', visibility: 'hidden'});
+  root.append(markLine);
 
   // The line, broken at missing values
   let d = '';
@@ -128,6 +128,28 @@ export function lineChart(container, spec)
     const [x, y] = xy(p);
     root.append(svg('circle', {cx: x, cy: y, r: valid.length > 60 ? 1.2 : 2.2, class: 'dot'}));
   }
+  root.append(markRing);
+
+  const setMark = (key) => {
+    const p = key === undefined || key === null ? null : spec.points.find((x) => x[0] === key);
+    const inside = key !== undefined && key !== null && key >= kMin && key <= kMax;
+    markLine.setAttribute('visibility', inside ? 'visible' : 'hidden');
+    markRing.setAttribute('visibility', p && isValid(p[1]) ? 'visible' : 'hidden');
+    if (inside)
+    {
+      const pos = keyPos(key);
+      const line = spec.vertical ? {x1: m.left, x2: m.left + w, y1: pos, y2: pos}
+                                 : {x1: pos, x2: pos, y1: m.top, y2: m.top + h};
+      Object.entries(line).forEach(([k, v]) => markLine.setAttribute(k, v));
+    }
+    if (p && isValid(p[1]))
+    {
+      const [x, y] = xy(p);
+      markRing.setAttribute('cx', x);
+      markRing.setAttribute('cy', y);
+    }
+  };
+  setMark(spec.mark);
 
   // The readout of the point nearest to the pointer
   const readout = el('div', {class: 'chart-readout small'}, ' ');
@@ -136,6 +158,7 @@ export function lineChart(container, spec)
   const overlay = svg('rect', {x: m.left, y: m.top, width: w, height: h, class: 'overlay'});
   root.append(overlay);
 
+  let hovered = null;
   const nearest = (event) => {
     const r = root.getBoundingClientRect();
     const pointer = spec.vertical ? (event.clientY - r.top) / r.height * height
@@ -165,10 +188,16 @@ export function lineChart(container, spec)
       Object.entries({x1: pos, x2: pos, y1: m.top, y2: m.top + h}).forEach(([k, v]) => cursor.setAttribute(k, v));
     cursor.setAttribute('visibility', 'visible');
     readout.textContent = spec.describe ? spec.describe(p) : `${keyLabel(p[0])}: ${formatValue(p[1])}`;
+    if (spec.onHover && p !== hovered)
+      spec.onHover(p);
+    hovered = p;
   });
   overlay.addEventListener('mouseleave', () => {
     cursor.setAttribute('visibility', 'hidden');
     readout.textContent = ' ';
+    if (spec.onHover)
+      spec.onHover(null);
+    hovered = null;
   });
   if (spec.onClick)
   {
@@ -181,4 +210,5 @@ export function lineChart(container, spec)
   }
 
   replace(container, spec.title ? el('div', {class: 'chart-title'}, spec.title) : null, root, readout);
+  return {setMark};
 }

@@ -131,11 +131,10 @@ export function timeTicks(min, max, count = 5)
   const ticks = [];
   for (let t = Math.ceil(min / step) * step; t <= max; t += step)
     ticks.push(t);
-  const daily = step >= 24 * hour;
+  // The date at midnight and the hour otherwise: a date on every label does not fit
   ticks.format = (t) => {
     const d = new Date(t);
-    const date = `${d.getUTCDate()}.${d.getUTCMonth() + 1}.`;
-    return daily ? date : `${date} ${pad(d.getUTCHours())}:00`;
+    return d.getUTCHours() === 0 ? `${d.getUTCDate()}.${d.getUTCMonth() + 1}.` : `${pad(d.getUTCHours())}:00`;
   };
   return ticks;
 }

@@ -1418,6 +1418,10 @@ function showMarker()
   }
 }
 
+// The charts of the pinned point and what they show. A new time only moves the mark of the
+// time series and a new level that of the profile, so the charts follow an animation.
+const pointCharts = {head: '', seriesKey: '', profileKey: '', series: null, profile: null};
+
 async function renderPoint()
 {
   const section = $('point');
@@ -1425,69 +1429,113 @@ async function renderPoint()
   if (!state.point || !data.resolved || !data.resolved.field)
   {
     section.hidden = true;
+    Object.assign(pointCharts, {head: '', seriesKey: '', profileKey: '', series: null, profile: null});
     return;
   }
   section.hidden = false;
   const s = data.resolved.sel;
   const {lat, lon} = state.point;
-  const close = el('button', {type: 'button', class: 'small'}, 'Remove point (Esc)');
-  close.addEventListener('click', unpin);
 
-  const series = el('div', {class: 'chart-box'}, el('div', {class: 'muted small'}, 'Loading…'));
-  const profile = el('div', {class: 'chart-box'});
-  replace(body, el('div', {class: 'point-head'}, el('span', {class: 'mono'}, formatLatLon(lat, lon)), close),
-      el('div', {class: 'charts'}, series, profile));
+  // The point and its chart boxes, kept while the point stays the same
+  const head = `${lat},${lon}`;
+  if (pointCharts.head !== head || !body.querySelector('.charts'))
+  {
+    const close = el('button', {type: 'button', class: 'small'}, 'Remove point (Esc)');
+    close.addEventListener('click', unpin);
+    replace(body, el('div', {class: 'point-head'}, el('span', {class: 'mono'}, formatLatLon(lat, lon)), close),
+        el('div', {class: 'charts'}, el('div', {class: 'chart-box series'}, el('div', {class: 'muted small'}, 'Loading…')),
+           el('div', {class: 'chart-box profile'})));
+    Object.assign(pointCharts, {head, seriesKey: '', profileKey: '', series: null, profile: null});
+  }
+  const seriesBox = body.querySelector('.chart-box.series');
+  const profileBox = body.querySelector('.chart-box.profile');
 
   const common = {generation: data.generation.id, parameter: storedParameter(), levelId: s.levelId,
                   forecastType: s.forecastType, forecastNumber: s.forecastNumber, geometry: s.geometry, lat, lon};
   const u = units();
+  const unitKey = `${state.parameter}/${data.conversion ? data.conversion.scale + '/' + data.conversion.offset : ''}`;
 
-  try
+  // The time series: drawn again only when something else than the time changes
+  const seriesKey = JSON.stringify([common, s.level, unitKey]);
+  if (seriesKey === pointCharts.seriesKey && pointCharts.series)
+    pointCharts.series.setMark(parseTime(s.time).getTime());
+  else
   {
-    const ts = await api('series', {...common, level: s.level}, {key: 'series', maxAge: 5000});
-    const points = ts.times.map((t, i) => [parseTime(t).getTime(), shownValue(ts.values[i])]);
-    const ticks = points.length ? timeTicks(points[0][0], points[points.length - 1][0]) : undefined;
-    lineChart(series, {
-      title: `${state.parameter} at level ${s.level}${u ? ` [${u}]` : ''}`,
-      points,
-      keyFormat: ticks && ticks.format,
-      keyTicks: ticks,
-      mark: parseTime(s.time).getTime(),
-      describe: (p) => `${formatShortTime(isoTime(p[0]))} UTC: ${formatValue(p[1], u)}`,
-      onClick: (p) => selectTime(isoTime(p[0]), true),
-    });
-  }
-  catch (error)
-  {
-    replace(series);
-    report(error);
+    pointCharts.seriesKey = seriesKey;
+    pointCharts.series = null;
+    try
+    {
+      const ts = await api('series', {...common, level: s.level}, {key: 'series', maxAge: 5000});
+      if (pointCharts.seriesKey !== seriesKey)
+        return;
+      const points = ts.times.map((t, i) => [parseTime(t).getTime(), shownValue(ts.values[i])]);
+      const ticks = points.length ? timeTicks(points[0][0], points[points.length - 1][0]) : undefined;
+      pointCharts.series = lineChart(seriesBox, {
+        title: `${state.parameter} at level ${s.level}${u ? ` [${u}]` : ''}`,
+        points,
+        keyFormat: ticks && ticks.format,
+        keyTicks: ticks,
+        mark: parseTime(data.resolved.sel.time).getTime(),
+        describe: (p) => `${formatShortTime(isoTime(p[0]))} UTC: ${formatValue(p[1], u)}`,
+        onClick: (p) => selectTime(isoTime(p[0]), true),
+        onHover: (p) => preview(p ? {time: isoTime(p[0])} : null),
+      });
+    }
+    catch (error)
+    {
+      if (isAbort(error))
+        return;
+      pointCharts.seriesKey = '';
+      replace(seriesBox);
+      report(error);
+    }
   }
 
   if (data.resolved.choices.levels.length < 2)
   {
-    replace(profile);
+    pointCharts.profileKey = '';
+    pointCharts.profile = null;
+    replace(profileBox);
     return;
   }
+
+  // The profile: drawn again only when something else than the level changes. The old
+  // profile stays until the new one has loaded.
+  const profileKey = JSON.stringify([common, s.time, unitKey]);
+  if (profileKey === pointCharts.profileKey && pointCharts.profile)
+  {
+    pointCharts.profile.setMark(s.level);
+    return;
+  }
+  pointCharts.profileKey = profileKey;
   try
   {
     const pr = await api('profile', {...common, time: s.time}, {key: 'profile', maxAge: 5000});
+    if (pointCharts.profileKey !== profileKey)
+      return;
     const lt = data.contents.levelTypes[s.levelId] || {};
-    lineChart(profile, {
+    pointCharts.profile = lineChart(profileBox, {
       title: `Profile at ${formatShortTime(s.time)} UTC`,
       points: pr.levels.map((l, i) => [l, shownValue(pr.values[i])]),
       vertical: true,
       invertKeys: levelsGrowDown(lt),
-      mark: s.level,
+      mark: data.resolved.sel.level,
       describe: (p) => `Level ${p[0]}${lt.units ? ' ' + lt.units : ''}: ${formatValue(p[1], u)}`,
       onClick: (p) => {
         state.sel.level = p[0];
+        pushNext = true;
         applySelection();
       },
+      onHover: (p) => preview(p ? levelContents(data.contents.fields, data.resolved.sel).find((l) => l.level === p[0]) || null : null),
     });
   }
   catch (error)
   {
-    replace(profile);
+    if (isAbort(error))
+      return;
+    pointCharts.profileKey = '';
+    pointCharts.profile = null;
+    replace(profileBox);
     report(error);
   }
 }
