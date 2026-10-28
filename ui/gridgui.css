@@ -74,6 +74,11 @@ button.small, .button.small { font-size: 12px; padding: 2px 8px; }
 button.link { border: none; background: none; color: var(--accent); padding: 0; }
 :focus-visible { outline: 2px solid var(--accent); outline-offset: 1px; }
 select { max-width: 100%; }
+/* A drop-down list with only one choice: shown grayed and without the arrow */
+select:disabled, .field > label > select:disabled {
+  background: var(--bg); color: var(--muted); border-style: dashed; cursor: default;
+  appearance: none; opacity: 1;
+}
 select.wide, .field select, .field input[type=search] { width: 100%; }
 
 /* Layout */

@@ -31,6 +31,7 @@ private too ([§4](#4-configuration)).
 selection (level type, level, forecast type, ensemble member, geometry) offers only what
 the chosen parameter has. Each choice keeps as much of the previous selection as still
 exists, so switching the generation or the parameter keeps the level and the time.
+A list with only one choice is grayed out: it shows the value, which cannot be changed.
 
 * The producer list shows the age of each producer's newest ready generation.
 * By default the newest **ready** generation is shown; a generation still being loaded is

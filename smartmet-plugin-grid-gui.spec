@@ -3,7 +3,7 @@
 %define SPECNAME smartmet-plugin-%{DIRNAME}
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
-Version: 26.10.26
+Version: 26.10.28
 Release: 1%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
@@ -81,6 +81,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/%{DIRNAME}
 
 %changelog
+* Wed Oct 28 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> - 26.10.28-1.fmi
+- /gui: drop-down lists with only one choice are disabled and shown grayed
+
 * Mon Oct 26 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> - 26.10.26-1.fmi
 - A request waiting for an image another request generates gives up after 30 seconds and generates it itself; map and streams requests used to wait forever if the generation failed
 - Map and image pages split into smaller functions

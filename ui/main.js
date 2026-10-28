@@ -490,20 +490,18 @@ function renderDataPanel()
         field('Level type', typeHelp('Level type', s.levelId, data.contents.levelTypes[s.levelId], data.meta.levelTypes),
             select(c.levelIds.map((v) => ({value: v, label: describeLevelType(v),
                                           title: typeHelp('Level type', v, data.contents.levelTypes[v], data.meta.levelTypes)})),
-                   s.levelId, choose('levelId'), {disabled: c.levelIds.length < 2,
-                                                  title: typeHelp('Level type', s.levelId, data.contents.levelTypes[s.levelId], data.meta.levelTypes)})),
-        field('Level', 'The vertical level', select(c.levels.map((v) => ({value: v, label: String(v)})), s.level, choose('level'), {disabled: c.levels.length < 2}))));
+                   s.levelId, choose('levelId'), {title: typeHelp('Level type', s.levelId, data.contents.levelTypes[s.levelId], data.meta.levelTypes)})),
+        field('Level', 'The vertical level', select(c.levels.map((v) => ({value: v, label: String(v)})), s.level, choose('level')))));
     controls.push(el('div', {class: 'field-row'},
         field('Forecast type', typeHelp('Forecast type', s.forecastType, data.contents.forecastTypes[s.forecastType], data.meta.forecastTypes),
             select(c.forecastTypes.map((v) => ({value: v, label: describeForecastType(v),
                                                title: typeHelp('Forecast type', v, data.contents.forecastTypes[v], data.meta.forecastTypes)})),
-                   s.forecastType, choose('forecastType'), {disabled: c.forecastTypes.length < 2,
-                                                           title: typeHelp('Forecast type', s.forecastType, data.contents.forecastTypes[s.forecastType], data.meta.forecastTypes)})),
+                   s.forecastType, choose('forecastType'), {title: typeHelp('Forecast type', s.forecastType, data.contents.forecastTypes[s.forecastType], data.meta.forecastTypes)})),
         field('Member', 'The ensemble member (forecast number). −1: the field is not an ensemble member. 0: the control forecast of an ensemble.',
             select(c.forecastNumbers.map((v) => ({value: v, label: describeMember(v)})), s.forecastNumber, choose('forecastNumber'),
-                   {disabled: c.forecastNumbers.length < 2, title: describeMember(s.forecastNumber)}))));
+                   {title: describeMember(s.forecastNumber)}))));
     const geometry = data.contents.geometries[s.geometry] || {};
-    controls.push(field('Geometry', 'The grid of the field', select(c.geometries.map((v) => ({value: v, label: describeGeometry(v)})), s.geometry, choose('geometry'), {disabled: c.geometries.length < 2}),
+    controls.push(field('Geometry', 'The grid of the field', select(c.geometries.map((v) => ({value: v, label: describeGeometry(v)})), s.geometry, choose('geometry')),
         geometry.searchConfigured === false
             ? el('div', {class: 'note small warn'}, 'Not in the producer file: queries without an explicit geometry do not find this grid.')
             : null));

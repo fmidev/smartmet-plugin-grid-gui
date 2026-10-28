@@ -61,7 +61,9 @@ export function svg(tag, attrs = {}, ...children)
   return node;
 }
 
-// A <select> with the given options [{value, label, title, disabled}] or [value, ...]
+// A <select> with the given options [{value, label, title, disabled}] or [value, ...].
+// A drop-down list with fewer than two choices is disabled: it shows the value but it
+// cannot be changed.
 export function select(options, selected, onchange, attrs = {})
 {
   const node = el('select', attrs);
@@ -86,6 +88,8 @@ export function fillSelect(node, options, selected)
     else
       node.append(optionElement(option, selected));
   }
+  if (!node.multiple && node.size <= 1)
+    node.disabled = Array.from(node.options).filter((o) => !o.disabled).length < 2;
   return node;
 }
 
