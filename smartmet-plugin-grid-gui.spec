@@ -3,8 +3,8 @@
 %define SPECNAME smartmet-plugin-%{DIRNAME}
 Summary: SmartMet grid-gui plugin
 Name: %{SPECNAME}
-Version: 26.10.28
-Release: 3%{?dist}.fmi
+Version: 26.11.6
+Release: 1%{?dist}.fmi
 License: MIT
 Group: SmartMet/Plugins
 URL: https://github.com/fmidev/smartmet-plugin-grid-gui
@@ -81,6 +81,9 @@ rm -rf $RPM_BUILD_ROOT
 %{_datadir}/smartmet/%{DIRNAME}
 
 %changelog
+* Fri Nov 6 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> - 26.11.6-1.fmi
+- Include the headers used directly instead of relying on transitive includes
+
 * Wed Oct 28 2026 Mika Heiskanen <mika.heiskanen@fmi.fi> - 26.10.28-3.fmi
 - /gui: playing the times no longer blinks: a new time changes the images in place instead of rebuilding the viewer
 - /gui: the time series and profile of the pinned point follow the selected time and level: their marks move in place, also while playing, and hovering them previews that time or level in the image

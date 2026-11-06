@@ -7,6 +7,7 @@
 #include "Plugin.h"
 #include "Attributes.h"
 
+#include <boost/algorithm/string.hpp>
 #include <grid-files/common/GeneralFunctions.h>
 #include <grid-files/common/ImagePaint.h>
 #include <grid-files/identification/GridDef.h>
