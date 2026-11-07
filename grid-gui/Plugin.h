@@ -297,6 +297,8 @@ class Plugin : public SmartMetPlugin
     /*! \brief The values of an image: the field in its own geometry, or interpolated to
      *  the projection geometry. With params.fileId2 the values are fileId2 - fileId.
      *  Returns false if the values or the geometry are not available. */
+    void checkProjection(T::GeometryId geometryId);
+    void checkImageGeometry(const ImagePaintParameters& params,T::GeometryId geometryId);
     bool getImageValues(const ImagePaintParameters& params,T::GeometryId& geometryId,uint& columns,uint& rows,T::ParamValue_vec& values);
 
     // ### The new user interface at /gui (Gui.cpp) and its JSON API (Api.cpp)
@@ -378,6 +380,7 @@ class Plugin : public SmartMetPlugin
     time_t                    itsProducerFile_modificationTime; //!< Last-modified time of itsProducerFile; used to detect reload need.
     std::set<std::string>     itsProducerList;                  //!< Set of producer names loaded from itsProducerFile (empty = show all).
     std::set<int>             itsBlockedProjections;            //!< Geometry IDs excluded from the projection selector (too large to display).
+    uint                      itsMaxProjectionPixels = 25000000; //!< Largest projection (columns * rows) an image may be drawn in.
 
     std::string               itsUiUrl;                         //!< URL of the new user interface (default /gui).
     std::string               itsUiDirectory;                   //!< Directory of the files of the new user interface.

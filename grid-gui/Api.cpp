@@ -1082,6 +1082,8 @@ Json::Value Plugin::api_value(const HTTP::Request& theRequest)
       if (!Identification::gridDef.getGridDimensionsByGeometryId(projectionId, cols, rows) ||
           cols == 0 || rows == 0)
         throw BadRequest("Unknown projection");
+      if (projectionId != info.mGeometryId)
+        checkProjection(projectionId);
 
       T::Coordinate_svec coordinates =
           Identification::gridDef.getGridLatLonCoordinatesByGeometryId(projectionId);
@@ -1528,6 +1530,8 @@ Json::Value Plugin::api_sample(const HTTP::Request& theRequest)
 
     const long long columns = gridData.mColumns;
     const long long rows = gridData.mRows;
+    if (i0 >= columns || j0 >= rows)
+      throw BadRequest("i0 and j0 must be inside the grid");
     const long long i1 = std::min(columns, i0 + size);
     const long long j1 = std::min(rows, j0 + size);
     const std::size_t count = static_cast<std::size_t>(columns * rows);

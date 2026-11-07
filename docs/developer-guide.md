@@ -249,6 +249,7 @@ All keys are under `smartmet.plugin.grid-gui`:
 | `animationEnabled` | Offer the animated WebP variants. |
 | `imageCache.directory`, `.maxImages`, `.minImages` | Rendered image cache. |
 | `blockedProjections` | Geometry ids that are too large to offer as reprojection targets. |
+| `maxProjectionPixels` | Optional, default 25000000: the largest projection (columns * rows) an image, stream or statistics request may use; larger and blocked projections are refused. |
 
 The producer list comes from the grid engine's producer file, not from this
 configuration.

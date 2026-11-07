@@ -171,6 +171,12 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
     for (auto& it : projVec)
       itsBlockedProjections.insert(std::stoi(it));
 
+    // The largest projection (columns * rows) an image may be drawn in. The largest regular
+    // geometries have about 10 million cells; larger ones (DEMs) would take gigabytes.
+    itsMaxProjectionPixels = 25000000;
+    if (itsConfigurationFile.findAttribute("smartmet.plugin.grid-gui.maxProjectionPixels"))
+      itsConfigurationFile.getAttributeValue("smartmet.plugin.grid-gui.maxProjectionPixels",itsMaxProjectionPixels);
+
     // The grid definitions (Identification::gridDef) are shared by the whole
     // process and are initialized by the grid engine from its own
     // grid-files.configFile; init() waits for the engine. Initializing them here
@@ -677,7 +683,7 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
     uint xx = columns / 36;
     uint yy = rows / 18;
 
-    uint *image = new uint[width*height];
+    std::vector<uint> image(static_cast<std::size_t>(width)*height);
 
     uint c = 0;
     // Heap-allocated rather than a stack VLA: width comes from the grid geometry and a
@@ -711,7 +717,7 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
           col = land ? landColor : seaColor;
 
         if (landBorder & 0xFF000000)
-          paintLandBorder(image,width,x,y,land,prevLand,yLand[x],landBorder,coordinateLines,col,lbcol);
+          paintLandBorder(image.data(),width,x,y,land,prevLand,yLand[x],landBorder,coordinateLines,col,lbcol);
 
         if (onMapCoordinateLine(coordinateLines,x,y,xx,yy,area))
           col = coordinateLines;
@@ -725,9 +731,7 @@ void Plugin::saveMap(const char *imageFile,uint columns,uint rows,T::ParamValue_
 
     //jpeg_save(imageFile,image,height,width,100);
 
-    png_save(imageFile,image,width,height,1);
-
-    delete[] image;
+    png_save(imageFile,image.data(),width,height,1);
 
     checkImageCache();
   }
@@ -849,6 +853,50 @@ double conversionValue(const std::string& str,double defaultValue)
 
 
 
+/*! \brief Refuses image geometries that would make a request too expensive: the geometry
+    must be the field's own geometry, and a projection must pass checkProjection(). */
+
+void Plugin::checkImageGeometry(const ImagePaintParameters& params,T::GeometryId geometryId)
+{
+  T::ContentInfo info;
+  auto contentServer = itsGridEngine->getContentServer_sptr();
+  if (contentServer->getContentInfo(0,params.fileId,params.messageIndex,info) == 0  &&  info.mGeometryId != 0  &&
+      params.geometryId != 0  &&  params.geometryId != info.mGeometryId)
+  {
+    Fmi::Exception exception(BCP,"The geometry is not the geometry of the message");
+    exception.addParameter("Geometry",std::to_string(params.geometryId));
+    exception.addParameter("Message geometry",std::to_string(info.mGeometryId));
+    throw exception;
+  }
+
+  if (geometryId != params.geometryId)
+    checkProjection(geometryId);
+}
+
+
+
+/*! \brief Refuses a projection that is blocked or has more than itsMaxProjectionPixels cells. */
+
+void Plugin::checkProjection(T::GeometryId geometryId)
+{
+  if (itsBlockedProjections.find(geometryId) != itsBlockedProjections.end())
+    throw Fmi::Exception(BCP,"The projection is blocked").addParameter("Projection",std::to_string(geometryId));
+
+  uint columns = 0;
+  uint rows = 0;
+  if (Identification::gridDef.getGridDimensionsByGeometryId(geometryId,columns,rows)  &&
+      static_cast<unsigned long long>(columns) * rows > itsMaxProjectionPixels)
+  {
+    Fmi::Exception exception(BCP,"The projection is too large");
+    exception.addParameter("Projection",std::to_string(geometryId));
+    exception.addParameter("Size",std::to_string(columns) + "x" + std::to_string(rows));
+    exception.addParameter("maxProjectionPixels",std::to_string(itsMaxProjectionPixels));
+    throw exception;
+  }
+}
+
+
+
 bool Plugin::getImageValues(const ImagePaintParameters& params,T::GeometryId& geometryId,uint& columns,uint& rows,T::ParamValue_vec& values)
 {
   FUNCTION_TRACE
@@ -859,6 +907,8 @@ bool Plugin::getImageValues(const ImagePaintParameters& params,T::GeometryId& ge
     geometryId = params.geometryId;
     if (params.projectionId > 0  &&  params.projectionId != params.geometryId)
       geometryId = params.projectionId;
+
+    checkImageGeometry(params,geometryId);
 
     if (!getFieldValues(*dataServer,params.fileId,params.messageIndex,params.geometryId,geometryId,columns,rows,values))
       return false;
@@ -908,9 +958,13 @@ void Plugin::saveImage(ImagePaintParameters& params)
   FUNCTION_TRACE
   try
   {
-    T::GeometryId geomId = params.geometryId;
-    if (params.projectionId > 0  &&  params.projectionId != params.geometryId)
-      geomId = params.projectionId;
+    // The values first: the geometries are checked there before anything large is made
+    T::GeometryId geomId = 0;
+    uint cols = 0;
+    uint rows = 0;
+    T::ParamValue_vec values;
+    if (!getImageValues(params,geomId,cols,rows,values))
+      return;
 
     T::Coordinate_vec emptyCoordinates;
     T::Coordinate_vec *coordinates = &emptyCoordinates;
@@ -936,14 +990,8 @@ void Plugin::saveImage(ImagePaintParameters& params)
       }
     }
 
-    uint cols = 0;
-    uint rows = 0;
-    T::ParamValue_vec values;
-    if (getImageValues(params,geomId,cols,rows,values))
-    {
-      params.geometryId = geomId;
-      saveImage(params,cols,rows,values,*coordinates,lineCoordinates);
-    }
+    params.geometryId = geomId;
+    saveImage(params,cols,rows,values,*coordinates,lineCoordinates);
   }
   catch (...)
   {
@@ -1086,11 +1134,10 @@ bool validImageSize(int width,int height,std::size_t sz)
 
 // Sea colour and sea shading layers of the image
 
-void buildSeaImages(const ImagePaintParameters& params,int width,int height,uint size,const T::Coordinate_vec& coordinates,bool rotate,uint *&seaShadingImage,uint *&seaImage)
+void buildSeaImages(const ImagePaintParameters& params,int width,int height,uint size,const T::Coordinate_vec& coordinates,bool rotate,std::vector<uint>& seaShadingImage,std::vector<uint>& seaImage)
 {
-  std::vector<float> seaShadings;
-  seaShadingImage = new uint[size];
-  seaImage = new uint[size];
+  seaShadingImage.resize(size);
+  seaImage.resize(size);
   uint c = 0;
   for (int y=0; y<height; y++)
   {
@@ -1128,7 +1175,7 @@ void buildSeaImages(const ImagePaintParameters& params,int width,int height,uint
 
 // A sea pixel marks its land neighbours on the left and above as land border
 
-void markSeaSideBorder(uint *landBorderImage,int width,int x,int yy,bool prevLand,bool landAbove,uint borderColor)
+void markSeaSideBorder(std::vector<uint>& landBorderImage,int width,int x,int yy,bool prevLand,bool landAbove,uint borderColor)
 {
   if (prevLand  &&  x > 0)
   {
@@ -1147,16 +1194,16 @@ void markSeaSideBorder(uint *landBorderImage,int width,int x,int yy,bool prevLan
 
 // Land colour, land shading and land border layers of the image
 
-void buildLandImages(const ImagePaintParameters& params,int width,int height,uint size,const T::Coordinate_vec& coordinates,bool rotate,uint *&landShadingImage,uint *&landImage,uint *&landBorderImage)
+void buildLandImages(const ImagePaintParameters& params,int width,int height,uint size,const T::Coordinate_vec& coordinates,bool rotate,std::vector<uint>& landShadingImage,std::vector<uint>& landImage,std::vector<uint>& landBorderImage)
 {
   // Counting land topography.
 
   // Heap-allocated rather than a stack VLA (width comes from the grid geometry).
   std::vector<bool> yLand(width, false);
 
-  landShadingImage = new uint[size];
-  landImage = new uint[size];
-  landBorderImage = new uint[size];
+  landShadingImage.resize(size);
+  landImage.resize(size);
+  landBorderImage.resize(size);
 
   uint c = 0;
   for (int y=0; y<height; y++)
@@ -1204,9 +1251,9 @@ void buildLandImages(const ImagePaintParameters& params,int width,int height,uin
 // Value layer of a difference image: blue for negative and red for positive values,
 // white at zero, full colour at -range and range
 
-uint *differenceValueImage(const ImagePaintParameters& params,const T::ParamValue_vec& values,int width,int height,uint size,bool rotate,uint alpha)
+std::vector<uint> differenceValueImage(const ImagePaintParameters& params,const T::ParamValue_vec& values,int width,int height,uint size,bool rotate,uint alpha)
 {
-  uint *valImage = new uint[size];
+  std::vector<uint> valImage(size);
 
   double range = params.differenceRange;
   if (range <= 0)
@@ -1236,9 +1283,9 @@ uint *differenceValueImage(const ImagePaintParameters& params,const T::ParamValu
 
 // Value layer coloured with a hue ramp over the value range
 
-uint *hsvValueImage(ImagePaintParameters& params,T::ParamValue_vec& values,int width,int height,uint size,bool rotate,uint alpha)
+std::vector<uint> hsvValueImage(ImagePaintParameters& params,T::ParamValue_vec& values,int width,int height,uint size,bool rotate,uint alpha)
 {
-  uint *valImage = new uint[size];
+  std::vector<uint> valImage(size);
 
   const HsvScale scale = hsvScale(values);
   const double minValue = scale.minValue;
@@ -1289,9 +1336,9 @@ uint *hsvValueImage(ImagePaintParameters& params,T::ParamValue_vec& values,int w
 
 // Value layer coloured with the colour map, its alpha scaled by the paint alpha
 
-uint *colorMapValueImage(const ImagePaintParameters& params,T::ColorMapFile& colorMapFile,T::ParamValue_vec& values,int width,int height,uint size,bool rotate,uint alpha)
+std::vector<uint> colorMapValueImage(const ImagePaintParameters& params,T::ColorMapFile& colorMapFile,T::ParamValue_vec& values,int width,int height,uint size,bool rotate,uint alpha)
 {
-  uint *valImage = new uint[size];
+  std::vector<uint> valImage(size);
 
   double amp = (double)params.paint_alpha/255.0;
 
@@ -1409,24 +1456,11 @@ uint composePixel(const ImagePaintParameters& params,uint t,const uint *landImag
 
 
 
-// Delete a layer image
+// The stream directions in row order from the north, size values
 
-void deleteImage(uint *&image)
+std::vector<float> streamDirections(T::ParamValue_vec& values,int width,int height,uint size,bool rotate)
 {
-  if (image)
-  {
-    delete [] image;
-    image = nullptr;
-  }
-}
-
-
-
-// The stream directions in row order from the north, a new array of size values
-
-float *streamDirections(T::ParamValue_vec& values,int width,int height,uint size,bool rotate)
-{
-  auto *direction = new float[size];
+  std::vector<float> direction(size);
   if (!rotate)
   {
     uint idx = 0;
@@ -1466,9 +1500,10 @@ float *streamDirections(T::ParamValue_vec& values,int width,int height,uint size
 
 void saveStreamAnimation(const ImagePaintParameters& params,const uint *finalImage,const uint *streamImage,int width,int height,uint size,const uint *color,uint lcolors,std::vector<int>& timeVect)
 {
-  uint *wimage[lcolors];
+  std::vector<std::vector<uint>> frames(lcolors,std::vector<uint>(size));
+  std::vector<uint*> wimage(lcolors);
   for (uint t=0; t<lcolors; t++)
-    wimage[t] = new uint[size];
+    wimage[t] = frames[t].data();
 
   uint idx = 0;
   for (int y = 0; y < height; y++)
@@ -1493,13 +1528,7 @@ void saveStreamAnimation(const ImagePaintParameters& params,const uint *finalIma
     }
   }
 
-  webp_anim_save(params.imageFile.c_str(),wimage,width,height,lcolors,timeVect);
-
-  for (uint t=0; t<lcolors; t++)
-  {
-    delete [] wimage[t];
-    wimage[t] = nullptr;
-  }
+  webp_anim_save(params.imageFile.c_str(),wimage.data(),width,height,lcolors,timeVect);
 }
 
 
@@ -1508,15 +1537,14 @@ void saveStreamAnimation(const ImagePaintParameters& params,const uint *finalIma
 
 bool drawStreamLines(const ImagePaintParameters& params,T::ParamValue_vec& values,int width,int height,uint size,bool rotate,uint *finalImage)
 {
-  float *direction = streamDirections(values,width,height,size,rotate);
+  std::vector<float> direction = streamDirections(values,width,height,size,rotate);
 
-  //uint *img = finalImage; //imagePaint.getImage();
-  uint *streamImage = new uint[size];
+  std::vector<uint> streamImage(size);
 
-  getStreamlineImage(direction,nullptr,streamImage,width,height,params.stream_step,params.stream_step,params.stream_minLength,params.stream_maxLength);
+  getStreamlineImage(direction.data(),nullptr,streamImage.data(),width,height,params.stream_step,params.stream_step,params.stream_minLength,params.stream_maxLength);
 
   uint lcolmax = 0xD0;
-  uint lcolors = 16;
+  constexpr uint lcolors = 16;
   uint color[lcolors];
 
   uint sc = params.stream_color & 0x00FFFFFF;
@@ -1532,13 +1560,7 @@ bool drawStreamLines(const ImagePaintParameters& params,T::ParamValue_vec& value
 
   if (params.stream_animation)
   {
-    saveStreamAnimation(params,finalImage,streamImage,width,height,size,color,lcolors,timeVect);
-
-    delete [] direction;
-    direction = nullptr;
-
-    delete [] streamImage;
-    streamImage = nullptr;
+    saveStreamAnimation(params,finalImage,streamImage.data(),width,height,size,color,lcolors,timeVect);
     return true;
   }
   for (uint t=0; t<size; t++)
@@ -1549,23 +1571,18 @@ bool drawStreamLines(const ImagePaintParameters& params,T::ParamValue_vec& value
       finalImage[t] = merge_ARGB(color[(streamCol-1) % lcolors],finalImage[t]);
     }
   }
-  delete [] direction;
-  direction = nullptr;
-
-  delete [] streamImage;
-  streamImage = nullptr;
   return false;
 }
 
 
 
 // The image of the values: a difference image, colors from the color map or HSV colors.
-// None for stream lines.
+// Empty for stream lines.
 
-uint *valueImage(ImagePaintParameters& params,T::ColorMapFile *colorMapFile,T::ParamValue_vec& values,int width,int height,uint size,bool rotate,uint alpha)
+std::vector<uint> valueImage(ImagePaintParameters& params,T::ColorMapFile *colorMapFile,T::ParamValue_vec& values,int width,int height,uint size,bool rotate,uint alpha)
 {
   if (params.stream_step != 0)
-    return nullptr;
+    return {};
   if (params.fileId2 != 0)
     return differenceValueImage(params,values,width,height,size,rotate,alpha);
   if (colorMapFile)
@@ -1621,13 +1638,12 @@ void Plugin::saveImage(ImagePaintParameters& params,
     rotate = coordinates.size() > C_UINT(10*width)  &&  coordinates[0].y() < coordinates[10*width].y();
 
 
-    uint *finalImage = new uint[size];
-    uint *valImage = nullptr;
-    uint *landShadingImage = nullptr;
-    uint *seaShadingImage = nullptr;
-    uint *landImage = nullptr;
-    uint *landBorderImage = nullptr;
-    uint *seaImage = nullptr;
+    std::vector<uint> finalImage(size);
+    std::vector<uint> landShadingImage;
+    std::vector<uint> seaShadingImage;
+    std::vector<uint> landImage;
+    std::vector<uint> landBorderImage;
+    std::vector<uint> seaImage;
 
     if (size == coordinates.size() && (params.seaShading_light || params.seaShading_shadow))
       buildSeaImages(params,width,height,size,coordinates,rotate,seaShadingImage,seaImage);
@@ -1638,39 +1654,34 @@ void Plugin::saveImage(ImagePaintParameters& params,
 
     uint alpha = (uint)params.paint_alpha << 24;
 
-    valImage = valueImage(params,colorMapFile,values,width,height,size,rotate,alpha);
+    {
+      std::vector<uint> valImage = valueImage(params,colorMapFile,values,width,height,size,rotate,alpha);
 
-    for (uint t=0; t<size; t++)
-      finalImage[t] = composePixel(params,t,landImage,seaImage,landShadingImage,seaShadingImage,valImage,landBorderImage);
+      // An empty layer is not drawn
+      auto layer = [](const std::vector<uint>& image) { return image.empty() ? nullptr : image.data(); };
+      for (uint t=0; t<size; t++)
+        finalImage[t] = composePixel(params,t,layer(landImage),layer(seaImage),layer(landShadingImage),layer(seaShadingImage),layer(valImage),layer(landBorderImage));
+    }
 
-    paintCoordinateLines(params,finalImage,width,height,rotate,lineCoordinates);
+    paintCoordinateLines(params,finalImage.data(),width,height,rotate,lineCoordinates);
 
-
-    deleteImage(landImage);
-    deleteImage(seaImage);
-    deleteImage(landShadingImage);
-    deleteImage(seaShadingImage);
-    deleteImage(valImage);
-    deleteImage(landBorderImage);
+    // The layers are no longer needed
+    std::vector<uint>().swap(landImage);
+    std::vector<uint>().swap(seaImage);
+    std::vector<uint>().swap(landShadingImage);
+    std::vector<uint>().swap(seaShadingImage);
+    std::vector<uint>().swap(landBorderImage);
 
 
     // Draw stream lines. An animation is saved there and then.
-    if (params.stream_step > 0 && drawStreamLines(params,values,width,height,size,rotate,finalImage))
+    if (params.stream_step > 0 && drawStreamLines(params,values,width,height,size,rotate,finalImage.data()))
     {
-      delete [] finalImage;
       checkImageCache();
       return;
     }
 
-
-    if (finalImage)
-    {
-      //jpeg_save(params.imageFile.c_str(),finalImage,height,width,100);
-      png_save(params.imageFile.c_str(),finalImage,width,height,1);
-
-      delete [] finalImage;
-      finalImage = nullptr;
-    }
+    //jpeg_save(params.imageFile.c_str(),finalImage,height,width,100);
+    png_save(params.imageFile.c_str(),finalImage.data(),width,height,1);
 
 
     checkImageCache();
@@ -2421,6 +2432,8 @@ int Plugin::page_value(const Spine::Reactor & /*theReactor*/,
       if (!Identification::gridDef.getGridDimensionsByGeometryId(projectionId,cols,rows))
         return HTTP::Status::ok;
 
+      checkProjection(projectionId);
+
       T::Coordinate_svec latLonCoordinates = Identification::gridDef.getGridLatLonCoordinatesByGeometryId(projectionId);
       if (!latLonCoordinates  ||  latLonCoordinates->size() < static_cast<std::size_t>(cols) * rows)
         return HTTP::Status::ok;
@@ -2868,6 +2881,14 @@ int Plugin::page_streamsAnimation(const Spine::Reactor & /*theReactor*/,
 
 /*! \brief GridGui: Shared rendering helper for the streams and streams-animation pages. */
 
+namespace
+{
+// The longest streamline: the longest the stream options of the page offer
+constexpr uint maxStreamLength = 2048;
+}  // namespace
+
+
+
 int Plugin::page_streamsImpl(const HTTP::Request &theRequest,
                              HTTP::Response &theResponse,
                              Session& session,
@@ -2961,8 +2982,9 @@ int Plugin::page_streamsImpl(const HTTP::Request &theRequest,
       params.paint_saturation = toUInt8(saturationStr);
       params.paint_blur = toUInt8(blurStr);
       params.stream_step = toUInt32(stepStr);
-      params.stream_minLength = toUInt32(minLengthStr);
-      params.stream_maxLength = toUInt32(maxLengthStr);
+      // A streamline is traced recursively one step per level: a long one overflows the stack
+      params.stream_minLength = C_INT(std::min(toUInt32(minLengthStr),maxStreamLength));
+      params.stream_maxLength = C_INT(std::min(toUInt32(maxLengthStr),maxStreamLength));
       params.stream_color = getColorValue(streamColorStr);
       params.stream_animation = animation;
       params.landBorder_color = getColorValue(landBorderStr);
