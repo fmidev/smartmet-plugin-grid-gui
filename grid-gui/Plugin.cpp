@@ -110,8 +110,10 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
       throw Fmi::Exception(BCP, "GridGui plugin and Server API version mismatch");
 
     // Register the handler
-    if (!theReactor->addPrivateContentHandler(
-            this, "/grid-gui", boost::bind(&Plugin::callRequestHandler, this, _1, _2, _3)))
+    if (!theReactor->addContentHandler(
+            this,
+            Spine::Reactor::HandlerOptions("/grid-gui").Private(),
+            boost::bind(&Plugin::callRequestHandler, this, _1, _2, _3)))
       throw Fmi::Exception(BCP, "Failed to register GridGui request handler");
 
 
@@ -140,7 +142,8 @@ Plugin::Plugin(Spine::Reactor *theReactor, const char *theConfig)
         throw Fmi::Exception(BCP, "ui.url must start with '/' and differ from /grid-gui").addParameter("ui.url",itsUiUrl);
 
       auto handler = boost::bind(&Plugin::callRequestHandler, this, _1, _2, _3);
-      if (!theReactor->addPrivateContentHandler(this, itsUiUrl, handler, {}, true))
+      if (!theReactor->addContentHandler(
+              this, Spine::Reactor::HandlerOptions(itsUiUrl).Private().IsPrefix(), handler))
         throw Fmi::Exception(BCP, "Failed to register GridGui user interface handler");
     }
 

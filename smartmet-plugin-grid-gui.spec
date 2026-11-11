@@ -33,7 +33,7 @@ BuildRequires: libconfig17-devel
 BuildRequires: libwebp13-devel
 BuildRequires: smartmet-utils-devel >= 26.9.3
 BuildRequires: smartmet-library-macgyver-devel >= 26.10.16
-BuildRequires: smartmet-library-spine-devel >= 26.10.16
+BuildRequires: smartmet-library-spine-devel >= 26.11.11
 BuildRequires: smartmet-library-grid-files-devel >= 26.10.16
 BuildRequires: smartmet-library-grid-content-devel >= 26.10.16
 BuildRequires: smartmet-engine-grid-devel >= 26.10.23
@@ -44,14 +44,14 @@ Requires: libconfig17
 Requires: smartmet-library-macgyver >= 26.10.17
 Requires: smartmet-library-grid-files >= 26.10.17
 Requires: smartmet-library-grid-content >= 26.10.17
-Requires: smartmet-library-spine >= 26.10.17
+Requires: smartmet-library-spine >= 26.11.11
 Requires: smartmet-server >= 26.10.17
 Requires: smartmet-engine-grid >= 26.10.23
 Requires: jsoncpp
 Requires: %{smartmet_fmt}
 Provides: %{SPECNAME}
 #TestRequires: smartmet-utils-devel >= 26.9.3
-#TestRequires: smartmet-library-spine-plugin-test >= 26.10.16
+#TestRequires: smartmet-library-spine-plugin-test >= 26.11.11
 #TestRequires: smartmet-engine-grid >= 26.10.23
 #TestRequires: valkey
 #TestRequires: smartmet-test-data >= 26.8.26
