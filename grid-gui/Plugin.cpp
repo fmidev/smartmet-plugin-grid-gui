@@ -4523,36 +4523,36 @@ void Plugin::page_main_geometries(PageMainState& ps,Session& session)
 
       ps.ostr1 << "<SELECT style=\"width:280px;\" " << disabled << " onchange=\"getPage(this,parent,'/grid-gui?session=" << session.getUrlParameter() << "&" << ATTR_GEOMETRY_ID << "=' + this.options[this.selectedIndex].value)\">\n";
 
-      for (int geometrie : ps.geometries)
+      for (int geometry : ps.geometries)
       {
-        std::string st = std::to_string(geometrie);
+        std::string st = std::to_string(geometry);
 
         std::string gName;
         uint cols = 0;
         uint rows = 0;
 
-        Identification::gridDef.getGeometryNameById(geometrie,gName);
+        Identification::gridDef.getGeometryNameById(geometry,gName);
 
-        if (Identification::gridDef.getGridDimensionsByGeometryId(geometrie,cols,rows))
-          st = std::to_string(geometrie) + ":" + gName + " (" + std::to_string(cols) + " x " + std::to_string(rows) + ")";
+        if (Identification::gridDef.getGridDimensionsByGeometryId(geometry,cols,rows))
+          st = std::to_string(geometry) + ":" + gName + " (" + std::to_string(cols) + " x " + std::to_string(rows) + ")";
         else
-          st = std::to_string(geometrie) + ":" + gName;
+          st = std::to_string(geometry) + ":" + gName;
 
         if (ps.geometryId == 0)
         {
-          ps.geometryId = geometrie;
+          ps.geometryId = geometry;
           ps.geometryIdStr = std::to_string(ps.geometryId);
           //printf("EMPTY => GEOMETRY %s\n",geometryIdStr.c_str());
         }
 
-        if (ps.geometryId == geometrie)
+        if (ps.geometryId == geometry)
         {
-          ps.ostr1 << "<OPTION selected value=\"" <<  geometrie << "\">" <<  st << "</OPTION>\n";
+          ps.ostr1 << "<OPTION selected value=\"" <<  geometry << "\">" <<  st << "</OPTION>\n";
           session.setAttribute(ATTR_GEOMETRY_ID,ps.geometryId);
         }
         else
         {
-          ps.ostr1 << "<OPTION value=\"" <<  geometrie << "\">" <<  st << "</OPTION>\n";
+          ps.ostr1 << "<OPTION value=\"" <<  geometry << "\">" <<  st << "</OPTION>\n";
         }
       }
       ps.ostr1 << "</SELECT>\n";
