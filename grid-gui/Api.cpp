@@ -41,7 +41,6 @@
 #include <json/json.h>
 #include <macgyver/Exception.h>
 #include <strings.h>
-#include <boost/date_time/posix_time/posix_time.hpp>
 #include <cmath>
 #include <map>
 #include <set>
