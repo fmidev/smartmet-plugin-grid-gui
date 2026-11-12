@@ -5,8 +5,6 @@
 // ======================================================================
 
 #include "Plugin.h"
-#include "Attributes.h"
-
 #include <boost/algorithm/string.hpp>
 #include <grid-files/common/GeneralFunctions.h>
 #include <grid-files/common/ImagePaint.h>
@@ -17,14 +15,56 @@
 #include <macgyver/Hash.h>
 #include <macgyver/TimeFormatter.h>
 #include <macgyver/FastMath.h>
-#include <algorithm>
-#include <cmath>
 #include <boost/bind/bind.hpp>
 #include <macgyver/DateTime.h>
-#include <boost/lexical_cast.hpp>
-#include <webp/encode.h>
-#include <webp/mux.h>
+#include <engines/grid/Engine.h>
+#include <grid-content/contentServer/definition/ContentInfoList.h>
+#include <grid-content/contentServer/definition/FileInfo.h>
+#include <grid-content/contentServer/definition/GenerationInfo.h>
+#include <grid-content/contentServer/definition/GenerationInfoList.h>
+#include <grid-content/contentServer/definition/ProducerInfo.h>
+#include <grid-content/contentServer/definition/ProducerInfoList.h>
+#include <grid-content/contentServer/definition/ServiceInterface.h>
+#include <grid-content/dataServer/definition/GridCoordinates.h>
+#include <grid-content/dataServer/definition/GridData.h>
+#include <grid-content/dataServer/definition/ServiceInterface.h>
+#include <grid-content/dataServer/definition/ServiceResults.h>
+#include <grid-files/common/Attribute.h>
+#include <grid-files/common/AttributeList.h>
+#include <grid-files/common/AutoReadLock.h>
+#include <grid-files/common/AutoThreadLock.h>
+#include <grid-files/common/Coordinate.h>
+#include <grid-files/common/GraphFunctions.h>
+#include <grid-files/common/ImageFunctions.h>
+#include <grid-files/common/Session.h>
+#include <grid-files/identification/AggregationDef.h>
+#include <grid-files/identification/FmiParameterDef.h>
+#include <grid-files/identification/ForecastTypeDef.h>
+#include <grid-files/identification/GribParameterDef.h>
+#include <grid-files/identification/LevelDef.h>
+#include <grid-files/identification/NewbaseParameterDef.h>
+#include <grid-files/identification/ProcessingTypeDef.h>
+#include <macgyver/Exception.h>
+#include <macgyver/StringConversion.h>
+#include <spine/HTTP.h>
+#include <spine/Reactor.h>
+#include <strings.h>
+#include <algorithm>
+#include <cmath>
 #include <optional>
+#include <cctype>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <cstddef>
+#include <iostream>
+#include <sstream>
+#include "Attributes.h"
+
+namespace SmartMet
+{
+class ModificationLock;
+}
 
 #define FUNCTION_TRACE FUNCTION_TRACE_OFF
 

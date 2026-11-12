@@ -1,19 +1,67 @@
 #pragma once
 
-#include "ColorMapFile.h"
 #include <spine/SmartMetPlugin.h>
-#include <spine/Reactor.h>
-#include <spine/HTTP.h>
-#include <engines/grid/Engine.h>
-#include <grid-files/common/ImageFunctions.h>
 #include <grid-files/common/BitLine.h>
-#include <grid-files/common/Session.h>
 #include <json/json.h>
+#include <grid-content/contentServer/definition/ContentInfo.h>
+#include <grid-files/common/ConfigurationFile.h>
+#include <grid-files/common/ThreadLock.h>
+#include <grid-files/common/Typedefs.h>
+#include <grid-files/grid/Typedefs.h>
 #include <mutex>
+#include <ctime>
+#include <iosfwd>
+#include <iterator>
+#include <map>
+#include <memory>
+#include <set>
+#include <string>
+#include <utility>
+#include <vector>
+#include "ColorMapFile.h"
+
+namespace SmartMet
+{
+namespace Engine
+{
+namespace Grid
+{
+class Engine;
+}
+}
+}
+namespace SmartMet
+{
+namespace Spine
+{
+class Reactor;
+}
+}
+namespace SmartMet
+{
+namespace Spine
+{
+namespace HTTP
+{
+class Request;
+class Response;
+}
+}
+}
+namespace SmartMet
+{
+namespace T
+{
+class ContentInfoList;
+class GenerationInfoList;
+}
+}
 
 
 namespace SmartMet
 {
+class Session;
+
 namespace Plugin
 {
 namespace GridGui

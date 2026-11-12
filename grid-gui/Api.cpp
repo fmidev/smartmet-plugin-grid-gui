@@ -9,18 +9,56 @@
  */
 // ======================================================================
 
-#include "Attributes.h"
-#include "Plugin.h"
-
 #include <grid-files/common/GeneralFunctions.h>
 #include <grid-files/identification/GridDef.h>
-#include <macgyver/StringConversion.h>
 #include <fmt/format.h>
 #include <spine/HTTP.h>
+#include <engines/grid/Engine.h>
+#include <grid-content/contentServer/definition/ContentInfo.h>
+#include <grid-content/contentServer/definition/ContentInfoList.h>
+#include <grid-content/contentServer/definition/FileInfo.h>
+#include <grid-content/contentServer/definition/GenerationInfo.h>
+#include <grid-content/contentServer/definition/GenerationInfoList.h>
+#include <grid-content/contentServer/definition/ProducerInfo.h>
+#include <grid-content/contentServer/definition/ProducerInfoList.h>
+#include <grid-content/contentServer/definition/ServiceInterface.h>
+#include <grid-content/dataServer/definition/GridCoordinates.h>
+#include <grid-content/dataServer/definition/GridData.h>
+#include <grid-content/dataServer/definition/ServiceInterface.h>
+#include <grid-content/queryServer/definition/ParameterMapping.h>
+#include <grid-files/common/Attribute.h>
+#include <grid-files/common/AttributeList.h>
+#include <grid-files/common/BitLine.h>
+#include <grid-files/common/Coordinate.h>
+#include <grid-files/common/Session.h>
+#include <grid-files/common/Typedefs.h>
+#include <grid-files/grid/Typedefs.h>
+#include <grid-files/identification/AggregationDef.h>
+#include <grid-files/identification/FmiParameterDef.h>
+#include <grid-files/identification/ForecastTypeDef.h>
+#include <grid-files/identification/LevelDef.h>
+#include <grid-files/identification/ProcessingTypeDef.h>
+#include <json/json.h>
+#include <macgyver/Exception.h>
+#include <strings.h>
+#include <boost/date_time/posix_time/posix_time.hpp>
 #include <cmath>
 #include <map>
 #include <set>
 #include <tuple>
+#include <cstring>
+#include <algorithm>
+#include <ctime>
+#include <memory>
+#include <optional>
+#include <stdexcept>
+#include <string>
+#include <utility>
+#include <variant>
+#include <vector>
+#include "Attributes.h"
+#include "Plugin.h"
+#include "ColorMapFile.h"
 
 namespace SmartMet
 {

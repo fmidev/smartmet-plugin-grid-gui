@@ -15,16 +15,25 @@
  */
 // ======================================================================
 
-#include "Attributes.h"
-#include "Plugin.h"
-
 #include <grid-files/common/GeneralFunctions.h>
 #include <macgyver/Hash.h>
 #include <macgyver/TimeFormatter.h>
 #include <spine/HTTP.h>
+#include <grid-files/common/Session.h>
+#include <macgyver/DateTime.h>
+#include <macgyver/Exception.h>
+#include <spine/Reactor.h>
 #include <cctype>
 #include <fstream>
 #include <sstream>
+#include <ctime>
+#include <map>
+#include <memory>
+#include <mutex>
+#include <optional>
+#include <string>
+#include "Attributes.h"
+#include "Plugin.h"
 
 namespace SmartMet
 {

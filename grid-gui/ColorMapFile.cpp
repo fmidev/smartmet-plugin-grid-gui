@@ -2,6 +2,13 @@
 #include <grid-files/common/GeneralFunctions.h>
 #include <grid-files/common/AutoWriteLock.h>
 #include <grid-files/common/AutoReadLock.h>
+#include <grid-files/grid/Typedefs.h>
+#include <macgyver/Exception.h>
+#include <strings.h>
+#include <cstdio>
+#include <cstdlib>
+#include <cstring>
+#include <utility>
 
 
 namespace SmartMet

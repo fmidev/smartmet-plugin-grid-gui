@@ -4,6 +4,9 @@
 #include <grid-files/common/Typedefs.h>
 #include <map>
 #include <vector>
+#include <ctime>
+#include <iosfwd>
+#include <string>
 
 
 namespace SmartMet
