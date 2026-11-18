@@ -3449,37 +3449,33 @@ std::string Plugin::getFmiKey(const std::string& producerName,const T::ContentIn
   FUNCTION_TRACE
   try
   {
-    char buf[200];
-    char *p = buf;
+    std::string key;
 
     if (strlen(contentInfo.getFmiParameterName()) > 0)
-      p += sprintf(p,"%s",contentInfo.getFmiParameterName());
+      key = contentInfo.getFmiParameterName();
     else if (contentInfo.mFmiParameterId > 0)
-      p += sprintf(p,"FMI-%u",contentInfo.mFmiParameterId);
+      key = "FMI-" + std::to_string(contentInfo.mFmiParameterId);
 
-    p += sprintf(p,":%s",producerName.c_str());
+    key += ":" + producerName;
 
+    key += ":";
     if (contentInfo.mGeometryId > 0)
-      p += sprintf(p,":%d",contentInfo.mGeometryId);
-    else
-      p += sprintf(p,":");
+      key += std::to_string(contentInfo.mGeometryId);
 
+    key += ":";
     if (contentInfo.mFmiParameterLevelId > 0)
-      p += sprintf(p,":%d",contentInfo.mFmiParameterLevelId);
-    else
-      p += sprintf(p,":");
+      key += std::to_string(contentInfo.mFmiParameterLevelId);
 
-    p += sprintf(p,":%d",contentInfo.mParameterLevel);
+    key += ":" + std::to_string(contentInfo.mParameterLevel);
 
     if (contentInfo.mForecastType >= 0)
     {
+      key += ":" + std::to_string(contentInfo.mForecastType);
       if (contentInfo.mForecastNumber >= 0)
-        sprintf(p,":%d:%d",contentInfo.mForecastType,contentInfo.mForecastNumber);
-      else
-        sprintf(p,":%d",contentInfo.mForecastType);
+        key += ":" + std::to_string(contentInfo.mForecastNumber);
     }
 
-    return std::string(buf);
+    return key;
   }
   catch (...)
   {
